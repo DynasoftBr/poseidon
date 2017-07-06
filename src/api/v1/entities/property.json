@@ -1,0 +1,102 @@
+{
+    "$schema": "./schemas/entity-type-schema.json",
+    "_id": "property",
+    "name": "property",
+    "label": "Property",
+    "properties": [
+        {
+            "name": "name",
+            "label": "Name",
+            "validation": {
+                "type": "string",
+                "pattern": "",
+                "max": 50,
+                "min": 2
+            }
+        },
+        {
+            "name": "type",
+            "label": "Type",
+            "validation": {
+                "type": "string",
+                "enum": [
+                    "string",
+                    "integer",
+                    "number",
+                    "date",
+                    "boolean",
+                    "abstractEntity",
+                    "linkedEntity",
+                    "array"
+                ]
+            }
+        },
+        {
+            "name": "min",
+            "label": "Minumum",
+            "validation": {
+                "type": "number"
+            }
+        },
+        {
+            "name": "max",
+            "label": "Minumum",
+            "validation": {
+                "type": "number"
+            }
+        },
+        {
+            "name": "pattern",
+            "label": "Pattern",
+            "validation": {
+                "type": "string"
+            }
+        },
+        {
+            "name": "ref",
+            "label": "Ref",
+            "validation": {
+                "type": "linkedEntity",
+                "ref": {
+                    "id": "entity_type",
+                    "label": "Entity type"
+                },
+                "linkedProperties": [
+                    {
+                        "name": "id",
+                        "label": "Id",
+                        "keepUpToDate": true
+                    },
+                    {
+                        "name": "label",
+                        "label": "Label",
+                        "keepUpToDate": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "items",
+            "validation": {
+                "type": "abstractEntity",
+                "ref": {
+                    "id": "validation",
+                    "label": "Validation"
+                }
+            }
+        },
+        {
+            "name": "linkedProperties",
+            "validation": {
+                "type": "array",
+                "items": {
+                    "type": "abstractEntity",
+                    "ref": {
+                        "id": "linkedProperties",
+                        "label": "Linked Properties"
+                    }
+                }
+            }
+        }
+    ]
+}

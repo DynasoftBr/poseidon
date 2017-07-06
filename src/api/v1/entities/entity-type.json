@@ -1,0 +1,43 @@
+{
+    "$schema": "./schemas/entity-type-schema.json",
+    "_id": "entity_type",
+    "name": "entity_type",
+    "label": "Entity Type",
+    "properties": [
+        {
+            "name": "_id",
+            "label": "Id",
+            "type": "string",
+            "min": 1,
+            "max": 32
+        },
+        {
+            "name": "name",
+            "label": "Name",
+            "type": "string",
+            "pattern": "/[^\\s]/g",
+            "max": 50,
+            "min": 2
+        },
+        {
+            "name": "label",
+            "label": "Label",
+            "type": "string",
+            "max": 50
+        },
+        {
+            "name": "properties",
+            "label": "Properties",
+            "type": "array",
+            "items": [
+                {
+                    "type": "abstractEntity",
+                    "ref": {
+                        "id": "property",
+                        "label": "Property"
+                    }
+                }
+            ]
+        }
+    ]
+}
