@@ -11,7 +11,6 @@ function normalizeParamsToLower(req: Request, res: Response, next: () => void) {
 
 export function ApiRouter() {
     const router = Router();
-    router.use(normalizeParamsToLower);
     router.use(new ApiV1().router);
     return router;
 }

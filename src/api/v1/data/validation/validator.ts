@@ -18,16 +18,28 @@ export class Validator {
 
     private constructor(private entityType: EntityType, private entity: Entity) {
     }
-    
+
+    /**
+     * Validates an entity against an entity type specification.
+     * @param entitytype Entity type to validate against.
+     * @param entity Object to be validated
+     * @static
+     * @func
+     */
     static validate(entitytype: EntityType, entity: Entity): Promise<void> {
         return new Promise<void>((resolve, reject) => {
+
+            // instatiates a new validator.
             let validator = new Validator(entitytype, entity);
+
+            // builds the schema for the specified entity type.
             validator.buildSchema().then(schema => {
 
-                let msgs = validator.validateJsonSchema(schema.getSchema());
+                // validates the object.
+                let problems = validator.validateJsonSchema(schema.getSchema());
 
-                if (msgs && msgs.length > 0)
-                    reject(new ValidationError(msgs));
+                if (problems && problems.length > 0)
+                    reject(new ValidationError(problems));
                 else
                     resolve();
             }).catch(err => {
@@ -36,30 +48,16 @@ export class Validator {
         });
     }
 
-    private validateJsonSchema(schema: SchemaModel): ValidationProblem[] {
-        let jsonVal = new Ajv({ allErrors: true, verbose: true });
-        let validate = jsonVal.compile(schema);
-
-        let valid = validate(this.entity);
-        if (!valid) {
-            let msgs: ValidationProblem[] = [];
-            validate.errors.forEach(err => {
-                msgs.push(ValidationProblem.buildMsg(err));
-            });
-
-            return msgs;
-        }
-
-        return null;
-    }
-
+    /**
+     * Builds the schema for the specified entity type.
+     */
     private buildSchema(): Promise<SchemaBuilderObject> {
         return new Promise((resolve, reject) => {
             let schema = new SchemaBuilder().object();
             let promises: Promise<SchemaBuilderGeneric>[] = [];
             this.entityType.props.forEach(prop => {
 
-                let bs = this.buildSchemaValidation(prop.validation, this.entityType.name);
+                let bs = this.buildSchemaValidation(schema, prop.validation, this.entityType.name);
                 promises.push(bs);
                 bs.then(res => {
                     schema.prop(prop.name,
@@ -76,8 +74,8 @@ export class Validator {
 
         });
     }
-    
-    private buildSchemaValidation(validation: Validation, etTypeName: string): Promise<SchemaBuilderGeneric> {
+
+    private buildSchemaValidation(rootSchema: SchemaBuilderCore<any>, validation: Validation, etTypeName: string): Promise<SchemaBuilderGeneric> {
         let propSchema: SchemaBuilderGeneric;
         return new Promise<SchemaBuilderGeneric>((resolve, reject) => {
 
@@ -92,6 +90,7 @@ export class Validator {
                 let lkdEtType: EntityType;
                 EntityRepository.getRepositoty("entity_type").then(etRepo => {
                     return etRepo.findOne(validation.ref.id);
+
                 }).then((lkdEntityType: EntityType) => {
                     let promises: Promise<SchemaBuilderGeneric>[] = [];
 
@@ -104,22 +103,13 @@ export class Validator {
                         });
 
                         if (foundProp) {
-                            if (foundProp.validation.type === PropertyType.linkedEntity
-                                && foundProp.validation.ref.name === validation.ref.name) {
+                            let bsPromise = this.buildSchemaValidation(rootSchema, foundProp.validation,
+                                lkdEntityType.name);
+                            promises.push(bsPromise);
 
-                                let refSchema = new SchemaBuilderGeneric({});
-                                refSchema.$ref("#");
-                                propSchema.prop(lkdProp.name, refSchema, foundProp.validation.required);
-
-                            } else {
-                                let bsPromise = this.buildSchemaValidation(foundProp.validation,
-                                    lkdEntityType.name);
-                                promises.push(bsPromise);
-
-                                bsPromise.then(schema => {
-                                    propSchema.prop(lkdProp.name, schema, foundProp.validation.required);
-                                });
-                            }
+                            bsPromise.then(schema => {
+                                propSchema.prop(lkdProp.name, schema, foundProp.validation.required);
+                            });
                         }
                     });
 
@@ -132,24 +122,30 @@ export class Validator {
 
             } else if (validation.type === PropertyType.abstractEntity) {
 
-                if (etTypeName === validation.ref.name) {
-                    propSchema = new SchemaBuilderGeneric({}).$ref("#");
-
+                propSchema = new SchemaBuilderGeneric({}).$ref("#/definitions/" + validation.ref.name);
+                let definitions = (<any>rootSchema.getSchema().definitions);
+                
+                if (definitions && definitions[validation.ref.name])
                     resolve(propSchema);
-                } else {
+
+                else {
+                    let definition = new SchemaBuilder().object();
+                    rootSchema.definitions(validation.ref.name, definition);
+
                     EntityRepository.getRepositoty("entity_type").then(etRepo => {
                         return etRepo.findOne(validation.ref.id);
+
                     }).then((abstractEtType: EntityType) => {
-                        propSchema = new SchemaBuilder().type("object");
                         let promises: Promise<SchemaBuilderGeneric>[] = [];
 
                         abstractEtType.props.forEach(absProp => {
-                            let bsPromise = this.buildSchemaValidation(absProp.validation,
+                            let bsPromise = this.buildSchemaValidation(rootSchema, absProp.validation,
                                 abstractEtType.name);
+
                             promises.push(bsPromise);
 
                             bsPromise.then(schema => {
-                                propSchema.prop(absProp.name, schema, absProp.validation.required);
+                                definition.prop(absProp.name, schema, absProp.validation.required);
                             });
                         });
 
@@ -167,10 +163,10 @@ export class Validator {
                 if (validation.uniqueItems)
                     propSchema.uniqueItems(true);
 
-                this.buildSchemaValidation(validation.items, etTypeName)
+                this.buildSchemaValidation(rootSchema, validation.items, etTypeName)
                     .then(res => {
                         propSchema.items(res);
-                        resolve();
+                        resolve(propSchema);
                     }).catch(err => {
                         reject(err);
                     });
@@ -226,6 +222,23 @@ export class Validator {
                 resolve(propSchema);
             }
         });
+    }
+
+    private validateJsonSchema(schema: SchemaModel): ValidationProblem[] {
+        let jsonVal = new Ajv({ allErrors: true, verbose: true });
+        let validate = jsonVal.compile(schema);
+
+        let valid = validate(this.entity);
+        if (!valid) {
+            let msgs: ValidationProblem[] = [];
+            validate.errors.forEach(err => {
+                msgs.push(ValidationProblem.buildMsg(err));
+            });
+
+            return msgs;
+        }
+
+        return null;
     }
 
     private parseDefaultValue(text: string, propType: string): any {
