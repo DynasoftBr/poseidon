@@ -1,13 +1,14 @@
 const PropertyType = {
-    String: "String",
-    Int: "Integer",
-    Number: "Number",
-    Date: "Date",
-    Boolean: "Boolean",
-    AbstractEntity: "AbstractEntity",
-    LinkedEntity: "LinkedEntity",
-    Array: "Array",
-    Enum: "Enum"
+    string: "string",
+    int: "integer",
+    number: "number",
+    dateTime: "dateTime",
+    boolean: "boolean",
+    abstractEntity: "abstractEntity",
+    linkedEntity: "linkedEntity",
+    array: "array",
+    enum: "enum",
+    "any": "any"
 };
 
 type PropertyType = (typeof PropertyType)[keyof typeof PropertyType];

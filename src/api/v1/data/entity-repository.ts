@@ -6,7 +6,7 @@ import { SchemaBuilderCore, SchemaBuilderGeneric } from "json-schema-fluent-buil
 import { SysMsgs, SysError, ValidationError, DatabaseError, RequestError } from "../exceptions";
 import { DataAccess } from "./data-access";
 import { EntityType, Entity } from "../models";
-import { ValidateMsg, Validator } from "./validation";
+import { ValidationProblem, Validator } from "./validation";
 import { PropertyConvention, PropertyType } from "../models/constants";
 
 
@@ -78,11 +78,7 @@ export class EntityRepository {
 
     create(entity: Entity): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Validator.prepare(this.entityType, entity);
-
-            if (this.entityType.name === "entity_type") {
-                this.buildAndSaveSchema(<EntityType>entity);
-            }
+            entity._id = new ObjectID().toHexString();
             Validator.validate(this.entityType, entity).then(() => {
 
                 this._collection.insertOne(entity).then((res) => {
@@ -91,32 +87,31 @@ export class EntityRepository {
 
                 }).catch((err: MongoError) => reject(new DatabaseError(err.message)));
 
-            }).catch((problems: ValidateMsg[]) => reject(new ValidationError(problems)));
-
+            }).catch((err: ValidationError) => reject(err));
         });
     }
 
-    update(entity: Entity): Promise<void> {
-        let oldEntity: Entity;
+    // update(entity: Entity): Promise<void> {
+    //     let oldEntity: Entity;
 
-        this.findOne(entity._id).then((res) => {
-            if (!res)
-                reject(RequestError.entityNotFound(entity._id, this.entityType.name);
-                        
-            oldEntity = res;
+    //     this.findOne(entity._id).then((res) => {
+    //         if (!res)
+    //             reject(RequestError.entityNotFound(entity._id, this.entityType.name);
 
-            entity = _.assignIn(oldEntity, entity); // Overwrite old values with new ones.
+    //         oldEntity = res;
+
+    //         entity = _.assignIn(oldEntity, entity); // Overwrite old values with new ones.
 
 
-        }).catch((err: MongoError) => reject(new DatabaseError(err.message)));
-    }
+    //     }).catch((err: MongoError) => reject(new DatabaseError(err.message)));
+    // }
 
-    save(entity: Entity): Promise<void> {
-        if (entity._id)
-            return this.update(entity);
-        else
-            return this.create(entity);
-    }
+    // save(entity: Entity): Promise<void> {
+    //     if (entity._id)
+    //         return this.update(entity);
+    //     else
+    //         return this.create(entity);
+    // }
 
     del(_id: Entity): Promise<number> {
         return new Promise<number>((resolve, reject) => {
@@ -129,16 +124,4 @@ export class EntityRepository {
 
         });
     }
-
-    private newEmptyEntity() {
-        return {
-            _id: new ObjectID().toHexString(),
-            created_at: new Date(),
-            created_by: "root",
-            updated_at: new Date(),
-            updated_by: "root"
-        };
-    }
-
-    
 }

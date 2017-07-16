@@ -10,7 +10,7 @@ export interface Validation {
     pattern: string;
     enum: any[];
     ref: Ref;
-    linkedProperties: LinkedProperty;
+    linkedProperties: LinkedProperty[];
     items: Validation;
     uniqueItems: boolean;
     multipleOf: number;

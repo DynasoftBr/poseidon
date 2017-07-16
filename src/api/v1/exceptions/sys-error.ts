@@ -26,7 +26,7 @@ export class SysError extends Error {
         return { type: this.type, code: this.code, message: this.message };
     }
 
-    
+
     /**
      * Returns a new SysError class for 'Unexpected Error' error.
      * @func

@@ -7,7 +7,7 @@ import { SysMsgs, SysError, RequestError } from "./exceptions";
 import { EntityRepository } from "./data/entity-repository";
 import { DataAccess } from "./data/data-access";
 import { Entity } from "./models";
-import { ResObj, ResObjStatus } from "./res-obj";
+import { ResObj } from "./res-obj";
 
 export class ApiV1 {
 
@@ -15,13 +15,15 @@ export class ApiV1 {
 
     private routeBase: string = "/:etName";
     constructor() {
+        this.handleUncaughtException();
+
         // Connect to database.
         DataAccess.connect();
 
         // Starts configuring routes for api
         this.router = Router();
 
-        // Bad request due to absence of entity type.
+        // Bad request, missig entity type.
         this.router.get("/", (req, res) => this.handleError(res, RequestError.noEntityTypeSpecified()));
 
         this.router.get(this.routeBase, (req, res) => this.all(req, res));
@@ -49,7 +51,7 @@ export class ApiV1 {
             repo.findAll(skip, limit).then((results) => {
 
                 let resp: ResObj = {
-                    status: ResObjStatus.success,
+                    status: "success",
                     itens: results.length,
                     result: results
                 };
@@ -78,7 +80,7 @@ export class ApiV1 {
                     let resObj: ResObj;
 
                     resObj = {
-                        status: ResObjStatus.success,
+                        status: "success",
                         itens: 1,
                         result: result
                     };
@@ -96,7 +98,7 @@ export class ApiV1 {
 
     /**
      * Query an entity based on a mongo query.
-     * @param req Request 
+     * @param req Request
      * @param res Response
      */
     private query(req: Request, res: Response) {
@@ -114,10 +116,10 @@ export class ApiV1 {
             repo.query(JSON.parse(q)).then((results) => {
 
                 let resObj: ResObj = {
-                    status: ResObjStatus.success,
+                    status: "success",
                     itens: results.length,
                     result: results
-                }
+                };
 
                 res.send(resObj);
 
@@ -160,10 +162,10 @@ export class ApiV1 {
                     let resObj: ResObj;
 
                     resObj = {
-                        status: ResObjStatus.success,
+                        status: "success",
                         itens: 1,
                         result: result
-                    }
+                    };
 
                     res.send(resObj);
                 } else // If cannot find specified id, respond with 'not found'.
@@ -202,7 +204,7 @@ export class ApiV1 {
      */
     private handleError(res: Response, error: SysError) {
         let resObj: ResObj = {
-            status: ResObjStatus.error,
+            status: "error",
             error: error
         };
 
@@ -216,11 +218,18 @@ export class ApiV1 {
             || error.code === SysMsgs.error.entityTypeNotFound.code)
 
             res.send(404, resObj);
-
+        else if (error.code === SysMsgs.validation.validationErrorMsg.code)
+            res.send(422, resObj);
         else {
             res.send(500);
             winston.error(error.message, error);
         }
 
+    }
+
+    private handleUncaughtException() {
+        process.on('uncaughtException', (err: Error) => {
+            winston.error(err.message, err);
+        });
     }
 }

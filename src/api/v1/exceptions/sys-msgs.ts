@@ -37,36 +37,69 @@ export const SysMsgs = {
     validation: {
         validationErrorMsg: {
             code: 4001,
-            message: "Some validation problems occurred."
+            message: "Some validation problems occurred. See 'validationProblems' for detail about the erros."
         },
-        entityTypeNotFound: {
+        minLength: {
             code: 4002,
-            message: "Some validation problems occurred."
-        },
-        invalidEntityProperty: {
-            code: 4003,
-            message: "The property '%s' is not valid for entity type '%s'."
-        },
-        requiredProperty: {
-            code: 4004,
-            message: "The property '%s' is required."
+            message: "The minumum length allowed for property '%s' is %d."
         },
         maxLength: {
+            code: 4003,
+            message: "The maximum length allowed for property '%s' is %d."
+        },
+        maxItems: {
+            code: 4004,
+            message: "Property '%s' cannot have more them %d item(s)."
+        },
+        minItems: {
             code: 4005,
-            message: "The maximum character allowed to property '%s' is %d."
+            message: "Property '%s' must have at least %d item(s)."
         },
-        linkedPropertyWithoutId: {
+        additionalProperties: {
             code: 4006,
-            message: "The linked property '%s' does not have an '_id' field."
+            message: "The property '%s' is not part of this entity type."
         },
-        invalidLinkedPropertyId: {
+        dateFormat: {
             code: 4007,
-            message: "Can't find an entity of type '%s' with the id '%s'."
+            message: "Invalid date-time."
         },
-        invalidDataType: {
+        minimum: {
             code: 4008,
-            message: "Property '%s' has an invalid data type, was expected '%s'."
+            message: "The minimum value for property '%s' is %d."
+        },
+        maximum: {
+            code: 4009,
+            message: "The maximum value for property '%s' is %d."
+        },
+        multipleOf: {
+            code: 4010,
+            message: "Property '%s' must be multiple of %d."
+        },
+        pattern: {
+            code: 4011,
+            message: "Property '%s' doesn't match de pattern '%s'."
+        },
+        required: {
+            code: 4012,
+            message: "Property '%s' is missing."
+        },
+        type:{
+            code: 4013,
+            message: "Invalid data type. Expected '%s"
+        },
+        uniqueItems: {
+            code: 4014,
+            message: "The property '%s' must have unique values. %d and %d are duplicate."
+        },
+        enum: {
+            code: 4015,
+            message: "The value '%s' for property '%s' is not valid."
+        },
+        linkedEntityDoesNotExist: {
+            code: 4009,
+            message: "Can't find a entity of type %s with the id %d specifyed in property %s."
         }
+
     },
     crash: {
         unexpectedError: {

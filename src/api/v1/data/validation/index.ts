@@ -1,2 +1,2 @@
-export * from "./validate-msg";
+export * from "./validation-problem";
 export * from "./validator";

@@ -23,10 +23,9 @@ dotenv.config({ path: __dirname + "/../.env" });
 // winston.level = process.env.LOG_LEVEL;
 winston.configure({
   transports: [
-    new (winston.transports.File)({ filename: "somefile.log" })
+    new (winston.transports.File)({ filename: "sysLog.log" })
   ]
 });
-winston.info("Agora foi");
 
 /**
  * Create Express server.
