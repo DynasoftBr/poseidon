@@ -1,0 +1,149 @@
+{
+    "_id": "EntityType",
+    "_version" : 1,
+    "name": "EntityType",
+    "abstract": false,
+    "createdAt": "2017-05-26T18:29:23.483Z",
+    "createdBy" : {
+        "_id" : "root",
+        "name" : "root"
+    },
+    "beforeValidation" : "ZW50aXR5LnRlc3RlID0gInRlc3RlIjs=",
+    "props" : [ 
+        {
+            "_id" : "_id",
+            "name" : "_id",
+            "validation" : {
+                "type" : "string",
+                "required" : true,
+                "max" : 32,
+                "min" : 1
+            }
+        }, 
+        {
+            "_id" : "name",
+            "name" : "name",
+            "validation" : {
+                "type" : "string",
+                "required" : true,
+                "pattern" : "^([^0-9]\\w+)$",
+                "convention" : "lowercase",
+                "max" : 50,
+                "min" : 1
+            }
+        }, 
+        {
+            "_id" : "abstract",
+            "name" : "abstract",
+            "validation" : {
+                "type" : "boolean",
+                "default" : false
+            }
+        }, 
+        {
+            "_id" : "createdBy",
+            "name" : "createdBy",
+            "validation" : {
+                "type" : "linkedEntity",
+                "required" : true,
+                "ref" : {
+                    "_id" : "user",
+                    "name" : "user",
+                    "label" : "User"
+                },
+                "linkedProperties" : [ 
+                    {
+                        "_id" : "_id",
+                        "name" : "_id",
+                        "label" : "Id",
+                        "keepUpToDate" : true
+                    }, 
+                    {
+                        "_id" : "name",
+                        "name" : "name",
+                        "label" : "Name",
+                        "keepUpToDate" : true
+                    }
+                ]
+            }
+        }, 
+        {
+            "_id" : "changedBy",
+            "name" : "changedBy",
+            "validation" : {
+                "type" : "linkedEntity",
+                "required" : false,
+                "ref" : {
+                    "_id" : "user",
+                    "name" : "user",
+                    "label" : "User"
+                },
+                "linkedProperties" : [ 
+                    {
+                        "_id" : "_id",
+                        "name" : "_id",
+                        "label" : "Id",
+                        "keepUpToDate" : true
+                    }, 
+                    {
+                        "_id" : "name",
+                        "name" : "name",
+                        "label" : "Name",
+                        "keepUpToDate" : true
+                    }
+                ]
+            }
+        }, 
+        {
+            "_id" : "createdAt",
+            "name" : "createdAt",
+            "validation" : {
+                "type" : "dateTime",
+                "required" : true,
+                "default" : "[[NOW]]"
+            }
+        }, 
+        {
+            "_id" : "changedAt",
+            "name" : "changedAt",
+            "validation" : {
+                "type" : "dateTime"
+            }
+        }, 
+        {
+            "_id" : "beforeValidation",
+            "name" : "beforeValidation",
+            "validation" : {
+                "type" : "javascript",
+                "required" : false
+            }
+        }, 
+        {
+            "_id" : "props",
+            "name" : "props",
+            "validation" : {
+                "type" : "array",
+                "items" : {
+                    "type" : "AbstractEntity",
+                    "ref" : {
+                        "_id" : "EntityProperty",
+                        "name" : "EntityProperty",
+                        "label" : "Entity Property"
+                    },
+                    "minItems" : 1
+                },
+                "uniqueItems" : true,
+                "required" : true
+            }
+        }, 
+        {
+            "_id" : "_version",
+            "name" : "_version",
+            "validation" : {
+                "type" : "integer",
+                "required" : true,
+                "min" : 1
+            }
+        }
+    ]
+}

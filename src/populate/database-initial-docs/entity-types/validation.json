@@ -1,0 +1,180 @@
+{
+    "_id": "validation",
+    "_version" : 1,
+    "name": "validation",
+    "abstract": true,
+    "createdAt": "2017-05-26T18:29:23.483Z",
+    "createdBy": {
+        "_id": "root",
+        "name": "root"
+    },
+    "props": [
+        {
+            "_id": "type",
+            "name": "type",
+            "validation": {
+                "type": "enum",
+                "required": true,
+                "enum": [
+                    "string",
+                    "integer",
+                    "number",
+                    "dateTime",
+                    "boolean",
+                    "abstractEntity",
+                    "linkedEntity",
+                    "array",
+                    "enum",
+                    "javascript"
+                ]
+            }
+        },
+        {
+            "_id": "required",
+            "name": "required",
+            "validation": {
+                "type": "boolean",
+                "required": false,
+                "default": false
+            }
+        },
+        {
+            "_id": "min",
+            "name": "min",
+            "validation": {
+                "type": "number",
+                "required": false
+            }
+        },
+        {
+            "_id": "max",
+            "name": "max",
+            "validation": {
+                "type": "number",
+                "required": false
+            }
+        },
+        {
+            "name": "pattern",
+            "validation": {
+                "type": "string",
+                "required": false
+            }
+        },
+        {
+            "_id": "enum",
+            "name": "enum",
+            "validation": {
+                "type": "array",
+                "required": false,
+                "items": {
+                    "type": "any"
+                },
+                "minItems": 1
+            }
+        },
+        {
+            "_id": "ref",
+            "name": "ref",
+            "validation": {
+                "type": "abstractEntity",
+                "required": false,
+                "ref": {
+                    "_id": "ref",
+                    "name": "ref",
+                    "label": "Ref"
+                }
+            }
+        },
+        {
+            "_id": "linkedProperties",
+            "name": "linkedProperties",
+            "validation": {
+                "type": "array",
+                "required": false,
+                "items": {
+                    "type": "abstractEntity",
+                    "ref": {
+                        "_id": "LinkedProperty",
+                        "name": "LinkedProperty",
+                        "label": "Linked Property"
+                    }
+                }
+            }
+        },
+        {
+            "_id": "items",
+            "name": "items",
+            "validation": {
+                "type": "abstractEntity",
+                "required": false,
+                "ref": {
+                    "_id": "validation",
+                    "name": "validation",
+                    "label": "Validation"
+                }
+            }
+        },
+        {
+            "_id": "uniqueItems",
+            "name": "uniqueItems",
+            "validation": {
+                "type": "boolean",
+                "required": false
+            }
+        },
+        {
+            "_id": "multipleOf",
+            "name": "multipleOf",
+            "validation": {
+                "type": "number",
+                "required": false
+            }
+        },
+        {
+            "_id": "default",
+            "name": "default",
+            "validation": {
+                "type": "string",
+                "required": false
+            }
+        },
+        {
+            "_id": "convention",
+            "name": "convention",
+            "validation": {
+                "type": "enum",
+                "required": false,
+                "enum": [
+                    "lowercase",
+                    "Capitalize First Letter",
+                    "UPPERCASE"
+                ]
+            }
+        },
+        {
+            "_id": "base64Encoded",
+            "name": "base64Encoded",
+            "validation": {
+                "type": "boolean",
+                "required": false
+            }
+        },
+        {
+            "_id": "unique",
+            "name": "unique",
+            "validation": {
+                "type": "boolean",
+                "required": false
+            }
+        },
+        {
+            "_id": "indexed",
+            "name": "indexed",
+            "validation": {
+                "type": "boolean",
+                "required": false
+            }
+        }
+    ]
+}

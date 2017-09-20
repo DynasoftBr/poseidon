@@ -1,0 +1,43 @@
+{
+    "_id": "ref",
+    "_version" : 1,
+    "name": "ref",
+    "abstract": true,
+    "createdAt": "2017-05-26T18:29:23.483Z",
+    "createdBy": {
+        "_id": "root",
+        "name": "root"
+    },
+    "props": [
+        {
+            "_id": "_id",
+            "name": "_id",
+            "validation": {
+                "type": "string",
+                "required": true,
+                "max": 32,
+                "min": 1
+            }
+        },
+        {
+            "_id": "name",
+            "name": "name",
+            "validation": {
+                "type": "string",
+                "required": true,
+                "max": 50,
+                "min": 1
+            }
+        },
+        {
+            "_id": "label",
+            "name": "label",
+            "validation": {
+                "type": "string",
+                "required": false,
+                "max": 50,
+                "min": 1
+            }
+        }
+    ]
+}
