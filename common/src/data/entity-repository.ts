@@ -4,7 +4,8 @@ import * as _ from "lodash";
 import { SysMsgs } from "../";
 import { SysError } from "../";
 import { DataAccess } from "./data-connection";
-import { EntityType, Entity, SysEntities } from "../models";
+import { EntityType, Entity } from "../models";
+import { SysEntities } from "../constants";
 import { ValidationError, ValidationProblem, Validator, EntityFactory } from "./validation";
 import { EntityRepositoryEvents } from "./entity-repository-events";
 import { DatabaseError } from "./database-error";
@@ -55,9 +56,7 @@ export class EntityRepository {
     findAll(skip: number = 0, limit: number = 500): Promise<Entity[]> {
         return new Promise((resolve, reject) => {
             this._collection.find().skip(skip).limit(limit).toArray().then((result) => {
-
                 resolve(result);
-
             }).catch((err) => {
                 reject(SysError.unexpectedError(err));
             });
