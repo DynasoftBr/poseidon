@@ -6,13 +6,18 @@
         "moduleResolution": "node",
         "sourceMap": true,
         "outDir": "dist",
-        "baseUrl": ".",
+        "baseUrl": "../",
         "paths": {
             "*": [
                 "node_modules/*",
                 "src/types/*"
             ]
-        }
+        },
+        "plugins": [
+            {
+                "name": "tslint-language-service"
+            }
+        ]
     },
     "include": [
         "src/**/*"

@@ -1,5 +1,3 @@
-const { VM } = require("vm2");
-
 import { Entity, EntityType } from "../models";
 import { ValidationProblem } from "./validation";
 
@@ -14,15 +12,17 @@ export class EntityRepositoryEvents {
         if (!this.entityType.beforeValidation)
             return entity;
 
-        let fun = Buffer.from(this.entityType.beforeValidation, "base64").toString("hex");
-        let vm = new VM({
-            timeout: 5000,
-            sandbox: { entity }
-        });
+        // let fun = Buffer.from(this.entityType.beforeValidation, "base64").toString("hex");
+        // let vm = new VM({
+        //     timeout: 5000,
+        //     sandbox: { entity }
+        // });
 
-        let retEntity = vm(fun);
+        // let retEntity = vm(fun);
 
-        return retEntity;
+        // return retEntity;
+
+        return null;
     }
 
     validating(entity: Entity): ValidationProblem[] {

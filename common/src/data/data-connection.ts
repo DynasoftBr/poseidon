@@ -1,39 +1,51 @@
 import { Db, MongoClient } from "mongodb";
 import winston = require("winston"); // Logger. Uses configuration made in server.ts.
 
-import { SysError, SysMsgs } from "../";
+import { SysError, SysMsgs, DatabaseError } from "../";
 import * as Data from "./";
+import { resolve } from "path";
 
-export class DataConnection {
+class DataConnection implements IDataConnection {
     database: Db;
     private retrys = 0;
     private _instance: DataConnection;
     /**
      * Opens database connection.
      */
-    connect(config: Data.MongoDbConfiguration, retry: boolean = false) {
+    async connect(config: Data.MongoDbConfiguration, retry: boolean = false) {
+
         if (retry)
             winston.info(SysMsgs.format(SysMsgs.info.tryingConnectToDatabaseAgain));
 
-        MongoClient.connect(config.connectionString).then(db => {
-            this.database = db;
+        try {
+            let client = await MongoClient.connect(config.url);
 
             winston.info(SysMsgs.info.connectedToDatabase.message);
 
-        }).catch((err) => {
-            let error = new Data.DatabaseError(err);
-            winston.error(error.message, error);
-
-            if (this.retrys <= 5) {
+            return this.database = client.db(config.dbName);
+        } catch (err) {
+            // Retry for configurated times.
+            if (this.retrys < config.retries) {
                 this.retrys++;
 
-                winston.info(SysMsgs.format(SysMsgs.info.cannotConnectToDatabase, 30));
-                setTimeout(() => {
-                    this.connect(config, true);
-                }, 30000);
+                // log a warn.
+                winston.warn(SysMsgs.format(SysMsgs.info.cannotConnectToDatabase, config.timeBetweenRetries));
+
+                // After configurated time retry connect to database.
+                const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+                await delay(config.timeBetweenRetries * 1000);
+
+                await this.connect(config, true);
+            } else {
+                throw err;
             }
-        });
+        }
     }
 }
 
-export let DataAccess = new DataConnection();
+export interface IDataConnection {
+    database: Db;
+    connect(config: Data.MongoDbConfiguration, retry?: boolean): Promise<Db>;
+}
+
+export let DataAccess: IDataConnection = new DataConnection();

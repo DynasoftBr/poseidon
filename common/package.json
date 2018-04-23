@@ -4,7 +4,7 @@
   "description": "Common objects for poseidon ecosystem.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Leandro-Albano/poseidon.git"
+    "url": "https://github.com/Leandro-Albano/poseidon.git"
   },
   "author": "dynasoft",
   "license": "MIT",
@@ -12,19 +12,19 @@
     "url": "https://github.com/Leandro-Albano/poseidon/issues"
   },
   "homepage": "https://github.com/Leandro-Albano/poseidon",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "dist/index.js",
+  "types": "src/",
   "keywords": [
     "poseidon"
   ],
   "scripts": {
     "start": "npm run build",
     "rimraf": "rimraf",
-    "build": "npm run clean:lib && npm run build-ts && npm run tslint",
+    "build": "npm run clean:dist && npm run build-ts && npm run tslint",
     "test": "mocha tests/ --compilers ts:ts-node/register --recursive",
     "build-ts": "tsc",
     "tslint": "tslint -c tslint.json -p tsconfig.json",
-    "clean:lib": "npm run rimraf -- lib"
+    "clean:dist": "npm run rimraf -- dist"
   },
   "dependencies": {
     "ajv": "^6.4.0",

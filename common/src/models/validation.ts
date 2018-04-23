@@ -1,6 +1,6 @@
 import { Entity } from "./entity";
-import { PropertyType, Ref, LinkedProperty } from "./";
-import { PropertyConvention } from "./constants";
+import { Ref, LinkedProperty } from "./";
+import { PropertyConvention, PropertyType } from "../constants";
 
 export interface Validation {
     type: PropertyType;

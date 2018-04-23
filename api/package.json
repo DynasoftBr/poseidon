@@ -14,14 +14,14 @@
   "homepage": "https://github.com/Leandro-Albano/poseidon",
   "scripts": {
     "start": "npm update && npm run build && npm run watch",
-    "build": "npm run clean:lib && npm run build-ts && npm run tslint",
+    "build": "npm run clean:dist && npm run build-ts && npm run tslint",
     "serve": "node dist/server.js",
     "watch": "nodemon dist/",
     "test": "jest --forceExit",
     "build-dependecies": "npm run build:common",
     "build:common": "npm start --prefix common/",
     "build-ts": "tsc",
-    "clean:lib": "npm run rimraf -- lib",
+    "clean:dist": "npm run rimraf -- dist",
     "rimraf": "rimraf",
     "watch-ts": "tsc -w",
     "tslint": "tslint -c tslint.json -p tsconfig.json"
