@@ -1,3 +1,6 @@
 export interface MongoDbConfiguration {
-    connectionString: string;
+    url: string;
+    dbName: string;
+    retries: number;
+    timeBetweenRetries: number;
 }

@@ -4,7 +4,7 @@
   "description": "Common objects for poseidon ecosystem.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Leandro-Albano/poseidon.git"
+    "url": "https://github.com/Leandro-Albano/poseidon.git"
   },
   "author": "dynasoft",
   "license": "MIT",
@@ -12,39 +12,37 @@
     "url": "https://github.com/Leandro-Albano/poseidon/issues"
   },
   "homepage": "https://github.com/Leandro-Albano/poseidon",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "dist/index.js",
+  "types": "src/",
   "keywords": [
     "poseidon"
   ],
   "scripts": {
     "start": "npm run build",
     "rimraf": "rimraf",
-    "build": "npm run clean:lib && npm run build-ts && npm run tslint",
+    "build": "npm run clean:dist && npm run build-ts && npm run tslint",
     "test": "mocha tests/ --compilers ts:ts-node/register --recursive",
     "build-ts": "tsc",
     "tslint": "tslint -c tslint.json -p tsconfig.json",
-    "clean:lib": "npm run rimraf -- lib"
+    "clean:dist": "npm run rimraf -- dist"
   },
   "dependencies": {
-    "ajv": "5.2.2",
+    "ajv": "^6.4.0",
     "json-schema-fluent-builder": "0.9.15",
-    "lodash": "4.17.4",
-    "moment": "2.18.1",
-    "mongodb": "2.2.31",
-    "winston": "2.3.1"
+    "lodash": "^4.17.5",
+    "moment": "^2.22.1",
+    "mongodb": "^3.0.7",
+    "winston": "^2.4.2"
   },
   "devDependencies": {
-    "@types/ajv": "1.0.0",    
-    "@types/lodash": "^4.14.64",
-    "@types/mongodb": "2.2.10",
-    "@types/moment": "2.13.0",
-    "@types/node": "^7.0.22",
-    "@types/winston": "^2.3.2",    
-    "rimraf": "2.6.1",
-    "tslint": "^5.7.0",
-    "tslint-eslint-rules": "4.1.1",
-    "tslint-language-service": "0.9.6",
-    "typescript": "2.4.2"
+    "@types/lodash": "^4.14.107",
+    "@types/mongodb": "^3.0.15",
+    "@types/node": "^9.6.6",
+    "@types/winston": "^2.3.9",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.9.1",
+    "tslint-eslint-rules": "^5.1.0",
+    "tslint-language-service": "^0.9.9",
+    "typescript": "^2.8.3"
   }
 }
