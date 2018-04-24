@@ -22,29 +22,25 @@ winston.configure({
   ]
 });
 
+// connect to database
+DataAccess.connect({
+  url: process.env.MONGODB_URI,
+  dbName: process.env.DB_NAME,
+  retries: parseInt(process.env.RETRIES),
+  timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
+}).then(db => {
+  // let coll = db.collection("EntityType1");
+  // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
+  // coll.indexes().then(idxs => {
+  //   console.log(idxs);
+  // });
+  // // });
+}).catch(err => {
+  winston.error(new DatabaseError(SysMsgs.error.databaseLevelError, err).message);
+  process.exit(SysMsgs.error.databaseLevelError.code);
+});
 
-try {
-  // connect to database
-  DataAccess.connect({
-    url: process.env.MONGODB_URI,
-    dbName: process.env.DB,
-    retries: parseInt(process.env.RETRIES),
-    timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
-  }).then(db => {
-    // let coll = db.collection("EntityType1");
-    // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
-    // coll.indexes().then(idxs => {
-    //   console.log(idxs);
-    // });
-    // // });
-  }).catch(err => {
-    winston.error(new DatabaseError(SysMsgs.error.databaseLevelError, err).message);
-    process.exit(SysMsgs.error.databaseLevelError.code);
-  });
-} catch (error) {
-  console.log("teste");
-}
-
-
-// Start server
+/**
+ * Start Server.
+ */
 Server.init();
