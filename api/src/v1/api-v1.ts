@@ -1,12 +1,12 @@
 import * as util from "util";
 
 import { Router, Request, Response, Express } from "express";
-import winston = require("winston"); // Logger. Uses configuration made in server.ts.
+import * as winston from "winston"; // Logger. Uses configuration made in server.ts.
 
 import {
     SysError, SysMsgs, SysMsg,
     DatabaseError, EntityRepository, Entity
-} from "../common";
+} from "@poseidon/common";
 
 import { ResObj } from "./res-obj";
 import { RequestError } from "./request-error";
@@ -32,7 +32,6 @@ export class ApiV1 {
             new RequestError(SysMsgs.error.noEntityTypeSpecified)));
 
         router.get(routeBase, (req, res) => api.all(req, res));
-        router.get(routeBase + "/query", (req, res) => api.query(req, res));
         router.get(routeBase + "/:id", (req, res) => api.findOne(req, res));
         router.post(routeBase, (req, res) => api.create(req, res));
         router.put(routeBase + "/:id", (req, res) => api.update(req, res));
@@ -51,23 +50,21 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private all(req: Request, res: Response): void {
-        EntityRepository.getRepositoty(req.params.etName).then((repo) => {
+    private async all(req: Request, res: Response) {
+        try {
+            let repo = await EntityRepository.getRepositoty(req.params.etName);
 
             // Get skip and limit from query string.
             // if not provided, use undefined to preserv function defaults.
             let skip = req.query.skip ? parseInt(req.query.skip) : undefined;
             let limit = req.query.limit ? parseInt(req.query.limit) : undefined;
 
-            repo.findAll(skip, limit).then((results) => {
+            let results = await repo.findAll(skip, limit);
 
-                res.send(this.responseSuccess(results, results.length));
-
-                // this is an unexpected error.
-            }).catch((err) => this.handleError(res, err));
-
-            // can't create a repository from the specified entity type.
-        }).catch((err) => this.handleError(res, err));
+            res.send(this.responseSuccess(results, results.length));
+        } catch (error) {
+            this.handleError(res, error);
+        }
     }
 
     /**
@@ -75,47 +72,18 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private findOne(req: Request, res: Response): void {
-        EntityRepository.getRepositoty(req.params.etName).then(repo => {
+    private async findOne(req: Request, res: Response) {
+        try {
+            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let result = await repo.findOne(req.params.id);
 
-            repo.findOne(req.params.id).then((result) => {
-
-                // If result is not undefined, then we respond with success.
-                if (result) {
-                    res.send(this.responseSuccess(result, 1));
-                } else // If cannot find specified id, respond with 'not found'.
-                    this.handleError(res, new RequestError(SysMsgs.error.entityNotFound));
-
-                // this is an unexpected error.
-            }).catch((err) => this.handleError(res, err));
-
-            // can't create a repository from the specified entity type.
-        }).catch((err) => this.handleError(res, err));
-    }
-
-    /**
-     * Query an entity based on a mongo query.
-     * @param req Request
-     * @param res Response
-     */
-    private query(req: Request, res: Response) {
-        EntityRepository.getRepositoty(req.params.etName).then(repo => {
-
-            // Check if the request has a query key in the header.
-            if (!req.headers.query) {
-                this.handleError(res, new RequestError(SysMsgs.error.invalidHeaderParameters, "query"));
-                return;
-            }
-
-            // The query must be base64 encoded.
-            let q = new Buffer(req.headers.query, "base64").toString();
-
-            repo.query(JSON.parse(q)).then((results) => {
-                res.send(this.responseSuccess(results, results.length));
-
-            }).catch((err) => this.handleError(res, err));
-
-        }).catch((err) => this.handleError(res, err));
+            if (result) {
+                res.send(this.responseSuccess(result, 1));
+            } else // If cannot find specified id, respond with 'not found'.
+                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound));
+        } catch (error) {
+            this.handleError(res, error);
+        }
     }
 
     /**
@@ -123,18 +91,20 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private create(req: Request, res: Response) {
+    private async create(req: Request, res: Response) {
 
         let entity: Entity = req.body;
-        EntityRepository.getRepositoty(req.params.etName)
-            .then(repo => repo.create(entity))
-            .then(result => {
-                res.statusCode = 201;
-                res.location("/" + result);
-                res.send(this.responseSuccess({ _id: result }, 1));
 
-            }).catch((err) => this.handleError(res, err));
+        try {
+            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let result = await repo.create(entity);
 
+            res.statusCode = 201;
+            res.location("/" + result);
+            res.send(this.responseSuccess({ _id: result }, 1));
+        } catch (error) {
+            this.handleError(res, error);
+        }
     }
 
     /**
@@ -142,22 +112,22 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private delete(req: Request, res: Response) {
-        EntityRepository.getRepositoty(req.params.etName).then(repo => {
+    private async delete(req: Request, res: Response) {
 
-            let _id: Entity = req.params.id;
+        let _id: Entity = req.params.id;
 
-            repo.del(_id).then((result) => {
+        try {
+            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let deleteCount = await repo.del(_id);
 
-                if (result > 0) {
-                    res.send(this.responseSuccess(null, 1));
-                } else // If cannot find specified id, respond with 'not found'.
-                    this.handleError(res, new RequestError(SysMsgs.error.entityNotFound,
-                        req.params.etName, req.params.id));
+            // If cannot find specified id, respond with 'not found'.
+            if (deleteCount == 0)
+                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound, req.params.etName, req.params.id));
 
-            }).catch((err) => this.handleError(res, err));
-
-        }).catch((err) => this.handleError(res, err));
+            res.send(this.responseSuccess(null, 1));
+        } catch (error) {
+            this.handleError(res, error);
+        }
     }
 
     /**
@@ -165,19 +135,22 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private update(req: Request, res: Response) {
-        EntityRepository.getRepositoty(req.params.etName).then(repo => {
+    private async update(req: Request, res: Response) {
 
-            let entity: Entity = req.body;
-            repo.update(entity).then((result) => {
-                res.send(204);
-            }).catch((err) => {
-                this.handleError(res, err);
-            });
+        let entity: Entity = req.body;
 
-        }).catch(err => {
-            this.handleError(res, err);
-        });
+        try {
+            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let updatedCount = await repo.update(entity);
+
+            // If cannot find specified id, respond with 'not found'.
+            if (updatedCount == 0)
+                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound, req.params.etName, req.params.id));
+
+            res.send(204);
+        } catch (error) {
+            this.handleError(res, error);
+        }
     }
 
     readonly responseObj: ResObj = {
@@ -226,6 +199,5 @@ export class ApiV1 {
             res.status(500).send();
             winston.error(error.message, error);
         }
-
     }
 }

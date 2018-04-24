@@ -2,9 +2,9 @@ import * as _ from "lodash";
 import * as Ajv from "ajv";
 
 import {
-    EntityType, EntityProperty, Entity, PropertyConvention,
-    PropertyType, Validation, SysEntities, SysProperties
+    EntityType, EntityProperty, Entity, Validation
 } from "../../models";
+import { PropertyConvention, PropertyType, SysEntities, SysProperties } from "../../constants";
 import { ValidationError, ValidationProblem } from "./";
 import { EntityRepository } from "../entity-repository";
 import { SchemaBuilder } from "json-schema-fluent-builder";

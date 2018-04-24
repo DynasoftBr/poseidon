@@ -8,47 +8,56 @@ import * as bodyParser from "body-parser";
 import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
 import * as path from "path";
+import * as dotenv from "dotenv";
 
+// APIs
 import { ApiV1 } from "./v1/api-v1";
 
-export function init(): Promise<express.Express> {
+// Middlewares
+import { customLogger, mqueryParser } from "./middlewares";
 
-  return new Promise<express.Express>((resolve) => {
-    /**
-     * Create Express server.
-     */
-    const app = express();
+export async function init(): Promise<express.Express> {
 
-    /**
-     * Express configuration.
-     */
-    app.set("port", process.env.PORT || 3000);
+  /**
+   * Create Express server.
+   */
+  const app = express();
 
-    app.use(compression());
-    app.use(logger("dev"));
-    app.use(bodyParser.json());
-    app.use(bodyParser.urlencoded({ extended: true }));
+  /**
+   * Express configuration.
+   */
+  app.set("port", process.env.PORT || 3000);
 
-    // API Router
-    let apiRouter = express.Router();
-    app.use("/api", apiRouter);
+  app.use(compression());
+  app.use(logger("dev"));
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
 
-    // API V1
-    ApiV1.init(apiRouter);
+  app.use(customLogger);
 
-    /**
-     * Error Handler. Provides full stack - remove for production
-     */
-    app.use(errorHandler());
+  // Parses query parameter 'query' to an object.
+  app.use(mqueryParser);
 
-    /**
-     * Start Express server.
-     */
-    app.listen(app.get("port"), () => {
-      console.log(("App is running at http://localhost:%d in %s mode"), app.get("port"), app.get("env"));
-      console.log("Press CTRL-C to stop\n");
+  // API Router
+  let apiRouter = express.Router();
+  app.use("/api", apiRouter);
 
-      resolve(app);
-    });
+  // API V1
+  ApiV1.init(apiRouter);
+
+  /**
+   * Error Handler. Provides full stack - remove for production
+   */
+  app.use(errorHandler());
+
+  /**
+   * Start Express server.
+   */
+
+  app.listen(app.get("port"), () => {
+    console.log(("App is running at http://localhost:%d in %s mode"), app.get("port"), app.get("env"));
+    console.log("Press CTRL-C to stop\n");
   });
+
+  return app;
 }

@@ -1,10 +1,7 @@
 import * as moment from "moment";
 import * as _ from "lodash";
-
-import {
-    SysProperties, EntityType, Entity,
-    PropertyType, PropertyConvention
-} from "../../models";
+import { SysProperties, PropertyType, PropertyConvention } from "../../constants";
+import { EntityType, Entity } from "../../models";
 import { SysError } from "../../";
 
 /**
