@@ -19,7 +19,7 @@ export class EntityRepository {
         this._collection = DataAccess.database.collection(entityType.name);
     }
 
-    static async getRepositoty(entityTypeName: string): Promise<EntityRepository> {
+    static async create(entityTypeName: string): Promise<EntityRepository> {
 
         // Check if database connection id open before continue.
         if (!DataAccess.database)

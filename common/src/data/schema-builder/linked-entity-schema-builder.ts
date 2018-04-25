@@ -16,7 +16,7 @@ export class LinkedEntitySchemaBuilder extends AbstractSchamaBuilderStrategy {
         propSchema.additionalProperties(false);
 
         // Get's an entity type repository then finds the linked entity type.
-        let etRepo = await EntityRepository.getRepositoty(SysEntities.entityType);
+        let etRepo = await EntityRepository.create(SysEntities.entityType);
         let lkdEntityType: EntityType = <EntityType>(await etRepo.findOne(validation.ref._id));
 
         // Iterate linked properties to build each schema validation

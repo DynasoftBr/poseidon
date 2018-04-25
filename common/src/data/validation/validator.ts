@@ -115,7 +115,7 @@ export class Validator {
                 let lkdEtType: EntityType;
 
                 // Get's an entity type repository then finds the linked entity type.
-                EntityRepository.getRepositoty(SysEntities.entityType).then(etRepo => {
+                EntityRepository.create(SysEntities.entityType).then(etRepo => {
                     return etRepo.findOne(validation.ref._id);
 
                 }).then((lkdEntityType: EntityType) => {
@@ -160,7 +160,7 @@ export class Validator {
 
                     definition.additionalProperties(false);
 
-                    EntityRepository.getRepositoty(SysEntities.entityType).then(etRepo => {
+                    EntityRepository.create(SysEntities.entityType).then(etRepo => {
                         return etRepo.findOne(validation.ref._id);
 
                     }).then((abstractEtType: EntityType) => {
@@ -282,7 +282,7 @@ export class Validator {
                 if (prop.validation.type === PropertyType.linkedEntity
                     && this.entity[prop.name] && this.entity[prop.name]._id) {
 
-                    let promise: Promise<Entity> = EntityRepository.getRepositoty(prop.validation.ref.name).then(repo => {
+                    let promise: Promise<Entity> = EntityRepository.create(prop.validation.ref.name).then(repo => {
                         return repo.findOne(this.entity[prop.name]._id);
                     });
 

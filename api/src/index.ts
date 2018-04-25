@@ -31,7 +31,6 @@ DataAccess.connect({
   retries: parseInt(process.env.RETRIES),
   timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
 }).then(db => {
-  winston.error("teste");
   // let coll = db.collection("EntityType1");
   // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
   // coll.indexes().then(idxs => {
