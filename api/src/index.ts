@@ -1,3 +1,5 @@
+import * as path from "path";
+
 import * as dotenv from "dotenv";
 import * as winston from "winston"; // Logger. Uses configuration made in server.ts.
 
@@ -7,7 +9,7 @@ import * as Server from "./server";
 /**
  * Load environment variables from .env file, where API keys and passwords are configured.
  */
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 console.log(`Running enviroment ${process.env.NODE_ENV || "dev"}`);
 
@@ -29,6 +31,7 @@ DataAccess.connect({
   retries: parseInt(process.env.RETRIES),
   timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
 }).then(db => {
+  winston.error("teste");
   // let coll = db.collection("EntityType1");
   // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
   // coll.indexes().then(idxs => {
