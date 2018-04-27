@@ -25,7 +25,7 @@ export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
 
             definition.additionalProperties(false);
 
-            let etRepo = await EntityRepository.create(SysEntities.entityType);
+            let etRepo = await EntityRepository.createByName(SysEntities.entityType);
             let abstractEtType: EntityType = <EntityType>await etRepo.findOne(validation.ref._id);
 
             abstractEtType.props.forEach(async (absProp) => {

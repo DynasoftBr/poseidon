@@ -12,16 +12,13 @@ import { DatabaseError } from "./database-error";
 
 export class EntityRepository {
     private readonly _collection: Collection;
-    protected readonly entityType: EntityType;
-
-    private constructor(entityType: EntityType) {
-        this.entityType = entityType;
+    private constructor(protected readonly entityType: EntityType) {
         this._collection = DataAccess.database.collection(entityType.name);
     }
 
-    static async create(entityTypeName: string): Promise<EntityRepository> {
+    static async createByName(entityTypeName: string): Promise<EntityRepository> {
 
-        // Check if database connection id open before continue.
+        // Check if database connection is open before continue.
         if (!DataAccess.database)
             throw new DatabaseError(SysMsgs.error.databaseConnectionClosed);
 
@@ -47,10 +44,7 @@ export class EntityRepository {
         try {
             return await this._collection.find().skip(skip).limit(limit).toArray();
         } catch (error) {
-            if (error instanceof MongoError)
-                throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
-
-            throw error;
+            this.handleError(error);
         }
     }
 
@@ -58,14 +52,11 @@ export class EntityRepository {
         try {
             return await this._collection.findOne({ _id: id });
         } catch (error) {
-            if (error instanceof MongoError)
-                throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
-
-            throw error;
+            this.handleError(error);
         }
     }
 
-    async create(entity: Entity): Promise<string> {
+    async insertOne(entity: Entity): Promise<string> {
 
         let factory = new EntityFactory(this.entityType, entity);
         factory.ensureIdProperty();
@@ -97,10 +88,7 @@ export class EntityRepository {
         try {
             let created = await this._collection.insertOne(entity);
         } catch (error) {
-            if (error instanceof MongoError)
-                throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
-
-            throw error;
+            this.handleError(error);
         }
 
         // Event to notify that object has been successfuly saved.
@@ -128,21 +116,22 @@ export class EntityRepository {
             let result = await this._collection.updateOne({ _id: entity._id }, entity);
             return result.matchedCount;
         } catch (error) {
-            if (error instanceof MongoError)
-                throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
-
-            throw error;
+            this.handleError(error);
         }
     }
 
-    async del(_id: Entity): Promise<number> {
+    async deleteOne(_id: Entity): Promise<number> {
         try {
             return (await this._collection.deleteOne({ _id: _id })).deletedCount;
         } catch (error) {
-            if (error instanceof MongoError)
-                throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
-
-            throw error;
+            this.handleError(error);
         }
+    }
+
+    handleError(error: any) {
+        if (error instanceof MongoError)
+            throw new DatabaseError(SysMsgs.error.databaseLevelError, error);
+
+        throw error;
     }
 }
