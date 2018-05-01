@@ -2,7 +2,7 @@ import { SchemaBuilderObject, SchemaBuilderGeneric, SchemaBuilderCore } from "js
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { Entity, EntityType, Validation, EntityProperty } from "../../models";
 import { PropertyType, SysEntities } from "../../constants";
-import { EntityRepository } from "../";
+
 import { LinkedEntitySchemaBuilder } from "./linked-entity-schema-builder";
 import { AbstractEntitySchamBuilder } from "./abstract-entity-schema-builder";
 import { REFUSED } from "dns";
@@ -12,12 +12,17 @@ import { BooleanPropertySchemaBuilder } from "./boolean-property-schema-builder"
 import { NumberPropertySchemaBuilder } from "./number-property-schema-builder";
 import { EnumPropertySchemaBuilder } from "./enum-property-schema-builder";
 import { SysError, SysMsgs } from "../..";
+import { EntityTypeRepository } from "../repositories/entity-type-repository";
+import { ArrayPropertySchemaBuilder } from "./array-property-schema-builder";
 
 export class EntitySchemaBuilder {
+
+    constructor(private readonly entityTypeRepository: EntityTypeRepository) { }
+
     /**
      * Builds the schema for the specified entity type.
      */
-    public static async buildSchema(entityType: EntityType): Promise<SchemaBuilderObject> {
+    public async buildSchema(entityType: EntityType): Promise<SchemaBuilderObject> {
         // The root schema.
         let schema = new SchemaBuilder().object();
 
@@ -38,39 +43,47 @@ export class EntitySchemaBuilder {
      * @param rootSchema The root schema.
      * @param validation A validation object that is used to build the schema.
      */
-    public static async buildSchemaValidation(rootSchema: SchemaBuilderCore<any>,
+    public async buildSchemaValidation(rootSchema: SchemaBuilderCore<any>,
         validation: Validation): Promise<SchemaBuilderGeneric> {
 
         let propSchema: SchemaBuilderGeneric;
 
         switch (validation.type) {
             case PropertyType.linkedEntity:
-                return new LinkedEntitySchemaBuilder().build(rootSchema, validation);
+                return new LinkedEntitySchemaBuilder(this.entityTypeRepository, this)
+                    .build(rootSchema, validation);
 
             case PropertyType.abstractEntity:
-                return new AbstractEntitySchamBuilder().build(rootSchema, validation);
+                return new AbstractEntitySchamBuilder(this.entityTypeRepository, this)
+                    .build(rootSchema, validation);
 
             case PropertyType.array:
-                return new AbstractEntitySchamBuilder().build(rootSchema, validation);
+                return new ArrayPropertySchemaBuilder(this)
+                    .build(rootSchema, validation);
 
             case PropertyType.string:
-                return new StringPropertySchemaBuilder().build(rootSchema, validation);
+                return new StringPropertySchemaBuilder()
+                    .build(rootSchema, validation);
 
             // Handle date.
             case PropertyType.dateTime:
-                return new DateTimePropertySchemaBuilder().build(rootSchema, validation);
+                return new DateTimePropertySchemaBuilder()
+                    .build(rootSchema, validation);
 
             // handle boolean.
             case PropertyType.boolean:
-                return new BooleanPropertySchemaBuilder().build(rootSchema, validation);
+                return new BooleanPropertySchemaBuilder()
+                    .build(rootSchema, validation);
 
             // Handle number and int.
             case PropertyType.number || PropertyType.int:
-                return new NumberPropertySchemaBuilder().build(rootSchema, validation);
+                return new NumberPropertySchemaBuilder()
+                    .build(rootSchema, validation);
 
             // Handle enum.
             case PropertyType.enum:
-                return new EnumPropertySchemaBuilder().build(rootSchema, validation);
+                return new EnumPropertySchemaBuilder()
+                    .build(rootSchema, validation);
 
             default:
                 throw new Error(SysMsgs.crash.unexpectedError.message);

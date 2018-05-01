@@ -1,15 +1,24 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { EntityType, EntityRepository, Validation, EntityProperty } from "../..";
+import { EntityType, Validation, EntityProperty } from "../..";
 import { SysEntities } from "../../constants";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
+import { EntityTypeRepository } from "../repositories/entity-type-repository";
+import { GenericRepositoryInterface } from "../repositories/repository-interface";
 
 /**
  * Build JSON schama validation for Abstract Entities.
  * @class
  */
 export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
+
+    constructor(
+        private readonly entityTypeRepository: GenericRepositoryInterface<EntityType>,
+        private readonly entitySchemaBuilder: EntitySchemaBuilder) {
+        super();
+
+    }
     async build(rootSchema: SchemaBuilderCore<any>, validation: Validation): Promise<SchemaBuilderGeneric> {
 
         let propSchema = new SchemaBuilderGeneric({}).$ref("#/definitions/" + validation.ref.name);
@@ -25,11 +34,10 @@ export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
 
             definition.additionalProperties(false);
 
-            let etRepo = await EntityRepository.createByName(SysEntities.entityType);
-            let abstractEtType: EntityType = <EntityType>await etRepo.findOne(validation.ref._id);
+            let abstractEtType = await this.entityTypeRepository.findOne(validation.ref._id);
 
             abstractEtType.props.forEach(async (absProp) => {
-                let schema = await EntitySchemaBuilder.buildSchemaValidation(rootSchema, absProp.validation);
+                let schema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, absProp.validation);
 
                 definition.prop(absProp.name, schema, absProp.validation.required);
             });

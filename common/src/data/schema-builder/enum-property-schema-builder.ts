@@ -1,7 +1,7 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { EntityType, EntityRepository, Validation, EntityProperty } from "../..";
+import { EntityType, Validation, EntityProperty } from "../..";
 import { SysEntities } from "../../constants";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
 
