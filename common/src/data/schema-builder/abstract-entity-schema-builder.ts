@@ -34,7 +34,7 @@ export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
 
             definition.additionalProperties(false);
 
-            let abstractEtType = await this.entityTypeRepository.findOne(validation.ref._id);
+            let abstractEtType = await this.entityTypeRepository.findById(validation.ref._id);
 
             abstractEtType.props.forEach(async (absProp) => {
                 let schema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, absProp.validation);

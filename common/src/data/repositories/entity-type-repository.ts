@@ -1,31 +1,22 @@
 import { AbstractRepository } from "./abstract-repository";
 import { EntityType } from "../../models";
-import { ValidationProblem, EntityFactory } from "../validation";
 import { Db } from "mongodb";
 import { SysEntities, SysProperties } from "../../constants";
 import { DatabaseError } from "../";
 import { SysMsgs } from "../..";
 import _ = require("lodash");
 import { ENTITY_TYPE_CHANGED } from "./events";
+import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
+import { ValidationProblem } from "./validation-problem";
+import { EntityHelpers } from "./entity-helpers";
 
 export class EntityTypeRepository extends AbstractRepository<EntityType> {
 
 
-    constructor(private _db: Db, entityType: EntityType) {
-        super(_db.collection(SysEntities.entityType), entityType);
-    }
-
-    static async init(db: Db): Promise<EntityTypeRepository> {
-
-        // Load the entity type.
-        var entityType = await db.collection(SysEntities.entityType)
-            .findOne({ name: SysEntities.entityType });
-
-        // If Entity Type is not on Db it's probability a database inconsistency.
-        if (entityType === null)
-            throw new DatabaseError(SysMsgs.error.entityTypeNotFound, SysEntities.entityType);
-
-        return new EntityTypeRepository(db, entityType);
+    constructor(private _db: Db,
+        entityType: EntityType,
+        repoFactory: AbstractRepositoryFactory) {
+        super(_db.collection(SysEntities.entityType), entityType, repoFactory);
     }
 
     private requireReservedProperties(entity: EntityType): ValidationProblem[] {
@@ -48,16 +39,15 @@ export class EntityTypeRepository extends AbstractRepository<EntityType> {
     }
 
     private async beforeValidateUpdate(entity: EntityType): Promise<EntityType> {
-        
+        return null;
     }
 
     private async beforeValidateInsert(entity: EntityType): Promise<EntityType> {
-        let factory = new EntityFactory(this.entityType, entity);
-        factory.ensureIdProperty();
-        factory.applyDefaults();
-        factory.applyConvention();
-        factory.parseDateTimeProperties();
-        factory.addReserverdPropsEtType();
+        EntityHelpers.ensureIdProperty(entity);
+        EntityHelpers.applyDefaults(entity, this.entityType);
+        EntityHelpers.applyConvention(entity, this.entityType);
+        EntityHelpers.parseDateTimeProperties(entity, this.entityType);
+        EntityHelpers.addReserverdPropsEtType(entity, this.entityType);
 
         return entity;
     }

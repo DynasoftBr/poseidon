@@ -1,6 +1,7 @@
 import { GenericRepositoryInterface, RepositoryInterface } from "../repository-interface";
-import { Entity } from "../../..";
+import { Entity, EntityType } from "../../..";
 
 export abstract class AbstractRepositoryFactory {
-   abstract async createRepository(entityTypeName: string): Promise<RepositoryInterface>;
+    abstract async entityType(): Promise<GenericRepositoryInterface<EntityType>>;
+    abstract async createByName(entityTypeName: string): Promise<RepositoryInterface>;
 }

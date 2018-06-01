@@ -1,52 +1,21 @@
 import { AbstractRepository } from "./abstract-repository";
 import { Entity, EntityType } from "../../models";
-import { ValidationProblem, EntityFactory } from "../validation";
 import { Db } from "mongodb";
 import { SysEntities } from "../../constants";
 import { EntityTypeRepository } from "./entity-type-repository";
 import { SysMsgs, DatabaseError } from "../..";
 import { ENTITY_TYPE_CHANGED } from "./events";
 import _ = require("lodash");
+import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
+import { EntityValidatorInterface } from "../validation/entity-validator-interface";
 
 export class EntityRepository extends AbstractRepository<Entity> {
 
+    constructor(private _db: Db,
+        entityType: EntityType,
+        repoFactory: AbstractRepositoryFactory) {
 
-    private constructor(private _db: Db, entityType: EntityType) {
-        super(_db.collection(SysEntities.entityType), entityType);
-    }
-
-    static async init(db: Db, entityTypeRepository: AbstractRepository<EntityType>): Promise<EntityRepository> {
-        // Load the entity type.
-        var entityType = await entityTypeRepository.findOne(SysEntities.entityType);
-
-        // If Entity Type is not on Db it's probability a database inconsistency.
-        if (entityType === null)
-            throw new DatabaseError(SysMsgs.error.entityTypeNotFound, SysEntities.entityType);
-
-        var newRepo = new EntityRepository(db, entityType);
-
-        // Listen to entity type changes.
-        entityTypeRepository.on(ENTITY_TYPE_CHANGED, (newEntityType: EntityType) => {
-            if (newEntityType.name == newRepo.entityType.name)
-                newRepo.entityType = newEntityType;
-        });
-
-        return new EntityRepository(db, entityType);
-    }
-
-    private async beforeValidateUpdate(entity: Entity): Promise<Entity> {
-        let oldEntity: Entity = await this.findOne(entity._id);
-
-        if (!oldEntity)
-            throw new DatabaseError(SysMsgs.error.entityNotFound, entity._id, this.entityType.name);
-
-        entity = _.assignIn(oldEntity, entity); // Overwrite old values with new ones.
-
-        let factory = new EntityFactory(this.entityType, entity);
-        factory.applyConvention();
-        factory.parseDateTimeProperties();
-
-        return entity;
+        super(_db.collection(SysEntities.entityType), entityType, repoFactory);
     }
 
     private async beforeValidateInsert(entity: Entity): Promise<Entity> {

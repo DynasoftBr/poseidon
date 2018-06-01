@@ -5,7 +5,7 @@ import * as winston from "winston"; // Logger. Uses configuration made in server
 
 import {
     SysError, SysMsgs, SysMsg,
-    DatabaseError, EntityRepository, Entity
+    DatabaseError, Entity
 } from "@poseidon/common";
 
 import { ResObj } from "./res-obj";
@@ -14,7 +14,7 @@ import { RequestError } from "./request-error";
 export class ApiV1 {
     private static _instance: ApiV1;
 
-    private constructor() { }
+    private constructor(private readonly repositoryFactory: ) { }
 
     static init(app: Router) {
         // If we already have an instace, just return it.

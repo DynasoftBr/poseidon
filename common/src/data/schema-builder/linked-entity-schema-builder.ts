@@ -23,7 +23,7 @@ export class LinkedEntitySchemaBuilder extends AbstractSchamaBuilderStrategy {
         let propSchema = new SchemaBuilder().type("object");
         propSchema.additionalProperties(false);
 
-        let lkdEntityType = await this.entityTypeRepository.findOne(validation.ref._id);
+        let lkdEntityType = await this.entityTypeRepository.findById(validation.ref._id);
 
         // Iterate linked properties to build each schema validation
         validation.linkedProperties.forEach(async (lkdProp) => {
