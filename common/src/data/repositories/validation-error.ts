@@ -1,7 +1,7 @@
 import * as util from "util";
 
 import { SysMsgs, SysError } from "../../";
-import { ValidationProblem } from "./";
+import { ValidationProblem } from "./validation-problem";
 
 /**
  * A custom Error class

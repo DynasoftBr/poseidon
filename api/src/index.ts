@@ -1,3 +1,5 @@
+import * as path from "path";
+
 import * as dotenv from "dotenv";
 import * as winston from "winston"; // Logger. Uses configuration made in server.ts.
 
@@ -7,7 +9,7 @@ import * as Server from "./server";
 /**
  * Load environment variables from .env file, where API keys and passwords are configured.
  */
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 console.log(`Running enviroment ${process.env.NODE_ENV || "dev"}`);
 

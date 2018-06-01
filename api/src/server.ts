@@ -35,7 +35,7 @@ export async function init(): Promise<express.Express> {
 
   app.use(customLogger);
 
-  // Parses query parameter 'query' to an object.
+  // Parses querystring parameter 'query' to an object.
   app.use(mqueryParser);
 
   // API Router

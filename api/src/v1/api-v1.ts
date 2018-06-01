@@ -5,7 +5,7 @@ import * as winston from "winston"; // Logger. Uses configuration made in server
 
 import {
     SysError, SysMsgs, SysMsg,
-    DatabaseError, EntityRepository, Entity
+    DatabaseError, Entity
 } from "@poseidon/common";
 
 import { ResObj } from "./res-obj";
@@ -14,7 +14,7 @@ import { RequestError } from "./request-error";
 export class ApiV1 {
     private static _instance: ApiV1;
 
-    private constructor() { }
+    private constructor(private readonly repositoryFactory: ) { }
 
     static init(app: Router) {
         // If we already have an instace, just return it.
@@ -52,7 +52,7 @@ export class ApiV1 {
      */
     private async all(req: Request, res: Response) {
         try {
-            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let repo = await EntityRepository.createByName(req.params.etName);
 
             // Get skip and limit from query string.
             // if not provided, use undefined to preserv function defaults.
@@ -74,7 +74,7 @@ export class ApiV1 {
      */
     private async findOne(req: Request, res: Response) {
         try {
-            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let repo = await EntityRepository.createByName(req.params.etName);
             let result = await repo.findOne(req.params.id);
 
             if (result) {
@@ -96,8 +96,8 @@ export class ApiV1 {
         let entity: Entity = req.body;
 
         try {
-            let repo = await EntityRepository.getRepositoty(req.params.etName);
-            let result = await repo.create(entity);
+            let repo = await EntityRepository.createByName(req.params.etName);
+            let result = await repo.insertOne(entity);
 
             res.statusCode = 201;
             res.location("/" + result);
@@ -117,8 +117,8 @@ export class ApiV1 {
         let _id: Entity = req.params.id;
 
         try {
-            let repo = await EntityRepository.getRepositoty(req.params.etName);
-            let deleteCount = await repo.del(_id);
+            let repo = await EntityRepository.createByName(req.params.etName);
+            let deleteCount = await repo.deleteOne(_id);
 
             // If cannot find specified id, respond with 'not found'.
             if (deleteCount == 0)
@@ -140,7 +140,7 @@ export class ApiV1 {
         let entity: Entity = req.body;
 
         try {
-            let repo = await EntityRepository.getRepositoty(req.params.etName);
+            let repo = await EntityRepository.createByName(req.params.etName);
             let updatedCount = await repo.update(entity);
 
             // If cannot find specified id, respond with 'not found'.
