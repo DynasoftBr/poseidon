@@ -1,6 +1,6 @@
-import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
+import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { Validation } from "../../models";
 
 export abstract class AbstractSchamaBuilderStrategy {
-    abstract async build(rootSchema: SchemaBuilderCore<any>, validation: Validation): Promise<SchemaBuilderGeneric>;
+    abstract async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder>;
 }

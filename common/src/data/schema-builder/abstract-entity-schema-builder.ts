@@ -1,5 +1,5 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
-import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
+import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntityType, Validation, EntityProperty } from "../..";
 import { SysEntities } from "../../constants";
@@ -19,9 +19,9 @@ export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
         super();
 
     }
-    async build(rootSchema: SchemaBuilderCore<any>, validation: Validation): Promise<SchemaBuilderGeneric> {
+    async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
 
-        let propSchema = new SchemaBuilderGeneric({}).$ref("#/definitions/" + validation.ref.name);
+        let propSchema = new FluentSchemaBuilder({}).$ref("#/definitions/" + validation.ref.name);
 
         let definitions = (<any>rootSchema.getSchema().definitions);
 

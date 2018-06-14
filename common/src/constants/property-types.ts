@@ -1,4 +1,4 @@
-const PropertyType = {
+const PropertyTypes = {
     string: "string",
     int: "integer",
     number: "number",
@@ -11,7 +11,7 @@ const PropertyType = {
     javascript: "javascript"
 };
 
-type PropertyType = (typeof PropertyType)[keyof typeof PropertyType];
+type PropertyTypes = (typeof PropertyTypes)[keyof typeof PropertyTypes];
 
-export { PropertyType };
+export { PropertyTypes };
 
