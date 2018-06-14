@@ -7,6 +7,7 @@ export interface RepositoryInterface {
     insertOne(entity: any): Promise<any>;
     findById(id: string): Promise<any>;
     find(filter: object, skip: number, limit: number): Promise<any[]>;
+    findOne(filter: object): Promise<any>;
 }
 
 export interface GenericRepositoryInterface<T extends Entity> extends RepositoryInterface {
@@ -16,4 +17,5 @@ export interface GenericRepositoryInterface<T extends Entity> extends Repository
     insertOne(entity: T): Promise<T>;
     findById(id: string): Promise<T>;
     find(filter: object, skip: number, limit: number): Promise<T[]>;
+    findOne(filter: object): Promise<T>;
 }

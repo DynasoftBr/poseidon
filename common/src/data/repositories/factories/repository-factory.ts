@@ -14,7 +14,7 @@ import { EntityRepository } from "../entity-repository";
 export class RepositoryFactory extends AbstractRepositoryFactory {
 
     private repositories: Array<RepositoryInterface> = [];
-    private constructor(
+    public constructor(
         private db: Db) {
         super();
     }
@@ -24,7 +24,7 @@ export class RepositoryFactory extends AbstractRepositoryFactory {
             return this.entityType();
 
         // try to find an existent instance, and return it.
-        var repo = _.find(this.repositories, (el) => el.entityType.name === entityTypeName);
+        let repo = _.find(this.repositories, (el) => el.entityType.name === entityTypeName);
         if (repo) return repo;
 
         // As there is no repository instance for this entity type yet, create one.
@@ -32,14 +32,14 @@ export class RepositoryFactory extends AbstractRepositoryFactory {
         return repo;
     }
 
-    async createStandardEntityRepository(entityTypeName: string) {
-        var entityTypeRepo = await this.entityType();
-        var entityType = (await entityTypeRepo.find({ name: entityTypeName }, 0, 1))[0];
+    private async createStandardEntityRepository(entityTypeName: string) {
+        let entityTypeRepo = await this.entityType();
+        let entityType = await entityTypeRepo.findOne({ name: entityTypeName });
 
         if (entityType == null)
             throw new DatabaseError(SysMsgs.error.entityTypeNotFound, SysEntities.entityType);
 
-        var repo = new EntityRepository(this.db, entityType, this);
+        let repo = new EntityRepository(this.db, entityType, this);
 
         this.repositories.push(repo);
 
@@ -50,7 +50,7 @@ export class RepositoryFactory extends AbstractRepositoryFactory {
     async entityType(): Promise<GenericRepositoryInterface<EntityType>> {
 
         if (this.entityTypeRepo == null) {
-            var entityType = await this.db.collection(SysEntities.entityType).findOne({ name: SysEntities.entityType });
+            let entityType = await this.db.collection(SysEntities.entityType).findOne({ name: SysEntities.entityType });
             this.entityTypeRepo = new EntityTypeRepository(this.db, entityType, this);
         }
 

@@ -1,5 +1,5 @@
 import { EntityType, Entity } from "../..";
-import { SysProperties, PropertyType, PropertyConvention } from "../../constants";
+import { SysProperties, PropertyTypes, PropertyConvention } from "../../constants";
 import _ = require("lodash");
 
 export class EntityHelpers {
@@ -39,7 +39,7 @@ export class EntityHelpers {
     public static parseDateTimeProperties(entity: Entity, entityType: EntityType): Entity {
         entityType.props.forEach(p => {
             // Parse date-time.
-            if (p.validation.type === PropertyType.dateTime
+            if (p.validation.type === PropertyTypes.dateTime
                 && entity[p.name] && typeof entity[p.name] === "string")
                 entity[p.name] = this.parseDateTime(entity[p.name]);
         });
@@ -88,17 +88,17 @@ export class EntityHelpers {
     private static parseDefault(d: string, type: PropertyType): any {
         let parsed: string = this.handleConstants(d);
 
-        if (type === PropertyType.string || type === PropertyType.enum)
+        if (type === PropertyTypes.string || type === PropertyTypes.enum)
             return parsed;
-        else if (type === PropertyType.boolean)
+        else if (type === PropertyTypes.boolean)
             return new Boolean(parsed);
-        else if (type === PropertyType.array)
+        else if (type === PropertyTypes.array)
             return [parsed];
-        else if (type === PropertyType.dateTime)
+        else if (type === PropertyTypes.dateTime)
             return new Date(parsed);
-        else if (type === PropertyType.number)
+        else if (type === PropertyTypes.number)
             return Number.parseFloat(parsed);
-        else if (type === PropertyType.int)
+        else if (type === PropertyTypes.int)
             return Number.parseInt(parsed);
         else
             throw Error("");

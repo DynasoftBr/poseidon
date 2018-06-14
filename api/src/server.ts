@@ -9,6 +9,7 @@ import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
 import * as path from "path";
 import * as dotenv from "dotenv";
+import { DataAccess, DatabaseError, SysMsgs } from "@poseidon/common";
 
 // APIs
 import { ApiV1 } from "./v1/api-v1";
@@ -16,8 +17,33 @@ import { ApiV1 } from "./v1/api-v1";
 // Middlewares
 import { customLogger, mqueryParser } from "./middlewares";
 
-export async function init(): Promise<express.Express> {
+export async function init(): Promise<void> {
 
+  // connect to database
+  await DataAccess.connect({
+    url: process.env.MONGODB_URI,
+    dbName: process.env.DB_NAME,
+    retries: parseInt(process.env.RETRIES),
+    timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
+  }).then(db => {
+    // let coll = db.collection("EntityType1");
+    // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
+    // coll.indexes().then(idxs => {
+    //   console.log(idxs);
+    // });
+    // // });
+
+    initApp(db);
+
+  }).catch(err => {
+    winston.error(new DatabaseError(SysMsgs.error.databaseLevelError, err).message);
+    process.exit(SysMsgs.error.databaseLevelError.code);
+  });
+
+}
+
+
+function initApp(db: any) {
   /**
    * Create Express server.
    */
@@ -42,8 +68,9 @@ export async function init(): Promise<express.Express> {
   let apiRouter = express.Router();
   app.use("/api", apiRouter);
 
+
   // API V1
-  ApiV1.init(apiRouter);
+  ApiV1.init(apiRouter, db);
 
   /**
    * Error Handler. Provides full stack - remove for production
@@ -53,7 +80,6 @@ export async function init(): Promise<express.Express> {
   /**
    * Start Express server.
    */
-
   app.listen(app.get("port"), () => {
     console.log(("App is running at http://localhost:%d in %s mode"), app.get("port"), app.get("env"));
     console.log("Press CTRL-C to stop\n");

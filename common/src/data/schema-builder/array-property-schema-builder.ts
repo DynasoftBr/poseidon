@@ -1,5 +1,5 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
-import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
+import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntityType, Validation, EntityProperty } from "../..";
 import { SysEntities } from "../../constants";
@@ -15,9 +15,9 @@ export class ArrayPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
         super();
     }
 
-    async build(rootSchema: SchemaBuilderCore<any>, validation: Validation): Promise<SchemaBuilderGeneric> {
+    async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
 
-        let propSchema = new SchemaBuilder().type("array");
+        let propSchema = new SchemaBuilder().array();
 
         // No additional items allowed.
         propSchema.additionalItems(false);
