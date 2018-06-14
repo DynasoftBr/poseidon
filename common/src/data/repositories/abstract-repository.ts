@@ -6,10 +6,11 @@ import { Collection, MongoError, ObjectID, Db, InsertWriteOpResult, InsertOneWri
 import { EventEmitter } from "events";
 import _ = require("lodash");
 import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
-import { PropertyType, SysEntities} from "../../constants";
+import { PropertyTypes, SysEntities } from "../../constants";
 import { SchemaModel } from "json-schema-fluent-builder/lib/models";
 import { ValidationProblem } from "./validation-problem";
 import { ValidationError } from "./validation-error";
+import { EntityValidator } from "./entity-validator";
 
 export abstract class AbstractRepository<T extends Entity>
     extends EventEmitter
@@ -23,13 +24,13 @@ export abstract class AbstractRepository<T extends Entity>
     }
 
     //#region Abstract Members
-    protected abstract async beforeValidation(entity: T, isNew: boolean): Promise<T>;
-    protected abstract async validating(entity: T, isNew: boolean): Promise<ValidationProblem[]>;
-    protected abstract async beforeSave(entity: T, isNew: boolean): Promise<boolean>;
-    protected abstract async afterSave(entity: T, isNew: boolean): Promise<void>;
+    protected abstract async beforeValidation(entity: T, isNew: boolean, old?: Entity): Promise<T>;
+    protected abstract async validating(entity: T, isNew: boolean, old?: Entity): Promise<ValidationProblem[]>;
+    protected abstract async beforeSave(entity: T, isNew: boolean, old?: Entity): Promise<boolean>;
+    protected abstract async afterSave(entity: T, isNew: boolean, old?: Entity): Promise<void>;
     protected abstract async beforeDelete(entity: T): Promise<boolean>;
     protected abstract async afterDelete(entity: T): Promise<void>;
-    //#endregion 
+    //#endregion
 
     async deleteOne(_id: string): Promise<number> {
         try {
@@ -57,16 +58,16 @@ export abstract class AbstractRepository<T extends Entity>
         entity = _.assignIn(oldEntity, entity);
 
         try {
-            entity = await this.beforeValidation(entity, false);
+            entity = await this.beforeValidation(entity, false, oldEntity);
         } catch (error) {
             // TODO: Exception
         }
 
-        var problems = await this.validate(this.entityType, entity);
+        let problems = await EntityValidator.validate(this.entityType, entity, this.repoFactory);
 
         try {
             // Custom validations.
-            problems.push(...await this.validating(entity, false));
+            problems.push(...await this.validating(entity, false, oldEntity));
         } catch (error) {
             // TODO: Exception
         }
@@ -80,7 +81,7 @@ export abstract class AbstractRepository<T extends Entity>
         let clone = _.cloneDeep(entity);
 
         try {
-            this.beforeSave(clone, false);
+            this.beforeSave(clone, false, oldEntity);
         } catch (error) {
             // TODO: Exception
         }
@@ -91,6 +92,11 @@ export abstract class AbstractRepository<T extends Entity>
 
         }
 
+        try {
+            this.afterSave(clone, false, oldEntity);
+        } catch (error) {
+            // TODO: Exception
+        }
         return entity;
     }
 
@@ -104,7 +110,7 @@ export abstract class AbstractRepository<T extends Entity>
 
         entity._id = new ObjectID().toHexString();
 
-        var problems = await this.validate(this.entityType, entity);
+        let problems = await EntityValidator.validate(this.entityType, entity, this.repoFactory);
 
         try {
             // call validation event to allow custom validation.
@@ -127,9 +133,9 @@ export abstract class AbstractRepository<T extends Entity>
         } catch (error) {
             // TODO: Exception
         }
-        
+
         try {
-           await this.collection.insertOne(entity);
+            await this.collection.insertOne(entity);
         } catch (error) {
             this.handleError(error);
         }
@@ -161,93 +167,12 @@ export abstract class AbstractRepository<T extends Entity>
         }
     }
 
-    /**
-     * Validates an entity against it's schema.
-     * @param entitytype The entity type of the entity to be validated.
-     * @param entity The entity to be validated.
-     */
-    public async validate(entitytype: EntityType, entity: Entity): Promise<ValidationProblem[]> {
-
-        let problems: ValidationProblem[] = [];
-        let schemaRepo = await this.repoFactory.createByName(SysEntities.entitySchema);
-
-        var schema = await schemaRepo.findById("");
-
-        // Get schema problems.
-        problems.push(...this.validateAgainstJsonSchema(schema, entity));
-
-        // Get linked entity problems.
-        problems.push(...await this.validateLinkedEntities(entity, entitytype, this.repoFactory));
-
-        return problems;
-    }
-
-    /**
-     * Validates the entity against the specified schema.
-     * @param schema The schema to validate the entity against.
-     */
-    private validateAgainstJsonSchema(schema: SchemaModel, entity: Entity): ValidationProblem[] {
-        // Instantiates ajv library, compiles the schema, them validates the entity.
-        let jsonVal = new Ajv({ allErrors: true, verbose: true });
-        let validate = jsonVal.compile(schema);
-        let valid = validate(entity);
-
-        // if the obj is not valid, builds the messages and returns a 'ValidationProblem' array.
-        if (!valid) {
-            let problems: ValidationProblem[] = [];
-            validate.errors.forEach(err => {
-                problems.push(ValidationProblem.buildMsg(err));
-            });
-
-            return problems;
+    async findOne(filter: object) {
+        try {
+            return await this.collection.findOne(filter);
+        } catch (error) {
+            this.handleError(error);
         }
-
-        return [];
-    }
-
-    /**
-     * Validates if linked entities has valid references and if its linked property values match the referenced entity values.
-     * @param entity The entity to be validated.
-     * @param entityType The entity type of the to be validated.
-     * @param repoFactory A repository factory
-     */
-    private async validateLinkedEntities(entity: Entity, entityType: EntityType,
-        repoFactory: AbstractRepositoryFactory): Promise<ValidationProblem[]> {
-
-        let problems: ValidationProblem[] = [];
-        var propsLength = entityType.props.length;
-
-        // Iterate entity properties.
-        for (let idx = 0; idx < propsLength; idx++) {
-            const prop = entityType.props[idx];
-
-            // Validate only if the entity has a value for this property, the required constraint is validated by json schema. 
-            if (prop.validation.type === PropertyType.linkedEntity && entity[prop.name] && entity[prop.name]._id) {
-
-                // Get the repository for the linked entity and try find it.
-                let lkdEntityRepo = await repoFactory.createByName(prop.validation.ref.name);
-
-                let lkdEntity = await lkdEntityRepo.findById(entity[prop.name]._id);
-
-                // If we can't find an entity with the linked id, add a validation problem.
-                if (lkdEntity == null) {
-                    problems.push(new ValidationProblem(prop.name, "linkedEntity", SysMsgs.validation.linkedEntityDoesNotExist,
-                        prop.validation.ref.name, entity[prop.name]._id));
-                } else {
-                    // Iterate the linked properties and check if it equals the lineked entity values.
-                    prop.validation.linkedProperties.forEach(lkdProp => {
-
-                        // Check if the value provided in linked properties equals linked entity values.
-                        if (!_.isEqual(entity[prop.name][lkdProp.name], lkdEntity[lkdProp.name])) {
-                            let p = prop.name + "." + lkdProp.name;
-                            problems.push(new ValidationProblem(p, "linkedValue", SysMsgs.validation.divergentLinkedValue, p, lkdEntity[lkdProp.name]));
-                        }
-                    });
-                }
-            }
-        }
-
-        return problems;
     }
 
     handleError(error: any) {
@@ -256,4 +181,4 @@ export abstract class AbstractRepository<T extends Entity>
 
         throw error;
     }
-} 
+}

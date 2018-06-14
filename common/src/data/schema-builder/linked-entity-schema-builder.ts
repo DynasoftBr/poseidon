@@ -1,11 +1,12 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
-import { SchemaBuilderGeneric, SchemaBuilderCore } from "json-schema-fluent-builder/lib/builders";
+import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntityType, Validation, EntityProperty } from "../../models";
 import { SysEntities } from "../../constants";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
 import _ = require("lodash");
 import { EntityTypeRepository } from "../repositories/entity-type-repository";
+import { GenericRepositoryInterface } from "../repositories/repository-interface";
 
 /**
  * Build JSON schama validation for linked entities.
@@ -14,12 +15,12 @@ import { EntityTypeRepository } from "../repositories/entity-type-repository";
 export class LinkedEntitySchemaBuilder extends AbstractSchamaBuilderStrategy {
 
     constructor(
-        private readonly entityTypeRepository: EntityTypeRepository,
+        private readonly entityTypeRepository: GenericRepositoryInterface<EntityType>,
         private readonly entitySchemaBuilder: EntitySchemaBuilder) {
         super();
     }
 
-    async build(rootSchema: SchemaBuilderCore<any>, validation: Validation): Promise<SchemaBuilderGeneric> {
+    async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
         let propSchema = new SchemaBuilder().type("object");
         propSchema.additionalProperties(false);
 

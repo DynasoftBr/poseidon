@@ -5,7 +5,7 @@ import * as winston from "winston"; // Logger. Uses configuration made in server
 
 import {
     SysError, SysMsgs, SysMsg,
-    DatabaseError, Entity
+    DatabaseError, Entity, AbstractRepositoryFactory
 } from "@poseidon/common";
 
 import { ResObj } from "./res-obj";
@@ -14,14 +14,14 @@ import { RequestError } from "./request-error";
 export class ApiV1 {
     private static _instance: ApiV1;
 
-    private constructor(private readonly repositoryFactory: ) { }
+   private constructor(private readonly repositoryFactory: AbstractRepositoryFactory) { }
 
-    static init(app: Router) {
+    static init(app: Router, repositoryFactory: AbstractRepositoryFactory) {
         // If we already have an instace, just return it.
         if (this._instance)
             return this._instance;
 
-        let api = this._instance = new ApiV1();
+        let api = this._instance = new ApiV1(repositoryFactory);
         let router = Router();
         let routeBase: string = "/:etName";
 
@@ -52,14 +52,14 @@ export class ApiV1 {
      */
     private async all(req: Request, res: Response) {
         try {
-            let repo = await EntityRepository.createByName(req.params.etName);
+            let repo = await this.repositoryFactory.createByName(req.params.etName);
 
             // Get skip and limit from query string.
             // if not provided, use undefined to preserv function defaults.
             let skip = req.query.skip ? parseInt(req.query.skip) : undefined;
             let limit = req.query.limit ? parseInt(req.query.limit) : undefined;
 
-            let results = await repo.findAll(skip, limit);
+            let results = await repo.find({}, skip, limit);
 
             res.send(this.responseSuccess(results, results.length));
         } catch (error) {
@@ -74,7 +74,7 @@ export class ApiV1 {
      */
     private async findOne(req: Request, res: Response) {
         try {
-            let repo = await EntityRepository.createByName(req.params.etName);
+            let repo = await this.repositoryFactory.createByName(req.params.etName);
             let result = await repo.findOne(req.params.id);
 
             if (result) {
@@ -96,7 +96,7 @@ export class ApiV1 {
         let entity: Entity = req.body;
 
         try {
-            let repo = await EntityRepository.createByName(req.params.etName);
+            let repo = await this.repositoryFactory.createByName(req.params.etName);
             let result = await repo.insertOne(entity);
 
             res.statusCode = 201;
@@ -114,10 +114,10 @@ export class ApiV1 {
      */
     private async delete(req: Request, res: Response) {
 
-        let _id: Entity = req.params.id;
+        let _id = req.params.id;
 
         try {
-            let repo = await EntityRepository.createByName(req.params.etName);
+            let repo = await this.repositoryFactory.createByName(req.params.etName);
             let deleteCount = await repo.deleteOne(_id);
 
             // If cannot find specified id, respond with 'not found'.
@@ -140,7 +140,7 @@ export class ApiV1 {
         let entity: Entity = req.body;
 
         try {
-            let repo = await EntityRepository.createByName(req.params.etName);
+            let repo = await this.repositoryFactory.createByName(req.params.etName);
             let updatedCount = await repo.update(entity);
 
             // If cannot find specified id, respond with 'not found'.

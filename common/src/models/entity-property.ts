@@ -1,5 +1,5 @@
 import { Entity, LinkedProperty, Validation } from "./";
-import { PropertyType } from "../constants";
+import { PropertyTypes } from "../constants";
 
 export interface EntityProperty {
     name: string;
