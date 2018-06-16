@@ -6,7 +6,10 @@ const SysProperties = {
     createdBy: "createdBy",
     createdOn: "createdOn",
     ref: "ref",
-    label: "label"
+    label: "label",
+    entityType: "entityType",
+    schema: "schema",
+    login: "login"
 };
 
 type SysProperties = (typeof SysProperties)[keyof typeof SysProperties];
