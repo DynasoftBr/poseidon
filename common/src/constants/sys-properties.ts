@@ -1,12 +1,17 @@
 const SysProperties = {
     _id: "_id",
     name: "name",
+    abstract: "abstract",
+    props: "props",
     changedBy: "changedBy",
-    changedOn: "changedOn",
+    changedAt: "changedAt",
     createdBy: "createdBy",
-    createdOn: "createdOn",
+    createdAt: "createdAt",
     ref: "ref",
-    label: "label"
+    label: "label",
+    entityType: "entityType",
+    schema: "schema",
+    login: "login"
 };
 
 type SysProperties = (typeof SysProperties)[keyof typeof SysProperties];

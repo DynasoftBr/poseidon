@@ -6,3 +6,5 @@ export * from "./linked-property";
 export * from "./ref";
 export * from "./validation";
 export * from "./entity-schema";
+export * from "./concrete-entity";
+export * from "./abstract-entity";

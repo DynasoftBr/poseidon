@@ -1,6 +1,7 @@
 import { EntityType, Entity } from "../..";
 import { SysProperties, PropertyTypes, PropertyConvention } from "../../constants";
 import _ = require("lodash");
+import { BuiltInEntries } from "../built-in-entries";
 
 export class EntityHelpers {
 
@@ -49,25 +50,27 @@ export class EntityHelpers {
 
     public static addReserverdPropsEtType(entity: Entity, entityType: EntityType): Entity {
 
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedAt.name })
-            .length == 0)
-            (<EntityType>entity).props.push(SysProperties.changedAt);
+        let builtin = new BuiltInEntries();
 
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedBy.name })
+        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedAt })
             .length == 0)
-            (<EntityType>entity).props.push(SysProperties.changedBy);
+            (<EntityType>entity).props.push(builtin.changedAtPropertyDefinition);
 
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdAt.name })
+        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedBy })
             .length == 0)
-            (<EntityType>entity).props.push(SysProperties.createdAt);
+            (<EntityType>entity).props.push(builtin.changedByPropertyDefinition);
 
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdBy.name })
+        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdAt })
             .length == 0)
-            (<EntityType>entity).props.push(SysProperties.createdBy);
+            (<EntityType>entity).props.push(builtin.createdAtPropertyDefinition);
 
-        if (_.filter((<EntityType>entity).props, { name: SysProperties._id.name })
+        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdBy })
             .length == 0)
-            (<EntityType>entity).props.push(SysProperties._id);
+            (<EntityType>entity).props.push(builtin.createdByPropertyDefinition);
+
+        if (_.filter((<EntityType>entity).props, { name: SysProperties._id })
+            .length == 0)
+            (<EntityType>entity).props.push(builtin.idPropertyDefinition);
 
         return entity;
     }
@@ -85,7 +88,7 @@ export class EntityHelpers {
      * @param type The type specified in validation of the entity type.
      * @return The parsed default value according the property type.
      */
-    private static parseDefault(d: string, type: PropertyType): any {
+    private static parseDefault(d: string, type: PropertyTypes): any {
         let parsed: string = this.handleConstants(d);
 
         if (type === PropertyTypes.string || type === PropertyTypes.enum)

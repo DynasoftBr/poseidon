@@ -1,16 +1,14 @@
-import { Entity } from "./entity";
-import { Ref, LinkedProperty } from "./";
+import { Ref, LinkedProperty, AbstractEntity } from "./";
 import { PropertyConvention, PropertyTypes } from "../constants";
-import { TruncateOptions } from "lodash";
 
-export interface Validation {
+export interface Validation extends AbstractEntity {
     type: PropertyTypes;
     required?: boolean;
     unique?: boolean;
     min?: number;
     max?: number;
     pattern?: string;
-    enum?: any[];
+    enum?: string[];
     ref?: Ref;
     linkedProperties?: LinkedProperty[];
     items?: Validation;

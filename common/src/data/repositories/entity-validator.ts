@@ -21,7 +21,8 @@ export class EntityValidator {
         let problems: ValidationProblem[] = [];
         let schemaRepo = await repoFactory.createByName(SysEntities.entitySchema);
 
-        let schema = await schemaRepo.findById("");
+        let entitySchema = await schemaRepo.findById(entitytype.name);
+        let schema = JSON.parse(entitySchema.schema);
 
         // Get schema problems.
         problems.push(...this.validateAgainstJsonSchema(schema, entity));
