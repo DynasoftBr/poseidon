@@ -1,7 +1,6 @@
-import { Entity, LinkedProperty, Validation } from "./";
-import { PropertyTypes } from "../constants";
+import { Validation, AbstractEntity } from "./";
 
-export interface EntityProperty {
+export interface EntityProperty extends AbstractEntity {
     name: string;
     validation: Validation;
 }
