@@ -35,7 +35,7 @@ export class EntitySchemaBuilder {
             const prop = entityType.props[idx];
 
             let bs = await this.buildSchemaValidation(schema, prop.validation);
-            schema.prop(prop.name, bs, prop.validation.required || prop.validation.type === PropertyTypes.boolean);
+            schema.prop(prop.name, bs, prop.validation.required);
         }
 
         return schema;

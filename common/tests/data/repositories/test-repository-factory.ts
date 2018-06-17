@@ -1,10 +1,11 @@
 import { RepositoryInterface, GenericRepositoryInterface } from "../../../src/data/repositories/repository-interface";
 import { AbstractRepositoryFactory } from "../../../src/data/repositories/factories/abstract-repository-factory";
-import { EntityType } from "../../../src/models";
+import { EntityType, EntitySchema, User } from "../../../src/models";
 import { TestEntityRepository } from "./test-entity-repository";
 import { SysEntities } from "../../../src/constants";
 import * as LokiDb from "lokijs";
 import { BuiltInEntries } from "../../../src";
+import { EntitySchemaBuilder } from "../../../src/data/schema-builder/entity-schema-builder";
 export class TestRepositoryFactory extends AbstractRepositoryFactory {
 
     private db: LokiDb;
@@ -28,18 +29,44 @@ export class TestRepositoryFactory extends AbstractRepositoryFactory {
         return new TestEntityRepository(this.db, entityType);
     }
 
-    entityTypeEntry: EntityType;
+    entityTypeRepo: GenericRepositoryInterface<EntityType>;
     async entityType(): Promise<GenericRepositoryInterface<EntityType>> {
-        if (this.entityTypeEntry == null) {
-            this.entityTypeEntry = new BuiltInEntries().entityType();
-            let collection = this.db.getCollection(SysEntities.entityType);
-
-            if (collection == null) {
-                collection = this.db.addCollection(SysEntities.entityType);
-                collection.insertOne(this.entityTypeEntry);
-            }
+        if (this.entityTypeRepo == null) {
+            this.entityTypeRepo = <any>new TestEntityRepository(this.db, new BuiltInEntries().entityType);
         }
 
-        return <any>new TestEntityRepository(this.db, this.entityTypeEntry);
+        return this.entityTypeRepo;
+    }
+
+    /**
+     * Insert the entity type schema to the database.
+     */
+    async initDatabase() {
+
+        let entityTypeCollection = this.db.addCollection<EntityType>(SysEntities.entityType);
+        let schemaCollection = this.db.addCollection<EntitySchema>(SysEntities.entitySchema);
+        let userCollection = this.db.addCollection<User>(SysEntities.user);
+
+        let builtin = new BuiltInEntries();
+
+        // Entity types
+        entityTypeCollection.insertOne(builtin.entityType);
+        entityTypeCollection.insertOne(builtin.entityTypeEntityProperty);
+        entityTypeCollection.insertOne(builtin.entityTypeUser);
+        entityTypeCollection.insertOne(builtin.entityTypeEntitySchema);
+
+        // Root user
+        userCollection.insertOne(builtin.rootUser);
+
+        let schemaBuilder = new EntitySchemaBuilder(await this.entityType());
+
+        // Add entity type schema to schemas' collection.
+        let etJsonSchema = (await schemaBuilder.buildSchema(builtin.entityType)).getSchema();
+
+        let entityTypeSchema = builtin.entitySchemaForEntityType;
+        entityTypeSchema.schema = JSON.stringify(etJsonSchema);
+
+        schemaCollection.insertOne(entityTypeSchema);
+
     }
 }

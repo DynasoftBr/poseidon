@@ -1,8 +1,9 @@
-import { Entity, EntityProperty } from "./";
+import { EntityProperty, ConcreteEntity } from "./";
 
-export interface EntityType extends Entity {
+export interface EntityType extends ConcreteEntity {
     name: string;
-    abstract: boolean;
+    label?: string;
+    abstract?: boolean;
     props: EntityProperty[];
     beforeValidation?: string;
     validating?: string;

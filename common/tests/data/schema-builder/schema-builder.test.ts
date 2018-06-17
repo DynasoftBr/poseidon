@@ -10,12 +10,6 @@ import { GenericRepositoryInterface } from "../../../src/data/repositories/repos
 
 describe("Schema Builder Test", () => {
 
-    // let entityTypeRepo: GenericRepositoryInterface<EntityType>;
-
-    // before(async () => {
-    //     entityTypeRepo = await (new TestRepositoryFactory()).entityType();
-    // });
-
     describe("Integer test", () => {
         it("Can set an integer property", async () => {
             let entityType: EntityType = <EntityType>{
@@ -401,13 +395,14 @@ describe("Schema Builder Test", () => {
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "boolean");
         });
 
-        it("Boolean property is always required", async () => {
+        it("Boolean property can be required", async () => {
             let entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
                         validation: {
                             type: PropertyTypes.boolean,
+                            required: true
                         }
                     }
                 ]
