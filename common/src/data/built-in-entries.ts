@@ -11,7 +11,7 @@ export class BuiltInEntries {
             abstract: false,
             props: [
                 this.idPropertyDefinition,
-                this.nameProperty,
+                this.namePropertyDefinition,
                 this.labelProperty,
                 this.abstractProperty,
                 this.propsPropertyDefinition,
@@ -32,7 +32,7 @@ export class BuiltInEntries {
             abstract: false,
             props: [
                 this.idPropertyDefinition,
-                this.nameProperty,
+                this.namePropertyDefinition,
                 this.entityTypePropertyDefinition,
                 this.schemaPropertyDefinition,
                 this.changedByPropertyDefinition,
@@ -71,7 +71,7 @@ export class BuiltInEntries {
             abstract: false,
             props: [
                 this.idPropertyDefinition,
-                this.nameProperty,
+                this.namePropertyDefinition,
                 this.loginPropertyDefinition,
                 this.createdByPropertyDefinition,
                 this.createdAtPropertyDefinition,
@@ -124,7 +124,19 @@ export class BuiltInEntries {
         };
     }
 
-    public get nameProperty(): EntityProperty {
+    public get userNamePropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.name,
+            validation: {
+                type: PropertyTypes.string,
+                required: true,
+                max: 50,
+                min: 2,
+            }
+        };
+    }
+
+    public get namePropertyDefinition(): EntityProperty {
         return {
             name: SysProperties.name,
             validation: {

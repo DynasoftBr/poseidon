@@ -1,12 +1,14 @@
 import * as Ajv from "ajv";
 import _ = require("lodash");
-import { SchemaModel } from "json-schema-fluent-builder";
+import { SchemaModel, SchemaBuilder } from "json-schema-fluent-builder";
 
 import { ValidationProblem } from "./validation-problem";
 import { EntityType, Entity } from "../../models";
 import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
 import { SysEntities, PropertyTypes } from "../../constants";
 import { SysMsgs } from "../../sys-msgs";
+import { EntitySchemaBuilder } from "../schema-builder/entity-schema-builder";
+import { RepositoryFactory } from "./factories/repository-factory";
 
 export class EntityValidator {
 
@@ -22,7 +24,14 @@ export class EntityValidator {
         let schemaRepo = await repoFactory.createByName(SysEntities.entitySchema);
 
         let entitySchema = await schemaRepo.findById(entitytype.name);
-        let schema = JSON.parse(entitySchema.schema);
+        let schema: object;
+
+        // If can't find the schema on database, try to build it.
+        if (entitySchema != null)
+            schema = JSON.parse(entitySchema.schema);
+        else
+            schema = (await new EntitySchemaBuilder(await repoFactory.entityType()).buildSchema(entitytype))
+                .getSchema();
 
         // Get schema problems.
         problems.push(...this.validateAgainstJsonSchema(schema, entity));
@@ -76,9 +85,7 @@ export class EntityValidator {
             if (prop.validation.type === PropertyTypes.linkedEntity && entity[prop.name] && entity[prop.name]._id) {
 
                 // Get the repository for the linked entity and try find it.
-                let lkdEntityRepo = await repoFactory.createByName(prop.validation.ref.name);
-
-                let lkdEntity = await lkdEntityRepo.findById(entity[prop.name]._id);
+                let lkdEntity = await (await repoFactory.createByName(prop.validation.ref.name)).findById(entity[prop.name]._id);
 
                 // If we can't find an entity with the linked id, add a validation problem.
                 if (lkdEntity == null) {
