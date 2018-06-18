@@ -9,7 +9,7 @@ import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
 import * as path from "path";
 import * as dotenv from "dotenv";
-import { DataAccess, DatabaseError, SysMsgs } from "@poseidon/common";
+import { DataAccess, DatabaseError, SysMsgs, AbstractRepositoryFactory, RepositoryFactory } from "@poseidon/common";
 
 // APIs
 import { ApiV1 } from "./v1/api-v1";
@@ -69,8 +69,9 @@ function initApp(db: any) {
   app.use("/api", apiRouter);
 
 
+  let repoFactory = new RepositoryFactory(db);
   // API V1
-  ApiV1.init(apiRouter, db);
+  ApiV1.init(apiRouter, repoFactory);
 
   /**
    * Error Handler. Provides full stack - remove for production
