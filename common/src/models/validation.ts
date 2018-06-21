@@ -1,5 +1,6 @@
-import { Ref, LinkedProperty, AbstractEntity } from "./";
+import { LinkedProperty, AbstractEntity } from "./";
 import { PropertyConvention, PropertyTypes } from "../constants";
+import { EntityTypeRef } from "./helpers";
 
 export interface Validation extends AbstractEntity {
     type: PropertyTypes;
@@ -9,7 +10,7 @@ export interface Validation extends AbstractEntity {
     max?: number;
     pattern?: string;
     enum?: string[];
-    ref?: Ref;
+    ref?: EntityTypeRef;
     linkedProperties?: LinkedProperty[];
     items?: Validation;
     uniqueItems?: boolean;

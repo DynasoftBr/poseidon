@@ -2,17 +2,13 @@ import { expect, assert } from "chai";
 import { describe } from "mocha";
 import { EntityType } from "../../../src/models";
 import { PropertyTypes } from "../../../src/constants";
-import { EntitySchemaBuilder } from "../../../src/data/schema-builder/entity-schema-builder";
-import { EntityTypeRepository } from "../../../src/data/repositories/entity-type-repository";
-import { DataAccess } from "../../../src";
-import { TestRepositoryFactory } from "../repositories/test-repository-factory";
-import { GenericRepositoryInterface } from "../../../src/data/repositories/repository-interface";
+import { EntitySchemaBuilder } from "../../../src/schema-builder/entity-schema-builder";
 
 describe("Schema Builder Test", () => {
 
     describe("Integer test", () => {
         it("Can set an integer property", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -23,13 +19,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "integer");
         });
 
         it("Integer property can have max value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -41,13 +37,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maximum, 50);
         });
 
         it("Integer property can have min value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -59,13 +55,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minimum, 30);
         });
 
         it("Integer property can be multiple of a value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -77,13 +73,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.multipleOf, 10);
         });
 
         it("Integer property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -95,7 +91,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -103,7 +99,7 @@ describe("Schema Builder Test", () => {
 
     describe("Number test", () => {
         it("Can set an mumber property", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -114,13 +110,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "number");
         });
 
         it("Number property can have max value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -132,13 +128,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maximum, 50);
         });
 
         it("Number property can have min value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -150,13 +146,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minimum, 30);
         });
 
         it("Number property can be multiple of a value", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -168,13 +164,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.multipleOf, 10.5);
         });
 
         it("Number property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -186,7 +182,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -194,7 +190,7 @@ describe("Schema Builder Test", () => {
 
     describe("String test", () => {
         it("Can set an string property", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -205,13 +201,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "string");
         });
 
         it("String property can have max length", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -223,13 +219,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maxLength, 50);
         });
 
         it("Number property can have min length", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -241,13 +237,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minLength, 30);
         });
 
         it("String property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -259,13 +255,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
 
         it("String property can have a pattern", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -277,7 +273,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect((<any>schemaB.getSchema().properties).prop1.pattern, "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$");
         });
@@ -285,7 +281,7 @@ describe("Schema Builder Test", () => {
 
     describe("Date and time test", () => {
         it("DateTime property has format automatically set to 'date-time'", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -296,13 +292,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.format, "date-time");
         });
 
         it("DateTime property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -314,7 +310,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -322,7 +318,7 @@ describe("Schema Builder Test", () => {
 
     describe("Enum test", () => {
         it("Enum property has 'string' type set in the schema", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -334,13 +330,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "string");
         });
 
         it("Enum property must have an array of valid strings", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -352,13 +348,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect((<any>schemaB.getSchema().properties).prop1.enum).to.eql(["teste", "teste2"]);
         });
 
         it("Enum property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -371,7 +367,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -379,7 +375,7 @@ describe("Schema Builder Test", () => {
 
     describe("Boolean test", () => {
         it("Can set an boolean property", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -390,13 +386,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "boolean");
         });
 
         it("Boolean property can be required", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -408,7 +404,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -416,7 +412,7 @@ describe("Schema Builder Test", () => {
 
     describe("Array test", () => {
         it("Can set an array of int", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -430,13 +426,13 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "array");
         });
 
         it("Can set an array of number", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -450,7 +446,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
@@ -467,7 +463,7 @@ describe("Schema Builder Test", () => {
         });
 
         it("Array can have unique items", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -482,7 +478,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
@@ -500,7 +496,7 @@ describe("Schema Builder Test", () => {
         });
 
         it("Array property does't accept aditional items", async () => {
-            let entityType: EntityType = <EntityType>{
+            const entityType: EntityType = <EntityType>{
                 props: [
                     {
                         name: "prop1",
@@ -514,7 +510,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            let schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
