@@ -2,25 +2,27 @@ import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strateg
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntityType, Validation, EntityProperty } from "../..";
-import { SysEntities } from "../../constants";
+import { SysEntities } from "../constants";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
 
 /**
- * Build JSON schama validation for string properties.
+ * Build JSON schama validation for number properties.
  * @class
  */
-export class StringPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
+export class NumberPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
     async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
-        let propSchema = new SchemaBuilder().type("string");
+        const propTypeName = validation.type.toLowerCase();
+
+        const propSchema = new SchemaBuilder().type(<"integer" | "number">propTypeName);
 
         if (validation.min)
-            propSchema.minLength(validation.min);
+            propSchema.min(validation.min);
 
         if (validation.max)
-            propSchema.maxLength(validation.max);
+            propSchema.max(validation.max);
 
-        if (validation.pattern)
-            propSchema.pattern(validation.pattern);
+        if (validation.multipleOf)
+            propSchema.multipleOf(validation.multipleOf);
 
         return propSchema;
     }

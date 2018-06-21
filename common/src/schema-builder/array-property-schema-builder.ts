@@ -1,8 +1,7 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { EntityType, Validation, EntityProperty } from "../..";
-import { SysEntities } from "../../constants";
+import { Validation } from "../..";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
 
 /**
@@ -17,7 +16,7 @@ export class ArrayPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
 
     async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
 
-        let propSchema = new SchemaBuilder().array();
+        const propSchema = new SchemaBuilder().array();
 
         // No additional items allowed.
         propSchema.additionalItems(false);
@@ -26,7 +25,7 @@ export class ArrayPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
             propSchema.uniqueItems(true);
 
         // Get the schema for items.
-        let itemsSchema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, validation.items);
+        const itemsSchema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, validation.items);
 
         propSchema.items(itemsSchema);
 

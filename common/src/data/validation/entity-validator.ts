@@ -4,11 +4,10 @@ import { SchemaModel, SchemaBuilder } from "json-schema-fluent-builder";
 
 import { ValidationProblem } from "./validation-problem";
 import { EntityType, Entity } from "../../models";
-import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
+import { AbstractRepositoryFactory } from "../repositories/factories/abstract-repository-factory";
 import { SysEntities, PropertyTypes } from "../../constants";
 import { SysMsgs } from "../../sys-msgs";
-import { EntitySchemaBuilder } from "../schema-builder/entity-schema-builder";
-import { RepositoryFactory } from "./factories/repository-factory";
+import { EntitySchemaBuilder } from "../../schema-builder/entity-schema-builder";
 
 export class EntityValidator {
 
@@ -20,21 +19,21 @@ export class EntityValidator {
     public static async validate(entitytype: EntityType, entity: Entity,
         repoFactory: AbstractRepositoryFactory): Promise<ValidationProblem[]> {
 
-        let problems: ValidationProblem[] = [];
-        let schemaRepo = await repoFactory.createByName(SysEntities.entitySchema);
+        let problems: ValidationProblem[];
+        const schemaRepo = await repoFactory.createByName(SysEntities.entitySchema);
 
-        let entitySchema = await schemaRepo.findById(entitytype.name);
+        const entitySchema = await schemaRepo.findById(entitytype._id);
         let schema: object;
 
         // If can't find the schema on database, try to build it.
         if (entitySchema != null)
             schema = JSON.parse(entitySchema.schema);
         else
-            schema = (await new EntitySchemaBuilder(await repoFactory.entityType()).buildSchema(entitytype))
-                .getSchema();
+            schema = (await new EntitySchemaBuilder(await repoFactory.entityType())
+                .buildSchema(entitytype)).getSchema();
 
         // Get schema problems.
-        problems.push(...this.validateAgainstJsonSchema(schema, entity));
+        problems = this.validateAgainstJsonSchema(schema, entity);
 
         // Get linked entity problems.
         problems.push(...await this.validateLinkedEntities(entity, entitytype, repoFactory));
@@ -48,21 +47,18 @@ export class EntityValidator {
      */
     private static validateAgainstJsonSchema(schema: SchemaModel, entity: Entity): ValidationProblem[] {
         // Instantiates ajv library, compiles the schema, them validates the entity.
-        let jsonVal = new Ajv({ allErrors: true, verbose: true });
-        let validate = jsonVal.compile(schema);
-        let valid = validate(entity);
+        const jsonVal = new Ajv({ allErrors: true, verbose: true });
+        const validate = jsonVal.compile(schema);
+        const valid = validate(entity);
+
+        // If the obj is valid just return an empty array.
+        if (valid) return [];
 
         // if the obj is not valid, builds the messages and returns a 'ValidationProblem' array.
-        if (!valid) {
-            let problems: ValidationProblem[] = [];
-            validate.errors.forEach(err => {
-                problems.push(ValidationProblem.buildMsg(err));
-            });
+        const problems: ValidationProblem[] = new Array(validate.errors.length);
+        validate.errors.forEach((err, idx) => problems[idx] = ValidationProblem.buildMsg(err));
 
-            return problems;
-        }
-
-        return [];
+        return problems;
     }
 
     /**
@@ -74,18 +70,18 @@ export class EntityValidator {
     private static async validateLinkedEntities(entity: Entity, entityType: EntityType,
         repoFactory: AbstractRepositoryFactory): Promise<ValidationProblem[]> {
 
-        let problems: ValidationProblem[] = [];
-        let propsLength = entityType.props.length;
+        const problems: ValidationProblem[] = [];
+        const propsLength = entityType.props.length;
 
         // Iterate entity properties.
         for (let idx = 0; idx < propsLength; idx++) {
             const prop = entityType.props[idx];
-
+            const propValidation = prop.validation;
             // Validate only if the entity has a value for this property, the required constraint is validated by json schema.
             if (prop.validation.type === PropertyTypes.linkedEntity && entity[prop.name] && entity[prop.name]._id) {
 
                 // Get the repository for the linked entity and try find it.
-                let lkdEntity = await (await repoFactory.createByName(prop.validation.ref.name)).findById(entity[prop.name]._id);
+                const lkdEntity = await (await repoFactory.createByName(prop.validation.ref.name)).findById(entity[prop.name]._id);
 
                 // If we can't find an entity with the linked id, add a validation problem.
                 if (lkdEntity == null) {
@@ -97,7 +93,7 @@ export class EntityValidator {
 
                         // Check if the value provided in linked properties equals linked entity values.
                         if (!_.isEqual(entity[prop.name][lkdProp.name], lkdEntity[lkdProp.name])) {
-                            let p = prop.name + "." + lkdProp.name;
+                            const p = prop.name + "." + lkdProp.name;
                             problems.push(new ValidationProblem(p, "linkedValue", SysMsgs.validation.divergentLinkedValue, p, lkdEntity[lkdProp.name]));
                         }
                     });
