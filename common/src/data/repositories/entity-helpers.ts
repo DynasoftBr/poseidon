@@ -50,7 +50,7 @@ export class EntityHelpers {
 
     public static addReserverdPropsEtType(entity: Entity, entityType: EntityType): Entity {
 
-        let builtin = new BuiltInEntries();
+        const builtin = new BuiltInEntries();
 
         if (_.filter((<EntityType>entity).props, { name: SysProperties.changedAt })
             .length == 0)
@@ -89,7 +89,7 @@ export class EntityHelpers {
      * @return The parsed default value according the property type.
      */
     private static parseDefault(d: string, type: PropertyTypes): any {
-        let parsed: string = this.handleConstants(d);
+        const parsed: string = this.handleConstants(d);
 
         if (type === PropertyTypes.string || type === PropertyTypes.enum)
             return parsed;
@@ -113,7 +113,7 @@ export class EntityHelpers {
      * @return The text replaced the found constants.
      */
     private static handleConstants(text: string) {
-        let matches = text.match(/\[\[(\w*)\]\]/);
+        const matches = text.match(/\[\[(\w*)\]\]/);
 
         if (!matches)
             return text;

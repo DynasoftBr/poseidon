@@ -1,27 +1,31 @@
-import { expect, assert } from "chai";
+import { expect } from "chai";
 import { describe } from "mocha";
-import { EntityType, Entity } from "../../../src/models";
+import { EntityType } from "../../../src/models";
 import { PropertyTypes, SysEntities, SysProperties } from "../../../src/constants";
-import { EntityValidator } from "../../../src/data/repositories/entity-validator";
-import { SchemaBuilder } from "json-schema-fluent-builder";
-import { EntitySchemaBuilder } from "../../../src/data/schema-builder/entity-schema-builder";
-import { TestRepositoryFactory } from "./test-repository-factory";
-import { BuiltInEntries } from "../../../src/data/";
+import { EntityValidator } from "../../../src/data/validation/entity-validator";
 import { SysUsers } from "../../../src/constants/sys-users";
-import { ValidationProblem } from "../../../src/data/repositories/validation-problem";
+import { ValidationProblem } from "../../../src/data/validation/validation-problem";
+import { RepositoryFactory } from "../../../src";
+import { InMemoryStorage } from "../../../src/data/storage/in-memory";
+import { DatabasePopulator } from "../../../src/data/database-populator";
 
 describe("Entity Validator Test", () => {
 
-    let repositoryFactory: TestRepositoryFactory;
+    let repositoryFactory: RepositoryFactory;
 
     before(async () => {
-        repositoryFactory = new TestRepositoryFactory();
-        await repositoryFactory.initDatabase();
+        const storage = new InMemoryStorage();
+        await storage.connect();
+
+        const populator = new DatabasePopulator(storage);
+        await populator.populate();
+
+        repositoryFactory = new RepositoryFactory(storage);
     });
 
     describe("String properties validation", () => {
         it("String doesn't accept other value types", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: 1,
                 label: "",
@@ -40,16 +44,16 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
-            let entityType = await entityTypeRepo.findOne({ name: SysEntities.entityType });
+            const entityTypeRepo = await repositoryFactory.entityType();
+            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
 
-            let problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
 
             expect(problems[0].property).eqls(SysProperties.name);
         });
 
         it("String can't be longer then expecified 'max'", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "VeryVeryLoooooooooooooooooooooooooooooooooongEntityTypeName",
                 label: "",
@@ -68,16 +72,16 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
-            let entityType = await entityTypeRepo.findOne({ name: SysEntities.entityType });
+            const entityTypeRepo = await repositoryFactory.entityType();
+            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
 
-            let problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
 
             expect(problems[0].property).eqls(SysProperties.name);
         });
 
         it("String can't be shorter then expecified 'min'", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "",
                 label: "",
@@ -96,16 +100,16 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
-            let entityType = await entityTypeRepo.findOne({ name: SysEntities.entityType });
+            const entityTypeRepo = await repositoryFactory.entityType();
+            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
 
-            let problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
 
             expect(problems[0].property).eqls(SysProperties.name);
         });
 
         it("String must match 'pattern'", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "a",
                 label: "",
@@ -124,10 +128,10 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
-            let entityType = await entityTypeRepo.findOne({ name: SysEntities.entityType });
+            const entityTypeRepo = await repositoryFactory.entityType();
+            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
 
-            let problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
 
             expect(problems[0]).contains(<ValidationProblem>{ property: SysProperties.name, keyword: "pattern" });
         });
@@ -135,7 +139,7 @@ describe("Entity Validator Test", () => {
 
     describe("Int properties validation", () => {
         it("Int doesn't accept float values", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -154,20 +158,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 1.1
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
 
         it("Int can't be greater than 'max'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -187,20 +191,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 26
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
 
         it("Int can't be lower than 'min'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -221,20 +225,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 9
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
 
         it("Int must respect 'multipleOf'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -256,14 +260,14 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 1
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
@@ -271,7 +275,7 @@ describe("Entity Validator Test", () => {
 
     describe("Number properties validation", () => {
         it("Number accept decimal/float values", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -290,20 +294,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 1.1
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems.length).eqls(0);
         });
 
         it("Number can't be greater than 'max'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -323,20 +327,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 25.1
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
 
         it("Int can't be lower than 'min'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -357,20 +361,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 9.9
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
 
         it("Int must respect 'multipleOf'.", async () => {
-            let newEntityType: EntityType = {
+            const newEntityType: EntityType = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -392,14 +396,14 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: 10.001
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems[0].property).eqls("prop1");
         });
@@ -407,7 +411,7 @@ describe("Entity Validator Test", () => {
 
     describe("DateTime properties validation", () => {
         it("DateTime property doesn't accept other values", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -426,20 +430,20 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: "teste"
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems.length).eqls(1);
         });
 
         it("DateTime property accept Date javascript object", async () => {
-            let newEntityType: any = {
+            const newEntityType: any = {
                 _id: "newId",
                 name: "Name",
                 label: "",
@@ -458,14 +462,14 @@ describe("Entity Validator Test", () => {
                 }
             };
 
-            let entityTypeRepo = await repositoryFactory.entityType();
+            const entityTypeRepo = await repositoryFactory.entityType();
             entityTypeRepo.insertOne(newEntityType);
 
-            let newEntity = {
+            const newEntity = {
                 prop1: new Date()
             };
 
-            let problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
 
             expect(problems.length).eqls(0);
         });

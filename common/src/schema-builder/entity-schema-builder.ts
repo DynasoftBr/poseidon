@@ -1,7 +1,7 @@
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { Entity, EntityType, Validation, EntityProperty } from "../../models";
-import { PropertyTypes, SysEntities } from "../../constants";
+import { EntityType, Validation } from "../models";
+import { PropertyTypes } from "../constants";
 
 import { LinkedEntitySchemaBuilder } from "./linked-entity-schema-builder";
 import { AbstractEntitySchamBuilder } from "./abstract-entity-schema-builder";
@@ -10,31 +10,29 @@ import { DateTimePropertySchemaBuilder } from "./date-time-property-schema-build
 import { BooleanPropertySchemaBuilder } from "./boolean-property-schema-builder";
 import { NumberPropertySchemaBuilder } from "./number-property-schema-builder";
 import { EnumPropertySchemaBuilder } from "./enum-property-schema-builder";
-import { SysError, SysMsgs } from "../..";
-import { EntityTypeRepository } from "../repositories/entity-type-repository";
 import { ArrayPropertySchemaBuilder } from "./array-property-schema-builder";
-import { GenericRepositoryInterface } from "../repositories/repository-interface";
+import { EntityTypeRepository } from "../data/repositories/entity-type-repository";
 
 export class EntitySchemaBuilder {
 
-    constructor(private readonly entityTypeRepository: GenericRepositoryInterface<EntityType>) { }
+    constructor(private readonly entityTypeRepository: EntityTypeRepository) { }
 
     /**
      * Builds the schema for the specified entity type.
      */
     public async buildSchema(entityType: EntityType): Promise<FluentSchemaBuilder> {
         // The root schema.
-        let schema = new SchemaBuilder().object();
+        const schema = new SchemaBuilder().object();
 
         // No additional properties allowed.
         schema.additionalProperties(false);
 
         // Iterate entity type properties to build each ones schema.
-        let propsLength = entityType.props.length;
+        const propsLength = entityType.props.length;
         for (let idx = 0; idx < propsLength; idx++) {
             const prop = entityType.props[idx];
 
-            let bs = await this.buildSchemaValidation(schema, prop.validation);
+            const bs = await this.buildSchemaValidation(schema, prop.validation);
             schema.prop(prop.name, bs, prop.validation.required);
         }
 

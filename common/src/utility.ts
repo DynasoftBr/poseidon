@@ -9,3 +9,7 @@ export class Utility {
         return true;
     }
 }
+
+export type Partial<T> = {
+    [P in keyof T]?: T[P];
+};

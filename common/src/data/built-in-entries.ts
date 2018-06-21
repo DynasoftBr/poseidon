@@ -183,7 +183,8 @@ export class BuiltInEntries {
                 required: true,
                 ref: {
                     _id: SysEntities.user,
-                    name: SysEntities.user
+                    name: SysEntities.user,
+                    label: SysEntities.user
                 },
                 linkedProperties: [
                     {
@@ -219,7 +220,8 @@ export class BuiltInEntries {
                 required: false,
                 ref: {
                     _id: SysEntities.user,
-                    name: SysEntities.user
+                    name: SysEntities.user,
+                    label: SysEntities.user
                 },
                 linkedProperties: [
                     {

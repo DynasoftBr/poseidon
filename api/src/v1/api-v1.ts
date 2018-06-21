@@ -5,7 +5,7 @@ import * as winston from "winston"; // Logger. Uses configuration made in server
 
 import {
     SysError, SysMsgs, SysMsg,
-    DatabaseError, Entity, AbstractRepositoryFactory
+    DatabaseError, Entity, AbstractRepositoryFactory, ServiceFactory, ConcreteEntity
 } from "@poseidon/common";
 
 import { ResObj } from "./res-obj";
@@ -14,14 +14,14 @@ import { RequestError } from "./request-error";
 export class ApiV1 {
     private static _instance: ApiV1;
 
-   private constructor(private readonly repositoryFactory: AbstractRepositoryFactory) { }
+    private constructor(private readonly serviceFactory: ServiceFactory) { }
 
-    static init(app: Router, repositoryFactory: AbstractRepositoryFactory) {
+    static init(app: Router, serviceFactory: ServiceFactory) {
         // If we already have an instace, just return it.
         if (this._instance)
             return this._instance;
 
-        let api = this._instance = new ApiV1(repositoryFactory);
+        let api = this._instance = new ApiV1(serviceFactory);
         let router = Router();
         let routeBase: string = "/:etName";
 
@@ -52,14 +52,14 @@ export class ApiV1 {
      */
     private async all(req: Request, res: Response) {
         try {
-            let repo = await this.repositoryFactory.createByName(req.params.etName);
+            const service = await this.serviceFactory.getServiceByName(req.params.etName);
 
             // Get skip and limit from query string.
             // if not provided, use undefined to preserv function defaults.
             let skip = req.query.skip ? parseInt(req.query.skip) : undefined;
             let limit = req.query.limit ? parseInt(req.query.limit) : undefined;
 
-            let results = await repo.find({}, skip, limit);
+            let results = await service.findMany({}, skip, limit);
 
             res.send(this.responseSuccess(results, results.length));
         } catch (error) {
@@ -74,8 +74,8 @@ export class ApiV1 {
      */
     private async findOne(req: Request, res: Response) {
         try {
-            let repo = await this.repositoryFactory.createByName(req.params.etName);
-            let result = await repo.findOne(req.params.id);
+            let service = await this.serviceFactory.getServiceByName(req.params.etName);
+            let result = await service.findOne({_id: req.params.id});
 
             if (result) {
                 res.send(this.responseSuccess(result, 1));
@@ -93,11 +93,11 @@ export class ApiV1 {
      */
     private async create(req: Request, res: Response) {
 
-        let entity: Entity = req.body;
+        let entity: ConcreteEntity = req.body;
 
         try {
-            let repo = await this.repositoryFactory.createByName(req.params.etName);
-            let result = await repo.insertOne(entity);
+            let service = await this.serviceFactory.getServiceByName(req.params.etName);
+            let result = await service.insertOne(entity);
 
             res.statusCode = 201;
             res.location("/" + result);
@@ -117,12 +117,13 @@ export class ApiV1 {
         let _id = req.params.id;
 
         try {
-            let repo = await this.repositoryFactory.createByName(req.params.etName);
-            let deleteCount = await repo.deleteOne(_id);
+            let service = await this.serviceFactory.getServiceByName(req.params.etName);
+            let deleteCount = await service.deleteOne(_id);
 
             // If cannot find specified id, respond with 'not found'.
-            if (deleteCount == 0)
-                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound, req.params.etName, req.params.id));
+            if (!deleteCount)
+                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound,
+                    req.params.etName, req.params.id));
 
             res.send(this.responseSuccess(null, 1));
         } catch (error) {
@@ -137,14 +138,14 @@ export class ApiV1 {
      */
     private async update(req: Request, res: Response) {
 
-        let entity: Entity = req.body;
+        let entity: ConcreteEntity = req.body;
 
         try {
-            let repo = await this.repositoryFactory.createByName(req.params.etName);
-            let updatedCount = await repo.update(entity);
+            let service = await this.serviceFactory.getServiceByName(req.params.etName);
+            let updatedCount = await service.updateOne(req.params.id, entity);
 
             // If cannot find specified id, respond with 'not found'.
-            if (updatedCount == 0)
+            if (!updatedCount)
                 this.handleError(res, new RequestError(SysMsgs.error.entityNotFound, req.params.etName, req.params.id));
 
             res.send(204);
@@ -153,7 +154,7 @@ export class ApiV1 {
         }
     }
 
-    readonly responseObj: ResObj = {
+    private readonly responseObj: ResObj = {
         status: null,
         itens: 0,
         result: null
@@ -162,6 +163,7 @@ export class ApiV1 {
         this.responseObj.status = "success";
         this.responseObj.itens = items;
         this.responseObj.result = result;
+        this.responseObj.error = null;
 
         return this.responseObj;
     }

@@ -9,7 +9,10 @@ import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
 import * as path from "path";
 import * as dotenv from "dotenv";
-import { DataAccess, DatabaseError, SysMsgs, AbstractRepositoryFactory, RepositoryFactory } from "@poseidon/common";
+import {
+  DatabaseError, SysMsgs, RepositoryFactory,
+  InMemoryStorage, DataStorage, ServiceFactory, DatabasePopulator
+} from "@poseidon/common";
 
 // APIs
 import { ApiV1 } from "./v1/api-v1";
@@ -19,31 +22,46 @@ import { customLogger, mqueryParser } from "./middlewares";
 
 export async function init(): Promise<void> {
 
-  // connect to database
-  await DataAccess.connect({
-    url: process.env.MONGODB_URI,
-    dbName: process.env.DB_NAME,
-    retries: parseInt(process.env.RETRIES),
-    timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
-  }).then(db => {
-    // let coll = db.collection("EntityType1");
-    // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
-    // coll.indexes().then(idxs => {
-    //   console.log(idxs);
-    // });
-    // // });
+  // Connect to the storage.
+  let storage = new InMemoryStorage();
+  try {
+    await storage.connect();
 
-    initApp(db);
+    const populator = new DatabasePopulator(storage);
+    await populator.populate();
 
-  }).catch(err => {
-    winston.error(new DatabaseError(SysMsgs.error.databaseLevelError, err).message);
+    initApp(storage);
+  } catch (error) {
+    winston.error(error);
     process.exit(SysMsgs.error.databaseLevelError.code);
-  });
+  }
+
+
+  // connect to database
+  // await DataAccess.connect({
+  //   url: process.env.MONGODB_URI,
+  //   dbName: process.env.DB_NAME,
+  //   retries: parseInt(process.env.RETRIES),
+  //   timeBetweenRetries: parseInt(process.env.TIME_BETWEEN_RETRIES)
+  // }).then(db => {
+  //   // let coll = db.collection("EntityType1");
+  //   // // coll.createIndexes([{ key: { "created_by.name": 1 }, unique: true }]).then(res => {
+  //   // coll.indexes().then(idxs => {
+  //   //   console.log(idxs);
+  //   // });
+  //   // // });
+
+
+
+  // }).catch(err => {
+  //   winston.error(new DatabaseError(SysMsgs.error.databaseLevelError, err).message);
+  //   process.exit(SysMsgs.error.databaseLevelError.code);
+  // });
 
 }
 
 
-function initApp(db: any) {
+function initApp(storage: DataStorage) {
   /**
    * Create Express server.
    */
@@ -68,10 +86,12 @@ function initApp(db: any) {
   let apiRouter = express.Router();
   app.use("/api", apiRouter);
 
+  // Instantiate the repositories and services factory.
+  const repoFactory = new RepositoryFactory(storage);
+  const servicesFactory = new ServiceFactory(repoFactory);
 
-  let repoFactory = new RepositoryFactory(db);
   // API V1
-  ApiV1.init(apiRouter, repoFactory);
+  ApiV1.init(apiRouter, servicesFactory);
 
   /**
    * Error Handler. Provides full stack - remove for production
