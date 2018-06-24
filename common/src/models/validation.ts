@@ -5,7 +5,6 @@ import { EntityTypeRef } from "./helpers";
 export interface Validation extends AbstractEntity {
     type: PropertyTypes;
     required?: boolean;
-    unique?: boolean;
     min?: number;
     max?: number;
     pattern?: string;
