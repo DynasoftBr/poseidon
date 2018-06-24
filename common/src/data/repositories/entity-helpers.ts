@@ -1,14 +1,13 @@
-import { EntityType, Entity } from "../..";
-import { SysProperties, PropertyTypes, PropertyConvention } from "../../constants";
-import _ = require("lodash");
-import { BuiltInEntries } from "../built-in-entries";
+import { EntityType, ConcreteEntity } from "../..";
+import { PropertyTypes, PropertyConvention } from "../../constants";
+import { SysUsers } from "../../constants/sys-users";
 
 export class EntityHelpers {
 
     /**
      * Apply defaults for properties that have one.
      */
-    public static applyDefaults(entity: Entity, entityType: EntityType): Entity {
+    public static applyDefaults(entity: ConcreteEntity, entityType: EntityType): ConcreteEntity {
         entityType.props.forEach(p => {
 
             // Apply defaults.
@@ -24,7 +23,7 @@ export class EntityHelpers {
      * Apply convention to properties that have one specified.
      * e.g. "lowercase" or "UPPERCASE".
      */
-    public static applyConvention(entity: Entity, entityType: EntityType): Entity {
+    public static applyConvention(entity: ConcreteEntity, entityType: EntityType): ConcreteEntity {
         entityType.props.forEach(p => {
             // Apply convention.
             if (p.validation.convention && entity[p.name])
@@ -37,7 +36,7 @@ export class EntityHelpers {
     /**
      * Look for date-time properties in the object and parse it if is a string.
      */
-    public static parseDateTimeProperties(entity: Entity, entityType: EntityType): Entity {
+    public static parseDateTimeProperties(entity: ConcreteEntity, entityType: EntityType): ConcreteEntity {
         entityType.props.forEach(p => {
             // Parse date-time.
             if (p.validation.type === PropertyTypes.dateTime
@@ -48,38 +47,31 @@ export class EntityHelpers {
         return entity;
     }
 
-    public static addReserverdPropsEtType(entity: Entity, entityType: EntityType): Entity {
-
-        const builtin = new BuiltInEntries();
-
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedAt })
-            .length == 0)
-            (<EntityType>entity).props.push(builtin.changedAtPropertyDefinition);
-
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.changedBy })
-            .length == 0)
-            (<EntityType>entity).props.push(builtin.changedByPropertyDefinition);
-
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdAt })
-            .length == 0)
-            (<EntityType>entity).props.push(builtin.createdAtPropertyDefinition);
-
-        if (_.filter((<EntityType>entity).props, { name: SysProperties.createdBy })
-            .length == 0)
-            (<EntityType>entity).props.push(builtin.createdByPropertyDefinition);
-
-        if (_.filter((<EntityType>entity).props, { name: SysProperties._id })
-            .length == 0)
-            (<EntityType>entity).props.push(builtin.idPropertyDefinition);
-
-        return entity;
-    }
-
-    public static ensureIdProperty(entity: Entity): Entity {
+    public static ensureIdProperty(entity: ConcreteEntity): ConcreteEntity {
         if (!entity._id)
             entity._id = null;
 
         return entity;
+    }
+
+    public static addCreationInfo(concreteEntity: ConcreteEntity): ConcreteEntity {
+        concreteEntity.createdAt = new Date();
+        concreteEntity.createdBy =  {
+            _id: SysUsers.root,
+            name: SysUsers.root
+        };
+
+        return concreteEntity;
+    }
+
+    public static addUpdateInfo(concreteEntity: ConcreteEntity): ConcreteEntity {
+        concreteEntity.changedAt = new Date();
+        concreteEntity.changedAt =  {
+            _id: SysUsers.root,
+            name: SysUsers.root
+        };
+
+        return concreteEntity;
     }
 
     /**
