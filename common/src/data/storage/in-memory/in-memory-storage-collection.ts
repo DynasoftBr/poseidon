@@ -27,12 +27,18 @@ export class InMemoryStorageCollection<T extends ConcreteEntity = ConcreteEntity
     }
 
     async findMany(filter: object, skip?: number, limit?: number, sort?: object): Promise<T[]> {
-        return await this.collection.find(filter);
+        const clone: any = _.cloneDeep(await this.collection.find(filter));
+        delete (clone.$loki);
+        delete (clone.meta);
+        return clone;
     }
 
     async findOne(filter: object): Promise<T> {
         try {
-            return await this.collection.findOne(filter);
+            const clone: any = _.cloneDeep(await this.collection.findOne(filter));
+            delete (clone.$loki);
+            delete (clone.meta);
+            return clone;
         } catch (error) {
             /// this.handleError(error);
         }
@@ -40,7 +46,8 @@ export class InMemoryStorageCollection<T extends ConcreteEntity = ConcreteEntity
 
     async insertOne(doc: T): Promise<boolean> {
         try {
-            const result = await this.collection.insertOne(doc);
+            const clone: any = _.cloneDeep(doc);
+            const result = await this.collection.insertOne(clone);
             return result != null;
         } catch (error) {
             /// this.handleError(error);
