@@ -1,14 +1,7 @@
-import * as Ajv from "ajv";
 
-import { Entity, DatabaseError, SysMsgs, EntityType, Repository } from "../..";
-import { Collection, MongoError, ObjectID, Db, InsertWriteOpResult, InsertOneWriteOpResult } from "mongodb";
+import { DatabaseError, SysMsgs, EntityType, Repository } from "../..";
+import { MongoError } from "mongodb";
 import { EventEmitter } from "events";
-import _ = require("lodash");
-import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
-import { PropertyTypes, SysEntities } from "../../constants";
-import { ValidationProblem } from "../validation/validation-problem";
-import { ValidationError } from "../validation/validation-error";
-import { EntityValidator } from "../validation/entity-validator";
 import { DataStorage, StorageCollection } from "../storage";
 import { ConcreteEntity } from "../../models";
 

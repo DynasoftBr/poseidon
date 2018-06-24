@@ -1,5 +1,3 @@
-import * as util from "util";
-
 import { SysMsg, SysError } from "@poseidon/common";
 
 /**
