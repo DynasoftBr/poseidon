@@ -12,8 +12,8 @@ export class BuiltInEntries {
             props: [
                 this.idPropertyDefinition,
                 this.namePropertyDefinition,
-                this.labelProperty,
-                this.abstractProperty,
+                this.labelPropertyDefinition,
+                this.abstractPropertyDefinition,
                 this.propsPropertyDefinition,
                 this.createdByPropertyDefinition,
                 this.createdAtPropertyDefinition,
@@ -29,16 +29,10 @@ export class BuiltInEntries {
         return {
             _id: SysEntities.entityProperty,
             name: SysEntities.entityProperty,
-            abstract: false,
+            abstract: true,
             props: [
-                this.idPropertyDefinition,
                 this.namePropertyDefinition,
-                this.entityTypePropertyDefinition,
-                this.schemaPropertyDefinition,
-                this.changedByPropertyDefinition,
-                this.createdAtPropertyDefinition,
-                this.changedByPropertyDefinition,
-                this.changedAtPropertyDefinition
+                this.validationPropertyDefinition
             ],
             createdBy: this.rootUserRef,
             createdAt: new Date()
@@ -71,12 +65,52 @@ export class BuiltInEntries {
             abstract: false,
             props: [
                 this.idPropertyDefinition,
-                this.namePropertyDefinition,
+                this.userNamePropertyDefinition,
                 this.loginPropertyDefinition,
                 this.createdByPropertyDefinition,
                 this.createdAtPropertyDefinition,
                 this.changedByPropertyDefinition,
                 this.changedAtPropertyDefinition
+            ],
+            createdAt: new Date(),
+            createdBy: this.rootUserRef
+        };
+    }
+
+    public get entityTypeValidation(): EntityType {
+        return {
+            _id: SysEntities.validation,
+            name: SysEntities.validation,
+            abstract: false,
+            props: [
+                this.typePropertyDefinition,
+                this.requiredPropertyDefinition,
+                this.minPropertyDefinition,
+                this.maxPropertyDefinition,
+                this.patternPropertyDefinition,
+                this.enumPropertyDefinition,
+                this.refPropertyDefinition,
+                this.linkedPropertiesPropertyDefinition,
+                this.itemsPropertyDefinition,
+                this.uniqueItemsPropertyDefinition,
+                this.multipleOfPropertyDefinition,
+                this.defaultPropertyDefinition,
+                this.conventionPropertyDefinition
+            ],
+            createdAt: new Date(),
+            createdBy: this.rootUserRef
+        };
+    }
+
+    public get entityTypeLinkedProperty(): EntityType {
+        return {
+            _id: SysEntities.linkedProperty,
+            name: SysEntities.linkedProperty,
+            abstract: false,
+            props: [
+                this.entityPropertyNamePropertyDefinition,
+                this.keepUpToDatePropertyDefinition,
+                this.labelPropertyDefinition
             ],
             createdAt: new Date(),
             createdBy: this.rootUserRef
@@ -114,7 +148,7 @@ export class BuiltInEntries {
         };
     }
 
-    public get labelProperty(): EntityProperty {
+    public get labelPropertyDefinition(): EntityProperty {
         return {
             name: SysProperties.label,
             validation: {
@@ -149,7 +183,41 @@ export class BuiltInEntries {
         };
     }
 
-    public get abstractProperty(): EntityProperty {
+    public get entityPropertyNamePropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.name,
+            validation: {
+                type: PropertyTypes.string,
+                required: true,
+                max: 50,
+                min: 1,
+                pattern: "^[a-z][A-Za-z0-9]*$"
+            }
+        };
+    }
+
+    public get keepUpToDatePropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.keepUpToDate,
+            validation: {
+                type: PropertyTypes.boolean,
+                required: false
+            }
+        };
+    }
+
+    public get validationPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.validation,
+            validation: {
+                type: PropertyTypes.abstractEntity,
+                required: true,
+                ref: this.validationRef
+            }
+        };
+    }
+
+    public get abstractPropertyDefinition(): EntityProperty {
         return {
             name: SysProperties.abstract,
             validation: {
@@ -165,8 +233,6 @@ export class BuiltInEntries {
             validation: {
                 type: PropertyTypes.array,
                 required: true,
-                ref: this.entityTypeRef,
-                linkedProperties: this.entityTypeRefLinkedProps,
                 items: {
                     type: PropertyTypes.abstractEntity,
                     ref: this.entityPropertyRef
@@ -181,11 +247,7 @@ export class BuiltInEntries {
             validation: {
                 type: PropertyTypes.linkedEntity,
                 required: true,
-                ref: {
-                    _id: SysEntities.user,
-                    name: SysEntities.user,
-                    label: SysEntities.user
-                },
+                ref: this.entityTypeUserRef,
                 linkedProperties: [
                     {
                         name: SysProperties._id,
@@ -217,12 +279,7 @@ export class BuiltInEntries {
             name: SysProperties.changedBy,
             validation: {
                 type: PropertyTypes.linkedEntity,
-                required: false,
-                ref: {
-                    _id: SysEntities.user,
-                    name: SysEntities.user,
-                    label: SysEntities.user
-                },
+                ref: this.entityTypeUserRef,
                 linkedProperties: [
                     {
                         name: SysProperties._id,
@@ -244,7 +301,6 @@ export class BuiltInEntries {
             name: SysProperties.changedAt,
             validation: {
                 type: PropertyTypes.dateTime,
-                required: false
             }
         };
     }
@@ -280,6 +336,136 @@ export class BuiltInEntries {
         };
     }
 
+    public get typePropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.type,
+            validation: {
+                type: PropertyTypes.string,
+                required: true
+            }
+        };
+    }
+
+    public get requiredPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.required,
+            validation: {
+                type: PropertyTypes.boolean,
+                required: true
+            }
+        };
+    }
+
+    public get minPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.min,
+            validation: {
+                type: PropertyTypes.number,
+            }
+        };
+    }
+
+    public get maxPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.max,
+            validation: {
+                type: PropertyTypes.number,
+            }
+        };
+    }
+
+    public get patternPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.pattern,
+            validation: {
+                type: PropertyTypes.string,
+            }
+        };
+    }
+
+    public get enumPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.enum,
+            validation: {
+                type: PropertyTypes.array,
+                items: {
+                    type: PropertyTypes.string
+                }
+            }
+        };
+    }
+
+    public get refPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.ref,
+            validation: {
+                type: PropertyTypes.linkedEntity,
+                ref: this.entityTypeRef,
+                linkedProperties: this.entityTypeRefLinkedProps
+            }
+        };
+    }
+
+    public get linkedPropertiesPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.linkedProperties,
+            validation: {
+                type: PropertyTypes.array,
+                items: {
+                    type: PropertyTypes.abstractEntity,
+                    ref: this.linkedPropertyRef
+                }
+            }
+        };
+    }
+
+    public get itemsPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.items,
+            validation: {
+                type: PropertyTypes.abstractEntity,
+                ref: this.validationRef
+            }
+        };
+    }
+
+    public get uniqueItemsPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.uniqueItems,
+            validation: {
+                type: PropertyTypes.boolean,
+                ref: this.validationRef
+            }
+        };
+    }
+
+    public get multipleOfPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.multipleOf,
+            validation: {
+                type: PropertyTypes.number,
+            }
+        };
+    }
+
+    public get defaultPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.default,
+            validation: {
+                type: PropertyTypes.string,
+            }
+        };
+    }
+
+    public get conventionPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.convention,
+            validation: {
+                type: PropertyTypes.string,
+            }
+        };
+    }
+
     public get rootUserRef(): UserRef {
         return {
             _id: SysUsers.root,
@@ -300,6 +486,30 @@ export class BuiltInEntries {
             _id: SysEntities.entityProperty,
             label: SysEntities.entityProperty,
             name: SysEntities.entityProperty
+        };
+    }
+
+    public get validationRef(): EntityTypeRef {
+        return {
+            _id: SysEntities.validation,
+            label: SysEntities.validation,
+            name: SysEntities.validation
+        };
+    }
+
+    public get linkedPropertyRef(): EntityTypeRef {
+        return {
+            _id: SysEntities.linkedProperty,
+            label: SysEntities.linkedProperty,
+            name: SysEntities.linkedProperty
+        };
+    }
+
+    public get entityTypeUserRef(): EntityTypeRef {
+        return {
+            _id: SysEntities.user,
+            name: SysEntities.user,
+            label: SysEntities.user
         };
     }
 
