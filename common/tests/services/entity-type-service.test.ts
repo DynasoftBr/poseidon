@@ -16,7 +16,7 @@ describe("Entity Type Service Test", () => {
         repositoryFactory = new RepositoryFactory(storage);
     });
 
-    describe("InsertOne", () => {
+    describe("Inserting one entity type", () => {
         it("During entity type's creation it gets the required entity properties.", async () => {
             const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
             const newEtType = <EntityType>{
@@ -24,7 +24,7 @@ describe("Entity Type Service Test", () => {
                 label: "New Entity Type",
                 props: [
                     {
-                        name: "Prop1",
+                        name: "prop1",
                         validation: {
                             type: PropertyTypes.string
                         }
@@ -41,6 +41,7 @@ describe("Entity Type Service Test", () => {
                 builtin.changedAtPropertyDefinition.name,
                 builtin.changedByPropertyDefinition.name
             ];
+
             expect(result.props.map(p => p.name)).to.include.members(reqProps);
         });
 
@@ -51,7 +52,7 @@ describe("Entity Type Service Test", () => {
                 label: "New Entity Type",
                 props: [
                     {
-                        name: "Prop1",
+                        name: "prop1",
                         validation: {
                             type: PropertyTypes.string
                         }
@@ -74,7 +75,7 @@ describe("Entity Type Service Test", () => {
                 label: "New Entity Type",
                 props: [
                     {
-                        name: "Prop1",
+                        name: "prop1",
                         validation: {
                             type: PropertyTypes.string
                         }
