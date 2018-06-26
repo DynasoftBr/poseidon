@@ -1,14 +1,10 @@
-import * as util from "util";
-
-import { Router, Request, Response, Express } from "express";
+import { Router, Request, Response } from "express";
 import * as winston from "winston"; // Logger. Uses configuration made in server.ts.
 
 import {
-    SysError, SysMsgs, SysMsg,
-    DatabaseError, Entity, AbstractRepositoryFactory, ServiceFactory, ConcreteEntity
+    SysError, SysMsgs, ServiceFactory, ConcreteEntity
 } from "@poseidon/common";
 
-import { ResObj } from "./res-obj";
 import { RequestError } from "./request-error";
 
 export class ApiV1 {
@@ -32,7 +28,7 @@ export class ApiV1 {
             new RequestError(SysMsgs.error.noEntityTypeSpecified)));
 
         router.get(routeBase, (req, res) => api.all(req, res));
-        router.get(routeBase + "/:id", (req, res) => api.findOne(req, res));
+        router.get(routeBase + "/:id", (req, res) => api.findById(req, res));
         router.post(routeBase, (req, res) => api.create(req, res));
         router.put(routeBase + "/:id", (req, res) => api.update(req, res));
         router.delete(routeBase + "/:id", (req, res) => api.delete(req, res));
@@ -61,7 +57,7 @@ export class ApiV1 {
 
             let results = await service.findMany({}, skip, limit);
 
-            res.send(this.responseSuccess(results, results.length));
+            res.send(results);
         } catch (error) {
             this.handleError(res, error);
         }
@@ -72,13 +68,13 @@ export class ApiV1 {
      * @param req Request
      * @param res Response
      */
-    private async findOne(req: Request, res: Response) {
+    private async findById(req: Request, res: Response) {
         try {
             let service = await this.serviceFactory.getServiceByName(req.params.etName);
-            let result = await service.findOne({_id: req.params.id});
+            let result = await service.findOne({ _id: req.params.id });
 
             if (result) {
-                res.send(this.responseSuccess(result, 1));
+                res.send(result);
             } else // If cannot find specified id, respond with 'not found'.
                 this.handleError(res, new RequestError(SysMsgs.error.entityNotFound));
         } catch (error) {
@@ -99,9 +95,7 @@ export class ApiV1 {
             let service = await this.serviceFactory.getServiceByName(req.params.etName);
             let result = await service.insertOne(entity);
 
-            res.statusCode = 201;
-            res.location("/" + result);
-            res.send(this.responseSuccess({ _id: result }, 1));
+            res.location("/" + result._id).status(201).send(result);
         } catch (error) {
             this.handleError(res, error);
         }
@@ -125,7 +119,7 @@ export class ApiV1 {
                 this.handleError(res, new RequestError(SysMsgs.error.entityNotFound,
                     req.params.etName, req.params.id));
 
-            res.send(this.responseSuccess(null, 1));
+            res.send(null);
         } catch (error) {
             this.handleError(res, error);
         }
@@ -154,26 +148,6 @@ export class ApiV1 {
         }
     }
 
-    private readonly responseObj: ResObj = {
-        status: null,
-        itens: 0,
-        result: null
-    };
-    private responseSuccess(result: any, items: number = 1): ResObj {
-        this.responseObj.status = "success";
-        this.responseObj.itens = items;
-        this.responseObj.result = result;
-        this.responseObj.error = null;
-
-        return this.responseObj;
-    }
-
-    private responseError(err: SysError): ResObj {
-        this.responseObj.status = "error";
-        this.responseObj.error = err;
-
-        return this.responseObj;
-    }
 
     /**
      * Treats errors and answer the request.
@@ -181,25 +155,26 @@ export class ApiV1 {
      * @param error A SysError object containing the error.
      */
     private handleError(res: Response, error: SysError) {
-        let resObj = this.responseError(error);
 
         if (error.code === SysMsgs.error.noEntityTypeSpecified.code
             || error.code === SysMsgs.error.abstractEntityType.code
             || error.code === SysMsgs.error.invalidHeaderParameters.code)
 
-            res.status(400).send(resObj);
+            res.status(400).send(error);
 
         else if (error.code === SysMsgs.error.entityNotFound.code
             || error.code === SysMsgs.error.entityTypeNotFound.code)
 
-            res.status(404).send(resObj);
+            res.status(404).send(error);
         else if (error.code === SysMsgs.validation.validationErrorMsg.code)
-            res.status(422).send(resObj);
+            res.status(422).send(error);
         else if (error.code === SysMsgs.error.methodNotAllowed.code)
-            res.status(405).send(resObj);
+            res.status(405).send(error);
         else {
             res.status(500).send();
             winston.error(error.message, error);
         }
     }
+
 }
+const waitFor = (ms: number) => new Promise(r => setTimeout(r, ms));

@@ -1,4 +1,4 @@
-import { Entity, EntityType, ConcreteEntity } from "../../models";
+import { EntityType, ConcreteEntity } from "../../models";
 
 export interface Repository<T extends ConcreteEntity = ConcreteEntity> {
     entityType: EntityType;

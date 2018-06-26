@@ -9,6 +9,6 @@ import { Validation } from "../..";
  */
 export class BooleanPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
     async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
-        return new SchemaBuilder().type("boolean");
+        return new SchemaBuilder().bool();
     }
 }

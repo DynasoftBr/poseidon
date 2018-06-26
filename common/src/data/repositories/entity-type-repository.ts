@@ -1,13 +1,6 @@
 import { AbstractRepository } from "./abstract-repository";
 import { EntityType } from "../../models";
-import { Db } from "mongodb";
-import { SysEntities, SysProperties } from "../../constants";
-import { SysMsgs } from "../..";
-import _ = require("lodash");
-import { ENTITY_TYPE_CHANGED } from "./events";
-import { AbstractRepositoryFactory } from "./factories/abstract-repository-factory";
-import { ValidationProblem } from "../validation/validation-problem";
-import { EntityHelpers } from "./entity-helpers";
+import { SysEntities } from "../../constants";
 import { DataStorage } from "../storage";
 
 export class EntityTypeRepository extends AbstractRepository<EntityType> {

@@ -8,6 +8,6 @@ import { Validation } from "../..";
  */
 export class EnumPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
     async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
-        return new SchemaBuilder().type("string").enum(...validation.enum);
+        return new SchemaBuilder().string().enum(...validation.enum);
     }
 }

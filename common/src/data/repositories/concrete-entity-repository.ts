@@ -1,6 +1,5 @@
 import { AbstractRepository } from "./abstract-repository";
-import { Entity, EntityType, ConcreteEntity } from "../../models";
-import { SysEntities } from "../../constants";
+import { EntityType, ConcreteEntity } from "../../models";
 import { DataStorage } from "../storage";
 
 export class ConcreteEntityRepository extends AbstractRepository<ConcreteEntity> {
