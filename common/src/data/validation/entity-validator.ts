@@ -77,19 +77,20 @@ export class EntityValidator {
         for (let idx = 0; idx < propsLength; idx++) {
             const prop = entityType.props[idx];
             const propValidation = prop.validation;
+
             // Validate only if the entity has a value for this property, the required constraint is validated by json schema.
-            if (prop.validation.type === PropertyTypes.linkedEntity && entity[prop.name] && entity[prop.name]._id) {
+            if (propValidation.type === PropertyTypes.linkedEntity && entity[prop.name] && entity[prop.name]._id) {
 
                 // Get the repository for the linked entity and try find it.
-                const lkdEntity = await (await repoFactory.createByName(prop.validation.ref.name)).findById(entity[prop.name]._id);
+                const lkdEntity = await (await repoFactory.createByName(propValidation.ref.name)).findById(entity[prop.name]._id);
 
                 // If we can't find an entity with the linked id, add a validation problem.
                 if (lkdEntity == null) {
                     problems.push(new ValidationProblem(prop.name, "linkedEntity", SysMsgs.validation.linkedEntityDoesNotExist,
-                        prop.validation.ref.name, entity[prop.name]._id));
+                    propValidation.ref.name, entity[prop.name]._id));
                 } else {
                     // Iterate the linked properties and check if it equals the lineked entity values.
-                    prop.validation.linkedProperties.forEach(lkdProp => {
+                    propValidation.linkedProperties.forEach(lkdProp => {
 
                         // Check if the value provided in linked properties equals linked entity values.
                         if (!_.isEqual(entity[prop.name][lkdProp.name], lkdEntity[lkdProp.name])) {
