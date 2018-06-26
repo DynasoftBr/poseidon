@@ -1,6 +1,7 @@
 import { AbstractService } from "./abstract-service";
 import { ConcreteEntity } from "../models";
 import { EntityHelpers } from "../data/repositories/entity-helpers";
+import { ok } from "assert";
 
 export class ConcreteEntityService<T extends ConcreteEntity> extends AbstractService<T> {
 
@@ -23,6 +24,8 @@ export class ConcreteEntityService<T extends ConcreteEntity> extends AbstractSer
     }
 
     protected async beforeValidation(entity: T, isNew: boolean, old?: T): Promise<T> {
+        super.beforeValidation(entity, isNew, old);
+
         if (isNew)
             return this.beforeValidateInsert(entity);
         else
