@@ -24,6 +24,12 @@ export class ArrayPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
         if (validation.uniqueItems)
             propSchema.uniqueItems(true);
 
+        if (validation.min)
+            propSchema.minItems(validation.min);
+
+        if (validation.max)
+            propSchema.maxItems(validation.max);
+
         // Get the schema for items.
         const itemsSchema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, validation.items);
 

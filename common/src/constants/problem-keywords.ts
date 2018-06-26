@@ -2,6 +2,7 @@ const ProblemKeywords = {
     minLength: "minLength",
     maxLength: "maxLength",
     maxItems: "maxItems",
+    minItems: "minItems",
     additionalProperties: "additionalProperties",
     format: "format",
     minimum: "minimum",
