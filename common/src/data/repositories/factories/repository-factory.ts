@@ -1,8 +1,6 @@
 import { AbstractRepositoryFactory } from "./abstract-repository-factory";
-import { Repository } from "../repository";
 import { SysEntities } from "../../../constants";
 import { EntityTypeRepository } from "../entity-type-repository";
-import _ = require("lodash");
 import { DatabaseError } from "../..";
 import { SysMsgs, ConcreteEntity } from "../../..";
 import { ConcreteEntityRepository } from "../concrete-entity-repository";

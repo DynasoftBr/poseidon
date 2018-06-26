@@ -1,9 +1,7 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { EntityType, Validation, EntityProperty } from "../..";
-import { SysEntities } from "../constants";
-import { EntitySchemaBuilder } from "./entity-schema-builder";
+import { Validation } from "../..";
 
 /**
  * Build JSON schama validation for string properties.
@@ -11,7 +9,7 @@ import { EntitySchemaBuilder } from "./entity-schema-builder";
  */
 export class StringPropertySchemaBuilder extends AbstractSchamaBuilderStrategy {
     async build(rootSchema: FluentSchemaBuilder, validation: Validation): Promise<FluentSchemaBuilder> {
-        const propSchema = new SchemaBuilder().type("string");
+        const propSchema = new SchemaBuilder().string();
 
         if (validation.min)
             propSchema.minLength(validation.min);

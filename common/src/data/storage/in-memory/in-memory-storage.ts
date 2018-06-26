@@ -1,9 +1,6 @@
-import winston = require("winston"); // Logger. Uses configuration made in server.ts.
-
 import { DataStorage } from "../data-storage";
 import { StorageCollection } from "../storage-collection";
 import { InMemoryStorageCollection } from "./in-memory-storage-collection";
-import { SysMsgs } from "../../..";
 import { ConcreteEntity } from "../../../models";
 import * as LokiDb from "lokijs";
 

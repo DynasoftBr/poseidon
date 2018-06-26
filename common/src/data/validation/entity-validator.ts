@@ -1,9 +1,9 @@
 import * as Ajv from "ajv";
 import _ = require("lodash");
-import { SchemaModel, SchemaBuilder } from "json-schema-fluent-builder";
+import { SchemaModel } from "json-schema-fluent-builder";
 
 import { ValidationProblem } from "./validation-problem";
-import { EntityType, Entity } from "../../models";
+import { EntityType, ConcreteEntity, Entity } from "../../models";
 import { AbstractRepositoryFactory } from "../repositories/factories/abstract-repository-factory";
 import { SysEntities, PropertyTypes } from "../../constants";
 import { SysMsgs } from "../../sys-msgs";
@@ -36,7 +36,7 @@ export class EntityValidator {
         problems = this.validateAgainstJsonSchema(schema, entity);
 
         // Get linked entity problems.
-        problems.push(...await this.validateLinkedEntities(entity, entitytype, repoFactory));
+        problems.push(...await this.validateLinkedEntities(entitytype, entity, repoFactory));
 
         return problems;
     }
@@ -67,7 +67,7 @@ export class EntityValidator {
      * @param entityType The entity type of the to be validated.
      * @param repoFactory A repository factory
      */
-    private static async validateLinkedEntities(entity: Entity, entityType: EntityType,
+    private static async validateLinkedEntities(entityType: EntityType, entity: Entity,
         repoFactory: AbstractRepositoryFactory): Promise<ValidationProblem[]> {
 
         const problems: ValidationProblem[] = [];
