@@ -31,7 +31,7 @@ export class BuiltInEntries {
             name: SysEntities.entityProperty,
             abstract: true,
             props: [
-                this.namePropertyDefinition,
+                this.entityPropertyNamePropertyDefinition,
                 this.validationPropertyDefinition
             ],
             createdBy: this.rootUserRef,
@@ -142,8 +142,7 @@ export class BuiltInEntries {
             name: SysProperties._id,
             validation: {
                 type: PropertyTypes.string,
-                required: true,
-                unique: true
+                required: true
             }
         };
     }
@@ -153,7 +152,7 @@ export class BuiltInEntries {
             name: SysProperties.label,
             validation: {
                 type: PropertyTypes.string,
-                required: true
+                required: false
             }
         };
     }
@@ -191,7 +190,7 @@ export class BuiltInEntries {
                 required: true,
                 max: 50,
                 min: 1,
-                pattern: "^[a-z][A-Za-z0-9]*$"
+                pattern: "^[a-z_][A-Za-z0-9_]*$"
             }
         };
     }
@@ -251,12 +250,10 @@ export class BuiltInEntries {
                 linkedProperties: [
                     {
                         name: SysProperties._id,
-                        label: SysProperties._id,
                         keepUpToDate: true
                     },
                     {
                         name: SysProperties.name,
-                        label: SysProperties.name,
                         keepUpToDate: true
                     }
                 ]
@@ -350,8 +347,7 @@ export class BuiltInEntries {
         return {
             name: SysProperties.required,
             validation: {
-                type: PropertyTypes.boolean,
-                required: true
+                type: PropertyTypes.boolean
             }
         };
     }
@@ -517,12 +513,14 @@ export class BuiltInEntries {
         return [
             {
                 keepUpToDate: true,
-                label: SysProperties.name,
+                name: SysProperties._id
+            },
+            {
+                keepUpToDate: true,
                 name: SysProperties.name
             },
             {
                 keepUpToDate: true,
-                label: SysProperties.label,
                 name: SysProperties.label
             }
         ];

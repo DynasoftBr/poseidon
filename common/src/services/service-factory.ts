@@ -4,6 +4,7 @@ import { EntityType, Entity, ConcreteEntity } from "../models";
 import { Service } from "./service";
 import { ConcreteEntityService } from "./concrete-entity-service";
 import { EntityTypeService } from "./entity-type-service";
+import { SysEntities } from "../constants";
 
 export class ServiceFactory {
 
@@ -16,6 +17,9 @@ export class ServiceFactory {
     }
 
     async getServiceByName(entityTypeName: string): Promise<Service> {
+        if (entityTypeName === SysEntities.entityType)
+            return this.getEntityTypeService();
+
         const repo = await this.repoFactory.createByName(entityTypeName);
 
         return new ConcreteEntityService(repo, this.repoFactory);

@@ -1,3 +1,5 @@
+import { InMemoryStorage } from "../../../src/data/storage/in-memory/in-memory-storage";
+import { RepositoryFactory, BuiltInEntries, EntityTypeRepository } from "../../../src";
 import { expect } from "chai";
 import { describe } from "mocha";
 import { EntityType } from "../../../src/models";
@@ -5,151 +7,92 @@ import { PropertyTypes, SysEntities, SysProperties, ProblemKeywords } from "../.
 import { EntityValidator } from "../../../src/data/validation/entity-validator";
 import { SysUsers } from "../../../src/constants/sys-users";
 import { ValidationProblem } from "../../../src/data/validation/validation-problem";
-import { RepositoryFactory, InMemoryStorage } from "../../../src";
 import { DatabasePopulator } from "../../../src/data/database-populator";
+import { TestDatabasePopulator } from "../test-database-populator";
+import { TestEntities } from "../../test-entities";
+import { TestProperties } from "../../constants/test-properties";
 
 describe("Entity Validator Test", () => {
 
     let repositoryFactory: RepositoryFactory;
+    let builtIn: BuiltInEntries;
+    let entityTypeRepo: EntityTypeRepository;
+    let entityType: EntityType;
+    let testEntities: TestEntities;
 
     before(async () => {
         const storage = new InMemoryStorage();
         await storage.connect();
 
         const populator = new DatabasePopulator(storage);
-        // const testPopulator = new TestDatabasePopulator(storage);
+        const testPopulator = new TestDatabasePopulator(storage);
 
         await populator.populate();
-        // await testPopulator.populate();
+        await testPopulator.populate();
 
         repositoryFactory = new RepositoryFactory(storage);
+        entityTypeRepo = await repositoryFactory.entityType();
+        entityType = await entityTypeRepo.findById(SysEntities.entityType);
+
+        builtIn = new BuiltInEntries();
+        testEntities = new TestEntities();
     });
 
     describe("String properties validation", () => {
         it("String doesn't accept other value types", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: 1,
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity: any = await testEntities.simpleLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
-
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            entity.stringProp = 10;
+            const problems = await EntityValidator.validate(testEntities.simpleLinkedEntityType, entity, repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: SysProperties.name,
+                property: TestProperties.stringProp,
                 keyword: ProblemKeywords.type
             });
         });
 
         it("String can't be longer then expecified 'max'", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "VeryVeryLoooooooooooooooooooooooooooooooooongEntityTypeName",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
+            entity.stringProp = "AAAA";
 
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: SysProperties.name,
+                property: TestProperties.stringProp,
                 keyword: ProblemKeywords.maxLength
             });
         });
 
         it("String can't be shorter then expecified 'min'", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
+            entity.stringProp = "A";
 
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            expect(problems).to.have.length(2);
+            expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: SysProperties.name,
+                property: TestProperties.stringProp,
                 keyword: ProblemKeywords.minLength
             });
         });
 
         it("String must match 'pattern'", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "a",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
+            entity.stringProp = "aaa";
 
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: SysProperties.name,
+                property: TestProperties.stringProp,
                 keyword: ProblemKeywords.pattern
             });
         });
@@ -157,151 +100,61 @@ describe("Entity Validator Test", () => {
 
     describe("Int properties validation", () => {
         it("Int doesn't accept float values", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.int
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.intProp = 10.1;
 
-            const newEntity = {
-                prop1: 1.1
-            };
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
-
-            expect(problems).to.have.length(1);
+            expect(problems).to.have.length(2);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.intProp,
                 keyword: ProblemKeywords.type
             });
         });
 
         it("Int can't be greater than 'max'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "Name",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.int,
-                            max: 25
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.intProp = 40;
 
-            const newEntity = {
-                prop1: 26
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.intProp,
                 keyword: ProblemKeywords.maximum
             });
         });
 
         it("Int can't be lower than 'min'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.int,
-                            max: 25,
-                            min: 10
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.intProp = 0;
 
-            const newEntity = {
-                prop1: 9
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.intProp,
                 keyword: ProblemKeywords.minimum
             });
         });
 
         it("Int must respect 'multipleOf'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.int,
-                            max: 25,
-                            min: 10,
-                            multipleOf: 5
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.intProp = 15;
 
-            const newEntity = {
-                prop1: 11
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.intProp,
                 keyword: ProblemKeywords.multipleOf
             });
         });
@@ -309,179 +162,72 @@ describe("Entity Validator Test", () => {
 
     describe("Number properties validation", () => {
         it("Number doesn't accept other values types", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.number
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity: any = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.numberProp = "15";
 
-            const newEntity = { prop1: "1.1" };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.numberProp,
                 keyword: ProblemKeywords.type
             });
         });
 
         it("Number accept decimal/float values", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.number
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.numberProp = 10.0000000001;
 
-            const newEntity = { prop1: 1.1 };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(0);
         });
 
         it("Number can't be greater than 'max'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.number,
-                            max: 25
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.numberProp = 30.0000000001;
 
-            const newEntity = {
-                prop1: 25.1
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.numberProp,
                 keyword: ProblemKeywords.maximum
             });
         });
 
         it("Number can't be lower than 'min'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.number,
-                            max: 25,
-                            min: 10
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.numberProp = 9.9999999999;
 
-            const newEntity = {
-                prop1: 9.9
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.numberProp,
                 keyword: ProblemKeywords.minimum
             });
         });
 
         it("Number must respect 'multipleOf'.", async () => {
-            const newEntityType: EntityType = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.number,
-                            max: 25,
-                            min: 10,
-                            multipleOf: 0.01
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.numberProp = 10.00000000001;
 
-            const newEntity = {
-                prop1: 10.001
-            };
-
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.numberProp,
                 keyword: ProblemKeywords.multipleOf
             });
         });
@@ -489,205 +235,258 @@ describe("Entity Validator Test", () => {
 
     describe("DateTime properties validation", () => {
         it("DateTime property doesn't accept other values", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.dateTime
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity: any = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.dateTimeProp = "";
 
-            const newEntity = {
-                prop1: "teste"
-            };
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
-
-            expect(problems.length).eqls(1);
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: TestProperties.dateTimeProp,
+                keyword: ProblemKeywords.format
+            });
         });
 
         it("DateTime property accept javascript Date object", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.dateTime
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.dateTimeProp = new Date();
 
-            const newEntity = {
-                prop1: new Date()
-            };
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
-
-            expect(problems.length).eqls(0);
+            expect(problems).to.have.length(0);
         });
     });
 
     describe("Boolean properties validation", () => {
         it("Boolean property doesn't accept other values", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.boolean
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity: any = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.booleanProp = "";
 
-            const newEntity = {
-                prop1: "teste"
-            };
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
-
-            expect(problems.length).eqls(1);
+            expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "prop1",
+                property: TestProperties.booleanProp,
+                keyword: ProblemKeywords.type
+            });
+        });
+    });
+
+    describe("Array properties validation", () => {
+        it("Array property doesn't accept other values", async () => {
+            const entity: any = testEntities.complexLinkedEntityEntry;
+
+            entity.arrayOfSimpleTypeProp = "";
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: TestProperties.arrayOfSimpleTypeProp,
                 keyword: ProblemKeywords.type
             });
         });
 
-        it("DateTime property accept javascript Date object", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.dateTime
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+        it("Array must respect the 'max' attribute.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            entityTypeRepo.insertOne(newEntityType);
+            entity.arrayOfSimpleTypeProp = ["AAA", "AAA", "AAA"];
 
-            const newEntity = {
-                prop1: new Date()
-            };
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
-            const problems = await EntityValidator.validate(newEntityType, newEntity, repositoryFactory);
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: TestProperties.arrayOfSimpleTypeProp,
+                keyword: ProblemKeywords.maxItems
+            });
+        });
 
-            expect(problems.length).eqls(0);
+        it("Array must respect the 'min' attribute.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.arrayOfSimpleTypeProp = [];
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: TestProperties.arrayOfSimpleTypeProp,
+                keyword: ProblemKeywords.minItems
+            });
+        });
+
+        it("Array values must respect constraints.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.arrayOfSimpleTypeProp = ["AAA", "BBBBSS"];
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: TestProperties.arrayOfSimpleTypeProp + "[1]",
+                keyword: ProblemKeywords.maxLength
+            });
+        });
+    });
+
+    describe("Properties of abstract entity validation", () => {
+        it("Can't have additional properties", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp.propx = undefined;
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "abstractEntityProp.propx",
+                keyword: ProblemKeywords.additionalProperties
+            });
+        });
+
+        it("Can't have missing required property", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp.stringProp = undefined;
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "abstractEntityProp." + TestProperties.stringProp,
+                keyword: ProblemKeywords.required
+            });
+        });
+
+        it("Must respect property abstract entity's constraints.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp.stringProp = "A";
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "abstractEntityProp." + TestProperties.stringProp,
+                keyword: ProblemKeywords.minLength
+            });
+        });
+
+        it("Non required abstract property doesn't report problems.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp = undefined;
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(0);
+        });
+    });
+
+    describe("Properties of linked entity validation", () => {
+        it("Can't have other properties than that specified on linkedProperties", async () => {
+            const entity: any = testEntities.complexLinkedEntityEntry;
+
+            entity.linkedEntityProp.propx = "teste";
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "linkedEntityProp.propx",
+                keyword: ProblemKeywords.additionalProperties
+            });
+        });
+
+        it("Can't have missing required property", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.linkedEntityProp.stringProp = undefined;
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(2);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "linkedEntityProp." + TestProperties.stringProp,
+                keyword: ProblemKeywords.required
+            });
+        });
+
+        it("Must respect property abstract entity's constraints.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp.stringProp = "A";
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(1);
+            expect(problems[0]).to.contains(<ValidationProblem>{
+                property: "abstractEntityProp." + TestProperties.stringProp,
+                keyword: ProblemKeywords.minLength
+            });
+        });
+
+        it("Non required abstract property doesn't report problems.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
+
+            entity.abstractEntityProp = undefined;
+
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
+
+            expect(problems).to.have.length(0);
         });
     });
 
     describe("General", () => {
 
-        it("Required property must appear in the object", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: undefined,
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+        it("Required property can't be missing.", async () => {
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
+            entity.stringProp = undefined;
 
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: SysProperties.name,
+                property: TestProperties.stringProp,
                 keyword: ProblemKeywords.required
             });
         });
 
         it("Object can not have aditional properties", async () => {
-            const newEntityType: any = {
-                _id: "newId",
-                name: "Name",
-                teste: "Teste",
-                label: "",
-                props: [
-                    {
-                        name: "prop1",
-                        validation: {
-                            type: PropertyTypes.string
-                        }
-                    }
-                ],
-                createdAt: new Date(),
-                createdBy: {
-                    _id: SysUsers.root,
-                    name: SysUsers.root
-                }
-            };
+            const entity = testEntities.complexLinkedEntityEntry;
 
-            const entityTypeRepo = await repositoryFactory.entityType();
-            const entityType = await entityTypeRepo.findByName(SysEntities.entityType);
+            entity.additional = "teste";
 
-            const problems = await EntityValidator.validate(entityType, newEntityType, repositoryFactory);
+            const problems = await EntityValidator.validate(testEntities.complexLinkedEntityType, entity,
+                repositoryFactory);
 
             expect(problems).to.have.length(1);
             expect(problems[0]).to.contains(<ValidationProblem>{
-                property: "teste",
+                property: "additional",
                 keyword: ProblemKeywords.additionalProperties
             });
         });
+
     });
 });
