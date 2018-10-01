@@ -32,6 +32,10 @@ export class ValidationProblem {
                 return new ValidationProblem(dtPath, err.keyword,
                     SysMsgs.validation.maxItems, dtPath, (<LimitParams>err.params).limit);
 
+            case ProblemKeywords.minItems:
+                return new ValidationProblem(dtPath, err.keyword,
+                    SysMsgs.validation.minItems, dtPath, (<LimitParams>err.params).limit);
+
             case ProblemKeywords.additionalProperties:
                 dtPath = (dtPath === "" ? "" : dtPath + ".") + (<AdditionalPropertiesParams>err.params).additionalProperty;
                 return new ValidationProblem(dtPath, err.keyword,

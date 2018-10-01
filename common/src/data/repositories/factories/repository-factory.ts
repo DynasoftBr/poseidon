@@ -38,7 +38,10 @@ export class RepositoryFactory extends AbstractRepositoryFactory {
         const entityType = await entityTypeRepo.findByName(entityTypeName);
 
         if (entityType == null)
-            throw new DatabaseError(SysMsgs.error.entityTypeNotFound, SysEntities.entityType);
+            throw new DatabaseError(SysMsgs.error.entityTypeNotFound, entityTypeName);
+
+        if (entityType.abstract === true)
+            throw new DatabaseError(SysMsgs.error.abstractEntityType, entityTypeName);
 
         return new ConcreteEntityRepository(this.storage, entityType);
     }

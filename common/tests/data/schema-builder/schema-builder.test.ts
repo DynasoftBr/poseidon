@@ -3,8 +3,33 @@ import { describe } from "mocha";
 import { EntityType } from "../../../src/models";
 import { PropertyTypes } from "../../../src/constants";
 import { EntitySchemaBuilder } from "../../../src/schema-builder/entity-schema-builder";
+import { InMemoryStorage } from "../../../src/data/storage";
+import { DatabasePopulator, RepositoryFactory } from "../../../src/data";
+import { TestDatabasePopulator } from "../test-database-populator";
+import { TestEntities } from "../../test-entities";
 
 describe("Schema Builder Test", () => {
+
+    let repositoryFactory: RepositoryFactory;
+    let entitySchemaBuilder: EntitySchemaBuilder;
+    let testEntities: TestEntities;
+
+    before(async () => {
+        const storage = new InMemoryStorage();
+        await storage.connect();
+
+        const populator = new DatabasePopulator(storage);
+        const testPopulator = new TestDatabasePopulator(storage);
+
+        await populator.populate();
+        await testPopulator.populate();
+
+        repositoryFactory = new RepositoryFactory(storage);
+        entitySchemaBuilder = new EntitySchemaBuilder(await repositoryFactory.entityType());
+
+        // builtIn = new BuiltInEntries();
+        testEntities = new TestEntities();
+    });
 
     describe("Integer test", () => {
         it("Can set an integer property", async () => {
@@ -19,7 +44,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "integer");
         });
@@ -37,7 +62,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maximum, 50);
         });
@@ -55,7 +80,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minimum, 30);
         });
@@ -73,7 +98,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.multipleOf, 10);
         });
@@ -91,7 +116,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -110,7 +135,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "number");
         });
@@ -128,7 +153,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maximum, 50);
         });
@@ -146,7 +171,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minimum, 30);
         });
@@ -164,7 +189,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.multipleOf, 10.5);
         });
@@ -182,7 +207,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -201,7 +226,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "string");
         });
@@ -219,7 +244,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.maxLength, 50);
         });
@@ -237,7 +262,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.minLength, 30);
         });
@@ -255,7 +280,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -273,7 +298,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect((<any>schemaB.getSchema().properties).prop1.pattern, "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$");
         });
@@ -292,7 +317,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.format, "date-time");
         });
@@ -310,7 +335,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -330,7 +355,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "string");
         });
@@ -348,7 +373,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect((<any>schemaB.getSchema().properties).prop1.enum).to.eql(["teste", "teste2"]);
         });
@@ -367,7 +392,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -386,7 +411,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "boolean");
         });
@@ -404,7 +429,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema().required).to.have.members(["prop1"]);
         });
@@ -426,7 +451,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             assert.equal((<any>schemaB.getSchema().properties).prop1.type, "array");
         });
@@ -446,7 +471,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
@@ -478,7 +503,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
@@ -510,7 +535,7 @@ describe("Schema Builder Test", () => {
                 ]
             };
 
-            const schemaB = await (new EntitySchemaBuilder(null)).buildSchema(entityType);
+            const schemaB = await entitySchemaBuilder.buildSchema(entityType);
 
             expect(schemaB.getSchema())
                 .deep.include(
@@ -524,6 +549,14 @@ describe("Schema Builder Test", () => {
                             }
                         }
                     });
+        });
+
+        it("Array property of abstract type are defined in ", async () => {
+            const complex = testEntities.complexLinkedEntityType;
+            const schemaB = await entitySchemaBuilder.buildSchema(complex);
+
+            expect((<any>schemaB.getSchema().properties).arrayOfAbstractEntityProp.items.$ref)
+                .to.equals("#/definitions/" + testEntities.simpleAbstractEntityType.name);
         });
     });
 });

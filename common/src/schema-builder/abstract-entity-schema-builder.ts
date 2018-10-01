@@ -48,6 +48,8 @@ export class AbstractEntitySchamBuilder extends AbstractSchamaBuilderStrategy {
 
                 definition.prop(absProp.name, schema, absProp.validation.required);
             }
+
+            return new FluentSchemaBuilder({}).$ref("#/definitions/" + ref.name);
         }
     }
 }
