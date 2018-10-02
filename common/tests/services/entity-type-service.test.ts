@@ -45,6 +45,31 @@ describe("Entity Type Service Test", () => {
             expect(result.props.map(p => p.name)).to.include.members(reqProps);
         });
 
+        it("Entity type property with pattern must be a valid regex.", async () => {
+            const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
+            const newEtType = <EntityType>{
+                name: "customer",
+                label: "Customers",
+                props: [
+                    {
+                        name: "name",
+                        validation: {
+                            type: PropertyTypes.string,
+                            pattern: "|||||]["
+                        }
+                    }
+                ]
+            };
+
+            const builtin = new BuiltInEntries();
+
+            try {
+                const result = await service.insertOne(newEtType);                
+            } catch (error) {
+                expect(error).to.not.equal(null);
+            }
+        });
+
         it("When created an entity type can be found.", async () => {
             const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
             const newEtType = <EntityType>{

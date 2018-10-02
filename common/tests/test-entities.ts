@@ -185,7 +185,7 @@ export class TestEntities {
         return {
             _id: "SimpleLinkedEntityType",
             name: "SimpleLinkedEntityType",
-            abstract: true,
+            abstract: false,
             props: [
                 this.builtIn.idPropertyDefinition,
                 this.builtIn.createdAtPropertyDefinition,
@@ -217,7 +217,7 @@ export class TestEntities {
         return {
             _id: "ComplexAbstractEntityType",
             name: "ComplexAbstractEntityType",
-            abstract: false,
+            abstract: true,
             props: [
                 {
                     name: "stringProp",
