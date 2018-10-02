@@ -127,12 +127,16 @@ export const SysMsgs = {
         missingRequiredEntityProperty: {
             code: 4018,
             message: "The system entity '%s' are required for all entity types.\n" +
-            "Poseidon adds these properties on entity type's creation. Please don't change it."
+                "Poseidon adds these properties on entity type's creation. Please don't change it."
         },
         invalidRequiredEntityProperty: {
             code: 4019,
             message: "The system entity '%s' doesn't match the required expecification." +
-            "Poseidon adds these properties on entity type's creation. Please don't change it."
+                "Poseidon adds these properties on entity type's creation. Please don't change it."
+        },
+        invalidPattern: {
+            code: 4020,
+            message: "The string '%s' is not a valid pattern."
         }
     },
     crash: {
