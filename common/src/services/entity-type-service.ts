@@ -1,7 +1,7 @@
 import { EntityTypeRepository } from "../data/repositories/entity-type-repository";
 import { AbstractRepositoryFactory, BuiltInEntries } from "../data";
-import { EntityType } from "../models";
-import { SysProperties } from "../constants";
+import { EntityType, Validation } from "../models";
+import { SysProperties, PropertyTypes, ProblemKeywords } from "../constants";
 import _ = require("lodash");
 import { ConcreteEntityService } from "./concrete-entity-service";
 import { ValidationProblem } from "../data/validation/validation-problem";
@@ -22,7 +22,9 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
     protected async validating(entity: EntityType, isNew: boolean, old?: EntityType)
         : Promise<ValidationProblem[]> {
 
-        super.validating(entity, isNew, old);
+        const problems = await super.validating(entity, isNew, old);
+
+        problems.push(...this.validatePatternProperties(entity));
 
         if (!isNew) return this.requireReservedProperties(entity);
         else return [];
@@ -50,6 +52,41 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
                 problems.push(new ValidationProblem(reqProp.name, "invalidRequiredEntityProperty",
                     SysMsgs.validation.invalidRequiredEntityProperty, reqProp));
         });
+
+        return problems;
+    }
+
+    private validatePatternProperties(entity: EntityType)
+        : ValidationProblem[] {
+
+        const problems: ValidationProblem[] = [];
+        const props = entity.props;
+
+        for (let idx = 0; idx < props.length; idx++) {
+            const prop = props[idx];
+
+            problems.push(...this.validatePattern(prop.name, prop.validation));
+        }
+
+        return problems;
+    }
+
+    private validatePattern(propName: string, validation: Validation) {
+        const problems: ValidationProblem[] = []
+        if (validation.type === PropertyTypes.string
+            && validation.pattern) {
+            try {
+                new RegExp(validation.pattern);
+            } catch (e) {
+                problems.push(new ValidationProblem(propName,
+                    ProblemKeywords.pattern, SysMsgs.validation.invalidPattern));
+            }
+        } else if (validation.type === PropertyTypes.array
+            && validation.items.type === PropertyTypes.string
+            && validation.items.pattern) {
+
+            problems.push(...this.validatePattern(propName, validation));
+        }
 
         return problems;
     }
