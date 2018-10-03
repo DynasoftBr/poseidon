@@ -76,7 +76,7 @@ export class ApiV1 {
             if (result) {
                 res.send(result);
             } else // If cannot find specified id, respond with 'not found'.
-                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound));
+                this.handleError(res, new RequestError(SysMsgs.error.entityNotFound, req.params.id, req.params.etName));
         } catch (error) {
             this.handleError(res, error);
         }
