@@ -41,16 +41,16 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
             buildIn.changedByPropertyDefinition
         ];
 
-        requiredProps.forEach(reqProp => {
+        requiredProps.forEach((reqProp) => {
             const prop = _.find(entity.props, { name: reqProp.name });
 
-            if (prop != null)
+            if (prop == null)
                 problems.push(new ValidationProblem(reqProp.name, "missingRequiredEntityProperty",
-                    SysMsgs.validation.missingRequiredEntityProperty, reqProp));
+                    SysMsgs.validation.missingRequiredEntityProperty, reqProp.name));
 
-            else if (!_.isEqual(prop[0], reqProp))
+            else if (!_.isEqual(prop, reqProp))
                 problems.push(new ValidationProblem(reqProp.name, "invalidRequiredEntityProperty",
-                    SysMsgs.validation.invalidRequiredEntityProperty, reqProp));
+                    SysMsgs.validation.invalidRequiredEntityProperty, reqProp.name));
         });
 
         return problems;
@@ -72,7 +72,7 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
     }
 
     private validatePattern(propName: string, validation: Validation) {
-        const problems: ValidationProblem[] = []
+        const problems: ValidationProblem[] = [];
         if (validation.type === PropertyTypes.string
             && validation.pattern) {
             try {
