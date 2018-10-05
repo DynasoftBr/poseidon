@@ -26,9 +26,34 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
 
         problems.push(...this.validatePatternProperties(entity));
 
-        if (!isNew) return this.requireReservedProperties(entity);
-        else return [];
+        // when is not creating
+        if (!isNew) {
+            problems.push(...this.requireReservedProperties(entity));
+            problems.push(...this.validatingLinkedProperty(entity));
+        }
+
+        return problems;
     }
+
+    protected validatingLinkedProperty(entity: EntityType) {
+        const problems: ValidationProblem[] = [];
+
+        for (let idx = 0; idx < entity.props.length; idx++) {
+            const prop = entity.props[idx];
+
+            if (prop.validation.type == PropertyTypes.linkedEntity) {
+                const lkdProp = prop.validation.linkedProperties.find((item) => item.name == "_id");
+
+                if (lkdProp == null)
+                    problems.push(new ValidationProblem(prop.name, "missingLinkedPropertyId",
+                        SysMsgs.validation.missingLinkedPropertyId, prop.name));
+            }
+        }
+
+        return problems;
+    }
+
+
 
     private requireReservedProperties(entity: EntityType): ValidationProblem[] {
         const problems: ValidationProblem[] = [];
