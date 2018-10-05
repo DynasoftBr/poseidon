@@ -41,13 +41,26 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
         for (let idx = 0; idx < entity.props.length; idx++) {
             const prop = entity.props[idx];
 
-            if (prop.validation.type == PropertyTypes.linkedEntity) {
-                const lkdProp = prop.validation.linkedProperties.find((item) => item.name == "_id");
+            problems.push(...this.validateLinkedProperty(prop.name, prop.validation));
 
-                if (lkdProp == null)
-                    problems.push(new ValidationProblem(prop.name, "missingLinkedPropertyId",
-                        SysMsgs.validation.missingLinkedPropertyId, prop.name));
-            }
+        }
+
+        return problems;
+    }
+
+    private validateLinkedProperty(propName: string, validation: Validation) {
+        const problems: ValidationProblem[] = [];
+
+        if (validation.type == PropertyTypes.linkedEntity) {
+            const lkdProp = validation.linkedProperties.find((item) => item.name == "_id");
+
+            if (lkdProp == null)
+                problems.push(new ValidationProblem(propName, "missingLinkedPropertyId",
+                    SysMsgs.validation.missingLinkedPropertyId, propName));
+        }
+        else if (validation.type === PropertyTypes.array
+            && validation.items.type === PropertyTypes.linkedEntity) {
+            problems.push(...this.validateLinkedProperty(propName, validation.items));
         }
 
         return problems;
