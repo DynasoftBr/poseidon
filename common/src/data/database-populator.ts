@@ -17,6 +17,7 @@ export class DatabasePopulator {
         entityTypeCollection.insertOne(buildInEntities.entityTypeUser);
         entityTypeCollection.insertOne(buildInEntities.entityTypeValidation);
         entityTypeCollection.insertOne(buildInEntities.entityTypeLinkedProperty);
+        entityTypeCollection.insertOne(buildInEntities.entityTypeBranch);
 
         const userCollection = this.storage.collection<User>(SysEntities.user);
         userCollection.insertOne(buildInEntities.rootUser);

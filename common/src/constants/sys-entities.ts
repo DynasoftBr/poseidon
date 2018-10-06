@@ -3,6 +3,7 @@ const SysEntities = {
     entityProperty: "EntityProperty",
     entitySchema: "EntitySchema",
     validation: "Validation",
+    entitybranch:"EntityBranch",
     ref: "Ref",
     linkedProperty: "LinkedProperty",
     user: "User"

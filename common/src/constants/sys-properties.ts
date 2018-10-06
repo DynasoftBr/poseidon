@@ -25,7 +25,8 @@ const SysProperties = {
     multipleOf: "multipleOf",
     default: "default",
     convention: "convention",
-    keepUpToDate: "keepUpToDate"
+    keepUpToDate: "keepUpToDate",
+    branch: "branch"
 };
 
 type SysProperties = (typeof SysProperties)[keyof typeof SysProperties];
