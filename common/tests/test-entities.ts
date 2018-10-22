@@ -36,6 +36,7 @@ export class TestEntities {
                 this.builtIn.createdByPropertyDefinition,
                 this.builtIn.changedAtPropertyDefinition,
                 this.builtIn.changedByPropertyDefinition,
+                this.builtIn.branchPropertyDefinition,
                 {
                     name: "stringProp",
                     validation: {
@@ -143,7 +144,8 @@ export class TestEntities {
                 }
             ],
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -171,7 +173,8 @@ export class TestEntities {
                 }
             ],
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -192,6 +195,7 @@ export class TestEntities {
                 this.builtIn.createdByPropertyDefinition,
                 this.builtIn.changedAtPropertyDefinition,
                 this.builtIn.changedByPropertyDefinition,
+                this.builtIn.branchPropertyDefinition,
                 {
                     name: "stringProp",
                     validation: {
@@ -204,7 +208,8 @@ export class TestEntities {
                 }
             ],
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -326,7 +331,8 @@ export class TestEntities {
                 }
             ],
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -346,6 +352,7 @@ export class TestEntities {
                 this.builtIn.createdByPropertyDefinition,
                 this.builtIn.changedAtPropertyDefinition,
                 this.builtIn.changedByPropertyDefinition,
+                this.builtIn.branchPropertyDefinition,
                 {
                     name: "stringProp",
                     validation: {
@@ -453,7 +460,8 @@ export class TestEntities {
                 }
             ],
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -479,7 +487,8 @@ export class TestEntities {
             abstractEntityProp: this.complexAbstractEntityEntry,
             linkedEntityProp: this.complexLinkedEntityRef,
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -494,7 +503,9 @@ export class TestEntities {
             _id: "simpleLinkedEntityEntry1",
             stringProp: "AAA",
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
+            
         };
     }
 
@@ -524,7 +535,8 @@ export class TestEntities {
             abstractEntityProp: this.simpleAbstractEntityEntry,
             linkedEntityProp: this.simpleLinkedEntityRef,
             createdAt: new Date(2018, 6, 25),
-            createdBy: this.builtIn.rootUserRef
+            createdBy: this.builtIn.rootUserRef,
+            branch: this.builtIn.headQuarterBranchRef
         };
     }
 
@@ -605,6 +617,7 @@ export class TestEntities {
         const linkedEntityEntry = this.complexLinkedEntityEntry;
         delete (linkedEntityEntry.createdAt);
         delete (linkedEntityEntry.createdBy);
+        delete (linkedEntityEntry.branch);
 
         return linkedEntityEntry;
     }

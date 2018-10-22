@@ -1,5 +1,5 @@
 import { Entity } from "./";
-import { UserRef } from "./helpers";
+import { UserRef, BranchRef } from "./helpers";
 
 export interface ConcreteEntity extends Entity {
     _id: string;
@@ -7,4 +7,5 @@ export interface ConcreteEntity extends Entity {
     changeddAt?: Date;
     createdBy: UserRef;
     changedBy?: UserRef;
+    branch: BranchRef
 }

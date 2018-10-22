@@ -1,8 +1,10 @@
 import { EntityType, ConcreteEntity } from "../..";
-import { PropertyTypes, PropertyConvention } from "../../constants";
+import { PropertyTypes, PropertyConvention, SysEntities } from "../../constants";
 import { SysUsers } from "../../constants/sys-users";
+import { BuiltInEntries } from "../built-in-entries";
 
 export class EntityHelpers {
+    static builtIn = new BuiltInEntries();
 
     /**
      * Apply defaults for properties that have one.
@@ -56,7 +58,7 @@ export class EntityHelpers {
 
     public static addCreationInfo(concreteEntity: ConcreteEntity): ConcreteEntity {
         concreteEntity.createdAt = new Date();
-        concreteEntity.createdBy =  {
+        concreteEntity.createdBy = {
             _id: SysUsers.root,
             name: SysUsers.root
         };
@@ -66,10 +68,16 @@ export class EntityHelpers {
 
     public static addUpdateInfo(concreteEntity: ConcreteEntity): ConcreteEntity {
         concreteEntity.changedAt = new Date();
-        concreteEntity.changedAt =  {
+        concreteEntity.changedAt = {
             _id: SysUsers.root,
             name: SysUsers.root
         };
+
+        return concreteEntity;
+    }
+
+    public static setBranchInfo(concreteEntity: ConcreteEntity): ConcreteEntity {
+        concreteEntity.branch = this.builtIn.headQuarterBranchRef;
 
         return concreteEntity;
     }
