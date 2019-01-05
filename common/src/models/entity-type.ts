@@ -1,4 +1,4 @@
-import { EntityProperty, ConcreteEntity } from "./";
+import { EntityProperty, ConcreteEntity } from ".";
 
 export interface EntityType extends ConcreteEntity {
     name: string;

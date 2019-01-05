@@ -7,11 +7,11 @@ import * as compression from "compression";  // compresses requests
 import * as bodyParser from "body-parser";
 import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
-import * as path from "path";
-import * as dotenv from "dotenv";
+import { Env } from "./env";
+
 import {
   DatabaseError, SysMsgs, RepositoryFactory,
-  InMemoryStorage, DataStorage, ServiceFactory, DatabasePopulator
+  InMemoryStorage, DataStorage, ServiceFactory, DatabasePopulator, MongoDbStorage,
 } from "@poseidon/common";
 
 // APIs
@@ -22,10 +22,18 @@ import { customLogger, mqueryParser } from "./middlewares";
 
 export async function init(): Promise<void> {
 
+  const env = <Env><any>process.env;
   // Connect to the storage.
-  let storage = new InMemoryStorage();
+  const storage = new InMemoryStorage();
   try {
     await storage.connect();
+
+    // await storage.connect({
+    //   dbName: env.DB_NAME,
+    //   retries: Number.parseInt(env.RETRIES),
+    //   timeBetweenRetries: Number.parseInt(env.TIME_BETWEEN_RETRIES),
+    //   url: env.MONGODB_URI
+    // });
 
     const populator = new DatabasePopulator(storage);
     await populator.populate();
@@ -83,7 +91,7 @@ function initApp(storage: DataStorage) {
   app.use(mqueryParser);
 
   // API Router
-  let apiRouter = express.Router();
+  const apiRouter = express.Router();
   app.use("/api", apiRouter);
 
   // Instantiate the repositories and services factory.

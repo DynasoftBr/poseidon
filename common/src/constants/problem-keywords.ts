@@ -12,7 +12,11 @@ const ProblemKeywords = {
     required: "required",
     type: "type",
     uniqueItems: "uniqueItems",
-    enum: "enum"
+    enum: "enum",
+    missingMadatoryEntityProperty: "missingMadatoryEntityProperty",
+    invalidMandatoryEntityProperty: "invalidMandatoryEntityProperty",
+    invalidLinkedEntityId: "invalidLinkedEntityId",
+    invalidLinkedValue: "invalidLinkedValue"
 };
 
 type ProblemKeywords = (typeof ProblemKeywords)[keyof typeof ProblemKeywords];

@@ -1,5 +1,5 @@
-import { Entity } from "./";
-import { UserRef } from "./helpers";
+import { Entity } from ".";
+import { UserRef } from "./references";
 
 export interface ConcreteEntity extends Entity {
     _id: string;

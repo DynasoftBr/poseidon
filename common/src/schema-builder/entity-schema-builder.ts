@@ -47,8 +47,6 @@ export class EntitySchemaBuilder {
     public async buildSchemaValidation(rootSchema: FluentSchemaBuilder,
         validation: Validation): Promise<FluentSchemaBuilder> {
 
-        let propSchema: FluentSchemaBuilder;
-
         switch (validation.type) {
             case PropertyTypes.linkedEntity:
                 return new LinkedEntitySchemaBuilder(this.entityTypeRepository, this)

@@ -1,5 +1,5 @@
-import { RepositoryFactory, InMemoryStorage, DatabasePopulator, EntityType, ServiceFactory, BuiltInEntries } from "../../src";
-import { PropertyTypes } from "../../src/constants";
+import { RepositoryFactory, InMemoryStorage, DatabasePopulator, EntityType, ServiceFactory, BuiltInEntries, EntityTypeService } from "../../src";
+import { PropertyTypes, SysEntities } from "../../src/constants";
 import { expect } from "chai";
 
 describe("Entity Type Service Test", () => {
@@ -18,7 +18,9 @@ describe("Entity Type Service Test", () => {
 
     describe("Inserting one entity type", () => {
         it("During entity type's creation it gets the required entity properties.", async () => {
-            const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
+            const service = <EntityTypeService>(await new ServiceFactory(repositoryFactory)
+                .getServiceByName(SysEntities.entityType));
+
             const newEtType = <EntityType>{
                 name: "NewEntityType",
                 label: "New Entity Type",
@@ -46,7 +48,7 @@ describe("Entity Type Service Test", () => {
         });
 
         it("When created an entity type can be found.", async () => {
-            const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
+            const service = await new ServiceFactory(repositoryFactory).getServiceByName(SysEntities.entityType);
             const newEtType = <EntityType>{
                 name: "NewEntityType",
                 label: "New Entity Type",
@@ -69,7 +71,9 @@ describe("Entity Type Service Test", () => {
         });
 
         it("When created the entity type has the required properties.", async () => {
-            const service = await new ServiceFactory(repositoryFactory).getEntityTypeService();
+            const service = <EntityTypeService>(await new ServiceFactory(repositoryFactory)
+                .getServiceByName(SysEntities.entityType));
+
             const newEtType = <EntityType>{
                 name: "NewEntityType",
                 label: "New Entity Type",

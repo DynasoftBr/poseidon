@@ -1,5 +1,5 @@
-import { ConcreteEntity } from "./";
-import { EntityTypeRef } from "./helpers/entity-type-ref";
+import { ConcreteEntity } from ".";
+import { EntityTypeRef } from "./references/entity-type-ref";
 
 export interface EntitySchema extends ConcreteEntity {
     schema: string;

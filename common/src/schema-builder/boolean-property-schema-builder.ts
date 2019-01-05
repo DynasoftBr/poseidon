@@ -1,7 +1,7 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { Validation } from "../..";
+import { Validation } from "..";
 
 /**
  * Build JSON schama validation for boolean properties.

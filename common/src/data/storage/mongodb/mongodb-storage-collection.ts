@@ -6,7 +6,7 @@ export class MongoDbStorageCollection<T extends ConcreteEntity = ConcreteEntity>
 
     private collection: Collection<T>;
     constructor(private readonly db: Db, collectionName: string) {
-        this.collection = db.collection<T>(name);
+        this.collection = db.collection<T>(collectionName);
     }
 
     ensureIndex(indexName: string, field: string, unique: boolean): void {

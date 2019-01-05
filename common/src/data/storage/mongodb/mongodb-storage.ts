@@ -1,4 +1,4 @@
-import winston = require("winston"); // Logger. Uses configuration made in server.ts.
+import winston from "winston"; // Logger. Uses configuration made in server.ts.
 
 import { DataStorage } from "../data-storage";
 import { StorageCollection } from "../storage-collection";
@@ -12,7 +12,7 @@ export class MongoDbStorage implements DataStorage {
 
     private mongoClient: MongoClient;
     private db: Db;
-    public connected: boolean;
+    public connected: boolean = false;
     async connect(connetionOptions: MongoDbStorageConnectionOptions): Promise<boolean> {
 
         let retries = 0;

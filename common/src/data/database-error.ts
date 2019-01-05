@@ -1,4 +1,4 @@
-import { SysError, SysMsg } from "../";
+import { SysError, SysMsg } from "..";
 
 
 /**

@@ -41,7 +41,6 @@
     "@types/mocha": "^5.2.0",
     "@types/mongodb": "^3.0.15",
     "@types/node": "^9.6.6",
-    "@types/winston": "^2.3.9",
     "chai": "^4.1.2",
     "lokijs": "^1.5.5",
     "mocha": "^5.2.0",

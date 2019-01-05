@@ -1,7 +1,7 @@
 import { PropertyTypes, SysEntities, SysProperties } from "../constants";
 import { SysUsers } from "../constants/sys-users";
 import { EntityProperty, EntitySchema, EntityType, LinkedProperty, User } from "../models";
-import { EntityTypeRef, UserRef } from "../models/helpers";
+import { EntityTypeRef, UserRef } from "../models/references";
 
 export class BuiltInEntries {
     public get entityType(): EntityType {

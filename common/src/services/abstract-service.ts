@@ -2,15 +2,16 @@ import { EntityType, ConcreteEntity } from "../models";
 import { Service } from "./service";
 import { AbstractRepositoryFactory, Repository, DatabaseError } from "../data";
 import { SysMsgs } from "..";
-import { ValidationError } from "../data/validation/validation-error";
-import { ValidationProblem } from "../data/validation/validation-problem";
-import _ = require("lodash");
-import { EntityValidator } from "../data/validation/entity-validator";
+import { ValidationError } from "../validation/validation-error";
+import { ValidationProblem } from "../validation/validation-problem";
+import *  as _ from "lodash";
 import { ObjectID } from "bson";
+import { EntityValidator } from "../validation/entity-validator";
 
 export abstract class AbstractService<T extends ConcreteEntity> implements Service<T> {
 
     protected entityType: EntityType;
+    private validators: EntityValidator[] = [];
     constructor(protected repo: Repository<T>, protected repoFactory: AbstractRepositoryFactory) {
         this.entityType = repo.entityType;
     }
@@ -32,7 +33,7 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
 
         entity._id = new ObjectID().toHexString();
 
-        const problems = await EntityValidator.validate(this.entityType, entity, this.repoFactory);
+        const problems = await this.validate(entity);
 
         try {
             // call validation event to allow custom validation.
@@ -71,6 +72,7 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
 
         return entity;
     }
+
     async deleteOne(id: string): Promise<boolean> {
         return await this.repo.deleteOne(id);
     }
@@ -97,7 +99,7 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
             // TODO: Exception
         }
 
-        let problems = await EntityValidator.validate(this.entityType, entity, this.repoFactory);
+        const problems = await this.validate(entity);
 
         try {
             // Custom validations.
@@ -112,7 +114,7 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
 
         // Event to notify that everything is ok and the object will be saved.
         // Passing a clone as parameter to avoid object being changed after validations
-        let clone = _.cloneDeep(entity);
+        const clone = _.cloneDeep(entity);
 
         try {
             this.beforeSave(clone, false, oldEntity);
@@ -121,7 +123,7 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
         }
 
         try {
-            let result = await this.repo.updateOne(id, entity);
+            const result = await this.repo.updateOne(id, entity);
         } catch (error) {
 
         }
@@ -134,7 +136,27 @@ export abstract class AbstractService<T extends ConcreteEntity> implements Servi
         return entity;
     }
 
+    protected addValidator(validator: EntityValidator): void {
+        this.validators.push(validator);
+    }
+
+    protected async validate(entity: T) {
+        const length = this.validators.length;
+        const promises: Promise<ValidationProblem[]>[] = [];
+        for (let idx = 0; idx < length; idx++) {
+            const validator = this.validators[idx];
+
+            promises.push(validator.validate(entity));
+        }
+
+        const problems: ValidationProblem[] = [];
+        (await Promise.all(promises)).map(el => problems.push(...el));
+
+        return problems;
+    }
+
     //#region Event handlers methods to be overridem by concrete types
+
     protected async beforeValidation(entity: T, isNew: boolean, old?: T): Promise<T> { return entity; }
     protected async validating(entity: T, isNew: boolean, old?: T)
         : Promise<ValidationProblem[]> { return []; }

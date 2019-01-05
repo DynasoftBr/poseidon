@@ -17,9 +17,9 @@ export class ApiV1 {
         if (this._instance)
             return this._instance;
 
-        let api = this._instance = new ApiV1(serviceFactory);
-        let router = Router();
-        let routeBase: string = "/:etName";
+        const api = this._instance = new ApiV1(serviceFactory);
+        const router = Router();
+        const routeBase: string = "/:etName";
 
         // Starts configuring routes for api
 
@@ -52,10 +52,10 @@ export class ApiV1 {
 
             // Get skip and limit from query string.
             // if not provided, use undefined to preserv function defaults.
-            let skip = req.query.skip ? parseInt(req.query.skip) : undefined;
-            let limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+            const skip = req.query.skip ? parseInt(req.query.skip) : undefined;
+            const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
 
-            let results = await service.findMany({}, skip, limit);
+            const results = await service.findMany({}, skip, limit);
 
             res.send(results);
         } catch (error) {
@@ -70,8 +70,8 @@ export class ApiV1 {
      */
     private async findById(req: Request, res: Response) {
         try {
-            let service = await this.serviceFactory.getServiceByName(req.params.etName);
-            let result = await service.findOne({ _id: req.params.id });
+            const service = await this.serviceFactory.getServiceByName(req.params.etName);
+            const result = await service.findOne({ _id: req.params.id });
 
             if (result) {
                 res.send(result);
@@ -89,11 +89,11 @@ export class ApiV1 {
      */
     private async create(req: Request, res: Response) {
 
-        let entity: ConcreteEntity = req.body;
+        const entity: ConcreteEntity = req.body;
 
         try {
-            let service = await this.serviceFactory.getServiceByName(req.params.etName);
-            let result = await service.insertOne(entity);
+            const service = await this.serviceFactory.getServiceByName(req.params.etName);
+            const result = await service.insertOne(entity);
 
             res.location("/" + result._id).status(201).send(result);
         } catch (error) {
@@ -108,11 +108,11 @@ export class ApiV1 {
      */
     private async delete(req: Request, res: Response) {
 
-        let _id = req.params.id;
+        const _id = req.params.id;
 
         try {
-            let service = await this.serviceFactory.getServiceByName(req.params.etName);
-            let deleteCount = await service.deleteOne(_id);
+            const service = await this.serviceFactory.getServiceByName(req.params.etName);
+            const deleteCount = await service.deleteOne(_id);
 
             // If cannot find specified id, respond with 'not found'.
             if (!deleteCount)
@@ -132,11 +132,11 @@ export class ApiV1 {
      */
     private async update(req: Request, res: Response) {
 
-        let entity: ConcreteEntity = req.body;
+        const entity: ConcreteEntity = req.body;
 
         try {
-            let service = await this.serviceFactory.getServiceByName(req.params.etName);
-            let updatedCount = await service.updateOne(req.params.id, entity);
+            const service = await this.serviceFactory.getServiceByName(req.params.etName);
+            const updatedCount = await service.updateOne(req.params.id, entity);
 
             // If cannot find specified id, respond with 'not found'.
             if (!updatedCount)

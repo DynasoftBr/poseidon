@@ -1,6 +1,6 @@
 import { AbstractSchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { SchemaBuilder, FluentSchemaBuilder } from "json-schema-fluent-builder";
-import { Validation } from "../..";
+import { Validation } from "..";
 
 /**
  * Build JSON schama validation for enum properties.

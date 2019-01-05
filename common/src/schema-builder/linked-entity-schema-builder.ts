@@ -3,7 +3,7 @@ import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { Validation, EntityProperty } from "../models";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
-import _ = require("lodash");
+import *  as _ from "lodash";
 import { EntityTypeRepository } from "../data/repositories/entity-type-repository";
 
 /**

@@ -1,7 +1,7 @@
 import { StorageCollection } from "../storage-collection";
 import * as LokiDb from "lokijs";
 import { ConcreteEntity } from "../../../models";
-import _ = require("lodash");
+import * as _  from "lodash";
 
 export class InMemoryStorageCollection<T extends ConcreteEntity = ConcreteEntity>
     implements StorageCollection<T> {
