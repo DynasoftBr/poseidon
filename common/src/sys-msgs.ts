@@ -137,6 +137,18 @@ export const SysMsgs = {
         invalidPattern: {
             code: 4020,
             message: "The string '%s' is not a valid pattern."
+        },
+        missingLinkedPropertyId: {
+            code: 4021,
+            message: "Properties of type 'LinkedProperty' must have at least a linked property 'Id'. the property '%s' doesn't have an 'Id' linked property."
+        },
+        InvalidAbstractEntityRef: {
+            code: 4022,
+            message: "Properties of type AbstractEntity can only accept an Abstract Entity as Ref."
+        },
+        InvalidLinkedEntityRef: {
+            code: 4023,
+            message: "Properties of type LinkedEntity can't accept an Abstract Entity as Ref."
         }
     },
     crash: {

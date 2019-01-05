@@ -19,6 +19,7 @@ export class ConcreteEntityService<T extends ConcreteEntity> extends AbstractSer
         EntityHelpers.applyConvention(entity, this.entityType);
         EntityHelpers.parseDateTimeProperties(entity, this.entityType);
         EntityHelpers.addCreationInfo(entity);
+        EntityHelpers.setBranchInfo(entity);
 
         return entity;
     }

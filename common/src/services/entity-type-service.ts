@@ -26,8 +26,107 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
 
         problems.push(...this.validatePatternProperties(entity));
 
-        if (!isNew) return this.requireReservedProperties(entity);
-        else return [];
+        // when is not creating
+        if (!isNew) {
+            problems.push(...this.requireReservedProperties(entity));
+            problems.push(...this.validatingLinkedProperty(entity));
+            problems.push(...await this.validatingAbstractEntityRef(entity));
+            problems.push(...await this.validatingLinkedEntityRef(entity));
+        }
+
+        return problems;
+    }
+
+    protected async validatingLinkedEntityRef(entity: EntityType) {
+        const problems: ValidationProblem[] = [];
+
+        for (let idx = 0; idx < entity.props.length; idx++) {
+            const prop = entity.props[idx];
+
+            problems.push(...await this.validateLinkedEntityRef(prop.name, prop.validation));
+
+        }
+
+        return problems;
+    }
+
+    private async validateLinkedEntityRef(propName: string, validation: Validation) {
+        const problems: ValidationProblem[] = [];
+
+        if (validation.type == PropertyTypes.linkedEntity) {
+            const lkdEntityType = await this.repo.findById(validation.ref._id);
+
+            if (lkdEntityType.abstract == true)
+                problems.push(new ValidationProblem(propName, "InvalidLinkedEntityRef",
+                    SysMsgs.validation.InvalidLinkedEntityRef));
+        }
+        else if (validation.type === PropertyTypes.array
+            && validation.items.type === PropertyTypes.linkedEntity) {
+            problems.push(...await this.validateLinkedEntityRef(propName, validation.items));
+        }
+
+        return problems;
+    }
+    protected async validatingAbstractEntityRef(entity: EntityType) {
+        const problems: ValidationProblem[] = [];
+
+        for (let idx = 0; idx < entity.props.length; idx++) {
+            const prop = entity.props[idx];
+
+            problems.push(...await this.validateAbstractEntityRef(prop.name, prop.validation));
+
+        }
+
+        return problems;
+    }
+
+    private async validateAbstractEntityRef(propName: string, validation: Validation) {
+        const problems: ValidationProblem[] = [];
+
+        if (validation.type == PropertyTypes.abstractEntity) {
+            const abstractEntityType = await this.repo.findById(validation.ref._id);
+
+            if (abstractEntityType.abstract != true)
+                problems.push(new ValidationProblem(propName, "InvalidAbstractEntityRef",
+                    SysMsgs.validation.InvalidAbstractEntityRef));
+        }
+        else if (validation.type === PropertyTypes.array
+            && validation.items.type === PropertyTypes.abstractEntity) {
+            problems.push(...await this.validateAbstractEntityRef(propName, validation.items));
+        }
+
+        return problems;
+    }
+
+    private validatingLinkedProperty(entity: EntityType) {
+        const problems: ValidationProblem[] = [];
+
+        for (let idx = 0; idx < entity.props.length; idx++) {
+            const prop = entity.props[idx];
+
+            problems.push(...this.validateLinkedProperty(prop.name, prop.validation));
+
+        }
+
+        return problems;
+    }
+
+    private validateLinkedProperty(propName: string, validation: Validation) {
+        const problems: ValidationProblem[] = [];
+
+        if (validation.type == PropertyTypes.linkedEntity) {
+            const lkdProp = validation.linkedProperties.find((item) => item.name == "_id");
+
+            if (lkdProp == null)
+                problems.push(new ValidationProblem(propName, "missingLinkedPropertyId",
+                    SysMsgs.validation.missingLinkedPropertyId, propName));
+        }
+        else if (validation.type === PropertyTypes.array
+            && validation.items.type === PropertyTypes.linkedEntity) {
+            problems.push(...this.validateLinkedProperty(propName, validation.items));
+        }
+
+        return problems;
     }
 
     private requireReservedProperties(entity: EntityType): ValidationProblem[] {
@@ -38,7 +137,8 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
             buildIn.createdAtPropertyDefinition,
             buildIn.createdByPropertyDefinition,
             buildIn.changedAtPropertyDefinition,
-            buildIn.changedByPropertyDefinition
+            buildIn.changedByPropertyDefinition,
+            buildIn.branchPropertyDefinition,
         ];
 
         requiredProps.forEach((reqProp) => {
@@ -115,6 +215,10 @@ export class EntityTypeService extends ConcreteEntityService<EntityType> {
             .length == 0)
             (<EntityType>entity).props.push(builtin.idPropertyDefinition);
 
+        if (_.filter((<EntityType>entity).props, { name: SysProperties.branch })
+            .length == 0)
+            (<EntityType>entity).props.push(builtin.branchPropertyDefinition);
+            
         return entity;
     }
 }

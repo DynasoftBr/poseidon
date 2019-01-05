@@ -1,7 +1,8 @@
 import { PropertyTypes, SysEntities, SysProperties } from "../constants";
 import { SysUsers } from "../constants/sys-users";
-import { EntityProperty, EntitySchema, EntityType, LinkedProperty, User } from "../models";
-import { EntityTypeRef, UserRef } from "../models/helpers";
+import { EntityProperty, EntitySchema, EntityType, LinkedProperty, User, Entity } from "../models";
+import { EntityTypeRef, UserRef, BranchRef } from "../models/helpers";
+import { Branch } from "../models/branch";
 
 export class BuiltInEntries {
     public get entityType(): EntityType {
@@ -18,10 +19,12 @@ export class BuiltInEntries {
                 this.createdByPropertyDefinition,
                 this.createdAtPropertyDefinition,
                 this.changedByPropertyDefinition,
-                this.changedAtPropertyDefinition
+                this.changedAtPropertyDefinition,
+                this.branchPropertyDefinition
             ],
             createdBy: this.rootUserRef,
-            createdAt: new Date()
+            createdAt: new Date(),
+            branch: this.headQuarterBranchRef
         };
     }
 
@@ -32,10 +35,11 @@ export class BuiltInEntries {
             abstract: true,
             props: [
                 this.entityPropertyNamePropertyDefinition,
-                this.validationPropertyDefinition
+                this.validationPropertyDefinition,
             ],
             createdBy: this.rootUserRef,
-            createdAt: new Date()
+            createdAt: new Date(),
+            branch: this.headQuarterBranchRef
         };
     }
 
@@ -51,10 +55,12 @@ export class BuiltInEntries {
                 this.changedByPropertyDefinition,
                 this.createdAtPropertyDefinition,
                 this.changedByPropertyDefinition,
-                this.changedAtPropertyDefinition
+                this.changedAtPropertyDefinition,
+                this.branchPropertyDefinition
             ],
             createdBy: this.rootUserRef,
-            createdAt: new Date()
+            createdAt: new Date(),
+            branch: this.headQuarterBranchRef
         };
     }
 
@@ -70,10 +76,12 @@ export class BuiltInEntries {
                 this.createdByPropertyDefinition,
                 this.createdAtPropertyDefinition,
                 this.changedByPropertyDefinition,
-                this.changedAtPropertyDefinition
+                this.changedAtPropertyDefinition,
+                this.branchPropertyDefinition
             ],
             createdAt: new Date(),
-            createdBy: this.rootUserRef
+            createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef
         };
     }
 
@@ -81,7 +89,7 @@ export class BuiltInEntries {
         return {
             _id: SysEntities.validation,
             name: SysEntities.validation,
-            abstract: false,
+            abstract: true,
             props: [
                 this.typePropertyDefinition,
                 this.requiredPropertyDefinition,
@@ -95,10 +103,11 @@ export class BuiltInEntries {
                 this.uniqueItemsPropertyDefinition,
                 this.multipleOfPropertyDefinition,
                 this.defaultPropertyDefinition,
-                this.conventionPropertyDefinition
+                this.conventionPropertyDefinition,
             ],
             createdAt: new Date(),
-            createdBy: this.rootUserRef
+            createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef
         };
     }
 
@@ -106,22 +115,42 @@ export class BuiltInEntries {
         return {
             _id: SysEntities.linkedProperty,
             name: SysEntities.linkedProperty,
-            abstract: false,
+            abstract: true,
             props: [
                 this.entityPropertyNamePropertyDefinition,
                 this.keepUpToDatePropertyDefinition,
-                this.labelPropertyDefinition
+                this.labelPropertyDefinition,
             ],
             createdAt: new Date(),
-            createdBy: this.rootUserRef
+            createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef
         };
     }
-
+    public get entityTypeBranch(): EntityType {
+        return {
+            _id: SysEntities.branch,
+            name: SysEntities.branch,
+            abstract: false,
+            props: [
+                this.idPropertyDefinition,
+                this.branchNamePropertyDefinition,
+                this.createdByPropertyDefinition,
+                this.createdAtPropertyDefinition,
+                this.changedByPropertyDefinition,
+                this.changedAtPropertyDefinition,
+                this.branchPropertyDefinition
+            ],
+            createdAt: new Date(),
+            createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef
+        };
+    }
     public get entitySchemaForEntityType(): EntitySchema {
         return {
             _id: SysEntities.entityType,
             createdAt: new Date(),
             createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef,
             schema: "",
             entityType: this.entityTypeRef
         };
@@ -132,6 +161,7 @@ export class BuiltInEntries {
             _id: SysEntities.entityProperty,
             createdAt: new Date(),
             createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef,
             schema: null,
             entityType: this.entityTypeRef
         };
@@ -461,11 +491,49 @@ export class BuiltInEntries {
             }
         };
     }
+    public get branchNamePropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.name,
+            validation: {
+                type: PropertyTypes.string,
+                required: true,
+                max: 50,
+                min: 2,
+            }
+        };
+    }
 
+    public get branchPropertyDefinition(): EntityProperty {
+        return {
+            name: SysProperties.branch,
+            validation: {
+                type: PropertyTypes.linkedEntity,
+                required: true,
+                ref: this.entityTypeBranchRef,
+                linkedProperties: [
+                    {
+                        name: SysProperties._id,
+                        keepUpToDate: true
+                    },
+                    {
+                        name: SysProperties.name,
+                        keepUpToDate: true
+                    }
+                ]
+            }
+        };
+    }
     public get rootUserRef(): UserRef {
         return {
             _id: SysUsers.root,
             name: SysUsers.root
+        };
+    }
+
+    public get headQuarterBranchRef(): BranchRef {
+        return {
+            _id: "Head Quarter",
+            name: "Head Quarter"
         };
     }
 
@@ -509,6 +577,13 @@ export class BuiltInEntries {
         };
     }
 
+    public get entityTypeBranchRef(): EntityTypeRef {
+        return {
+            _id: SysEntities.branch,
+            name: SysEntities.branch
+        };
+    }
+
     public get entityTypeRefLinkedProps(): LinkedProperty[] {
         return [
             {
@@ -533,7 +608,18 @@ export class BuiltInEntries {
             login: SysUsers.root,
             createdAt: new Date(),
             createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef,
             pass: SysUsers.root
+        };
+    }
+
+    public get headQuarterBranch(): Branch {
+        return {
+            _id: "Head Quarter",
+            name: "Head Quarter",
+            createdAt: new Date(),
+            createdBy: this.rootUserRef,
+            branch: this.headQuarterBranchRef
         };
     }
 }
