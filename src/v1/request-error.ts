@@ -1,4 +1,4 @@
-import { SysMsg, SysError } from "@poseidon/engine";
+import { SysMsg, SysError } from "@poseidon/core";
 
 /**
  * A custom Error class

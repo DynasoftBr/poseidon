@@ -3,7 +3,7 @@ import * as winston from "winston"; // Logger. Uses configuration made in server
 
 import {
     SysError, SysMsgs, ServiceFactory, ConcreteEntity
-} from "@poseidon/engine";
+} from "@poseidon/core";
 
 import { RequestError } from "./request-error";
 

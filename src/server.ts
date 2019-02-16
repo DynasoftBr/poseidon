@@ -13,7 +13,7 @@ import * as cors from "cors";
 import {
   DatabaseError, SysMsgs, RepositoryFactory,
   DataStorage, ServiceFactory, DatabasePopulator, MongoDbStorage,
-} from "@poseidon/engine";
+} from "@poseidon/core";
 
 // APIs
 import { ApiV1 } from "./v1/api-v1";
