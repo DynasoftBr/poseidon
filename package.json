@@ -1,0 +1,63 @@
+{
+  "name": "@poseidon/api",
+  "version": "0.1.0",
+  "description": "Poseidons' rest api.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Leandro-Albano/poseidon.git"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "main": "dist/index.js",
+  "author": "dynasoft",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Leandro-Albano/poseidon/issues"
+  },
+  "homepage": "https://github.com/Leandro-Albano/poseidon",
+  "scripts": {
+    "start": "npm run build && npm run watch",
+    "build": "npm run clean:dist && npm run build-ts && npm run tslint",
+    "serve": "node dist/server.js",
+    "watch": "node dist/",
+    "test": "jest --forceExit",
+    "build-dependecies": "npm run build:engine",
+    "build:engine": "npm start --prefix engine/",
+    "build-ts": "tsc",
+    "clean:dist": "npm run rimraf -- dist",
+    "rimraf": "rimraf",
+    "watch-ts": "tsc -w",
+    "tslint": "tslint -c tslint.json -p tsconfig.json"
+  },
+  "dependencies": {
+    "@poseidon/core-models": "file:core-models",
+    "@poseidon/core": "file:core",
+    "body-parser": "^1.18.3",
+    "common": "^0.2.5",
+    "compression": "^1.7.3",
+    "cors": "^2.8.5",
+    "dotenv": "^6.2.0",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.17.0",
+    "@types/compression": "^0.0.36",
+    "@types/cors": "^2.8.4",
+    "@types/dotenv": "^6.1.0",
+    "@types/errorhandler": "^0.0.32",
+    "@types/express": "^4.16.1",
+    "@types/lodash": "^4.14.120",
+    "@types/mongodb": "^3.1.19",
+    "@types/morgan": "^1.7.35",
+    "@types/node": "^10.12.24",
+    "errorhandler": "^1.5.0",
+    "nodemon": "^1.18.10",
+    "rimraf": "^2.6.3",
+    "tslint": "^5.12.1",
+    "tslint-eslint-rules": "^5.4.0",
+    "typescript": "^3.3.3"
+  }
+}

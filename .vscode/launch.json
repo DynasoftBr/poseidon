@@ -8,10 +8,10 @@
             "type": "node",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceRoot}\\api\\dist\\index",
+            "program": "${workspaceRoot}\\dist\\index",
             "smartStep": true,
             "outFiles": [
-                "/api/dist/**/*.js"
+                "/dist/**/*.js"
             ],
             "protocol": "inspector",
             "preLaunchTask": "tsc",
