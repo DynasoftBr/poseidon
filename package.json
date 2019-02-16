@@ -31,7 +31,7 @@
     "tslint": "tslint -c tslint.json -p tsconfig.json"
   },
   "dependencies": {
-    "@poseidon/core-models": "file:core-models",
+    "@poseidon/core-models": "file:core/core-models",
     "@poseidon/core": "file:core",
     "body-parser": "^1.18.3",
     "common": "^0.2.5",
