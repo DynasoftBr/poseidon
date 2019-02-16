@@ -1,6 +1,3 @@
 [submodule "core"]
 	path = core
 	url = https://github.com/DynasoftBr/poseidon-core.git
-[submodule "core-models"]
-	path = core-models
-	url = https://github.com/DynasoftBr/poseidon-core-models.git
