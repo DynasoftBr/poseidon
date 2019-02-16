@@ -1,3 +1,4 @@
 [submodule "core"]
 	path = core
 	url = https://github.com/DynasoftBr/poseidon-core.git
+	branch = master
