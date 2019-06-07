@@ -1,0 +1,1 @@
+{"version":3,"file":"boolean-property-schema-builder.js","sourceRoot":"","sources":["../../src/schema-builder/boolean-property-schema-builder.ts"],"names":[],"mappings":";;;;;;;;;;AAEA,2EAA2D;AAG3D;;;GAGG;AACH,MAAa,4BAA4B;IAC/B,KAAK,CAAC,UAA+B,EAAE,UAAuB;;YAChE,OAAO,IAAI,0CAAa,EAAE,CAAC,IAAI,EAAE,CAAC;QACtC,CAAC;KAAA;CACJ;AAJD,oEAIC"}
