@@ -1,0 +1,14 @@
+import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
+import { FluentSchemaBuilder } from "json-schema-fluent-builder";
+import { SchemaBuilder } from "json-schema-fluent-builder";
+import { IValidation } from "@poseidon/core-models";
+
+/**
+ * Build JSON schama validation for boolean properties.
+ * @class
+ */
+export class BooleanPropertySchemaBuilder implements ISchamaBuilderStrategy {
+    async build(rootSchema: FluentSchemaBuilder, validation: IValidation): Promise<FluentSchemaBuilder> {
+        return new SchemaBuilder().bool();
+    }
+}
