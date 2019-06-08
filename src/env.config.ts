@@ -18,5 +18,6 @@ export const env = {
     },
     log: {
         level: process.env.LOG_LEVEL
-    }
+    },
+    isProd: process.env.NODE_ENV == "production"
 };

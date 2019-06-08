@@ -13,9 +13,6 @@ logs
 results
 tmp
 
-#Build
-public/css/main.css
-
 # API keys and secrets
 .env
 
@@ -32,4 +29,4 @@ bower_components
 Thumbs.db
 
 # Ignore built ts files
-*/dist/**/*
+dist/**/*

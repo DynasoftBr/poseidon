@@ -36,6 +36,6 @@ export class SysError extends Error {
      * @param aditionalMsg: A complement for the default message.
      */
     static unexpectedError(aditionalMsg: string): SysError {
-        return new SysError("unexpected", SysMsgs.crash.unexpectedError, aditionalMsg);
+        return new SysError("unexpected", SysMsgs.error.unexpectedError, aditionalMsg);
     }
 }

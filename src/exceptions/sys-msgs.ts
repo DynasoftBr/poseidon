@@ -53,7 +53,15 @@ export const SysMsgs = {
         databaseConnectionClosed: {
             code: 3008,
             message: "Database connection closed."
-        }
+        },
+        unexpectedError: {
+            code: 3009,
+            message: "Unexpected error: %s"
+        },
+        databaseConnectionFailed: {
+            code: 3010,
+            message: "Database connection failed. Error: %s"
+        },
     },
     validation: {
         validationErrorMsg: {
@@ -138,17 +146,6 @@ export const SysMsgs = {
             code: 4020,
             message: "The string '%s' is not a valid pattern."
         }
-    },
-    crash: {
-        unexpectedError: {
-            code: 5001,
-            message: "Unexpected error: %s"
-        },
-        databaseConnectionFailed: {
-            code: 5002,
-            message: "Database connection failed. Error: %s"
-        },
-
     },
     format: (sysMsg: SysMsg, ...params: any[]): string => {
         return util.format(sysMsg.message, ...params);
