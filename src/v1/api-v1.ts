@@ -113,6 +113,7 @@ export class ApiV1 {
         const { id, etName } = ctx.params;
 
         const entity: IConcreteEntity = ctx.request.body;
+        entity._id = id;
 
         const service = await this.serviceFactory.getByName(etName);
         const updatedCount = await service.update(entity);

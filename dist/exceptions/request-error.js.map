@@ -1,1 +1,0 @@
-{"version":3,"file":"request-error.js","sourceRoot":"","sources":["../../src/exceptions/request-error.ts"],"names":[],"mappings":";;AAAA,wBAAqC;AAErC;;;GAGG;AACH,MAAa,YAAa,SAAQ,WAAQ;IACtC,YAAY,MAAc,EAAE,GAAG,MAAa;QACxC,KAAK,CAAC,SAAS,EAAE,MAAM,EAAE,GAAG,MAAM,CAAC,CAAC;IACxC,CAAC;CACJ;AAJD,oCAIC"}

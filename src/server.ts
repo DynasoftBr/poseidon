@@ -59,11 +59,11 @@ function initApp(storage: IDataStorage) {
   app.use(ApiV1.getRouter(servicesFactory).routes());
 
   /**
-   * Start Express server.
+   * Start server.
    */
-  const server = app.listen(Number(env.port) | 3000, () => {
+  const server = app.listen(env.port || 3000, () => {
     const address = server.address() as AddressInfo;
-    logger.info(("App is running at http://localhost:%d in %s mode"), address.port);
+    logger.info((`App is running at http://localhost:${address.port} in ${env.nodeEnv} mode.`));
     logger.info("Press CTRL-C to stop\n");
   });
 
