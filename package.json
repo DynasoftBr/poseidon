@@ -17,7 +17,7 @@
     "build": "npm run clean:dist && npm run build-ts && npm run tslint",
     "serve": "node dist/server.js",
     "watch": "nodemon",
-    "test": "jest --forceExit",
+    "test": "mocha --require ts-node/register \"tests/**/*.ts\"",
     "build-dependecies": "npm run build:core-models",
     "build:core-models": "npm run build --prefix poseidon-core-models/",
     "build-ts": "tsc",

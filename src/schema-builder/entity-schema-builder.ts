@@ -10,6 +10,7 @@ import { EnumPropertySchemaBuilder } from "./enum-property-schema-builder";
 import { ArrayPropertySchemaBuilder } from "./array-property-schema-builder";
 import { IRepository } from "../data";
 import { IEntityType, IValidation, PropertyTypes } from "@poseidon/core-models";
+import * as _ from "lodash";
 
 export class EntitySchemaBuilder {
 
@@ -29,7 +30,6 @@ export class EntitySchemaBuilder {
         const propsLength = entityType.props.length;
         for (let idx = 0; idx < propsLength; idx++) {
             const prop = entityType.props[idx];
-
             const bs = await this.buildSchemaValidation(schema, prop.validation);
             schema.prop(prop.name, bs, prop.validation.required);
         }
@@ -44,8 +44,6 @@ export class EntitySchemaBuilder {
      */
     public async buildSchemaValidation(rootSchema: FluentSchemaBuilder,
         validation: IValidation): Promise<FluentSchemaBuilder> {
-
-        let propSchema: FluentSchemaBuilder;
 
         switch (validation.type) {
             case PropertyTypes.linkedEntity:
@@ -85,9 +83,13 @@ export class EntitySchemaBuilder {
                 return new EnumPropertySchemaBuilder()
                     .build(rootSchema, validation);
 
+            // Handle enum.
+            case PropertyTypes.any:
+                return new EnumPropertySchemaBuilder()
+                    .build(rootSchema, validation);
+
             default:
                 throw new Error(validation.type);
         }
-
     }
 }

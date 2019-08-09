@@ -4,7 +4,6 @@ import * as HttpStatus from "http-status-codes";
 import { logger } from "../logger";
 import { UnexpectedError } from "../exceptions/unexpected-error";
 
-
 export function unhandledException(): Middleware {
     const { noEntityTypeSpecified, abstractEntityType,
         invalidHeaderParameters, entityNotFound, entityTypeNotFound,

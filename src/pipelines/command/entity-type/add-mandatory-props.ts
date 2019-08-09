@@ -3,6 +3,7 @@ import { NextPipelineItem } from "../command-pipeline-item";
 import { BuiltInEntries } from "../../../data";
 import * as _ from "lodash";
 import { ValidationProblem, SysMsgs } from "../../../exceptions";
+import { ProblemKeywords } from "@poseidon/core-models/src";
 
 export function AddMandatoryProps(request: ICommandRequest, next: NextPipelineItem) {
 
@@ -21,11 +22,11 @@ export function AddMandatoryProps(request: ICommandRequest, next: NextPipelineIt
         const prop = _.find(entity.props, { name: reqProp.name });
 
         if (prop == null)
-            problems.push(new ValidationProblem(reqProp.name, "missingRequiredEntityProperty",
+            problems.push(new ValidationProblem(reqProp.name, ProblemKeywords.missingMadatoryEntityProperty,
                 SysMsgs.validation.missingRequiredEntityProperty, reqProp.name));
 
         else if (!_.isEqual(prop, reqProp))
-            problems.push(new ValidationProblem(reqProp.name, "invalidRequiredEntityProperty",
+            problems.push(new ValidationProblem(reqProp.name, ProblemKeywords.invalidMandatoryEntityProperty,
                 SysMsgs.validation.invalidRequiredEntityProperty, reqProp.name));
     });
 

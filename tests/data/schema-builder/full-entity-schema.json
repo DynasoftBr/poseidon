@@ -1,0 +1,437 @@
+{
+    "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "_id": {
+                "type": "string"
+            },
+            "createdAt": {
+                "format": "date-time"
+            },
+            "createdBy": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "_id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 50
+                    }
+                },
+                "required": [
+                    "_id",
+                    "name"
+                ]
+            },
+            "changedAt": {
+                "format": "date-time"
+            },
+            "changedBy": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "_id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 50
+                    }
+                },
+                "required": [
+                    "_id",
+                    "name"
+                ]
+            },
+            "stringProp": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 3,
+                "pattern": "^[A-Z]*$"
+            },
+            "intProp": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 30,
+                "multipleOf": 10
+            },
+            "numberProp": {
+                "type": "number",
+                "minimum": 10,
+                "maximum": 30,
+                "multipleOf": 1e-10
+            },
+            "dateTimeProp": {
+                "format": "date-time"
+            },
+            "booleanProp": {
+                "type": "boolean"
+            },
+            "arrayOfSimpleTypeProp": {
+                "type": "array",
+                "additionalItems": false,
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 3
+                }
+            },
+            "arrayOfAbstractEntityProp": {
+                "type": "array",
+                "additionalItems": false,
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                    "$ref": "#/definitions/ComplexAbstractEntityType"
+                }
+            },
+            "arrayOfLinkedEntityProp": {
+                "type": "array",
+                "additionalItems": false,
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "_id": {
+                            "type": "string"
+                        },
+                        "stringProp": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 3,
+                            "pattern": "^[A-Z]*$"
+                        },
+                        "intProp": {
+                            "type": "integer",
+                            "minimum": 10,
+                            "maximum": 30,
+                            "multipleOf": 10
+                        },
+                        "numberProp": {
+                            "type": "number",
+                            "minimum": 10,
+                            "maximum": 30,
+                            "multipleOf": 1e-10
+                        },
+                        "dateTimeProp": {
+                            "format": "date-time"
+                        },
+                        "booleanProp": {
+                            "type": "boolean"
+                        },
+                        "arrayOfSimpleTypeProp": {
+                            "type": "array",
+                            "additionalItems": false,
+                            "minItems": 1,
+                            "maxItems": 2,
+                            "items": {
+                                "type": "string",
+                                "minLength": 2,
+                                "maxLength": 3
+                            }
+                        },
+                        "arrayOfAbstractEntityProp": {
+                            "type": "array",
+                            "additionalItems": false,
+                            "minItems": 1,
+                            "maxItems": 2,
+                            "items": {
+                                "$ref": "#/definitions/SimpleAbstractEntityType"
+                            }
+                        },
+                        "arrayOfLinkedEntityProp": {
+                            "type": "array",
+                            "additionalItems": false,
+                            "minItems": 1,
+                            "maxItems": 2,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "_id": {
+                                        "type": "string"
+                                    },
+                                    "stringProp": {
+                                        "type": "string",
+                                        "minLength": 2,
+                                        "maxLength": 3,
+                                        "pattern": "^[A-Z]*$"
+                                    }
+                                },
+                                "required": [
+                                    "_id",
+                                    "stringProp"
+                                ]
+                            }
+                        },
+                        "abstractEntityProp": {
+                            "$ref": "#/definitions/SimpleAbstractEntityType"
+                        },
+                        "linkedEntityProp": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "_id": {
+                                    "type": "string"
+                                },
+                                "stringProp": {
+                                    "type": "string",
+                                    "minLength": 2,
+                                    "maxLength": 3,
+                                    "pattern": "^[A-Z]*$"
+                                }
+                            },
+                            "required": [
+                                "_id",
+                                "stringProp"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "_id",
+                        "stringProp"
+                    ]
+                }
+            },
+            "abstractEntityProp": {
+                "$ref": "#/definitions/ComplexAbstractEntityType"
+            },
+            "linkedEntityProp": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "_id": {
+                        "type": "string"
+                    },
+                    "stringProp": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 3,
+                        "pattern": "^[A-Z]*$"
+                    },
+                    "intProp": {
+                        "type": "integer",
+                        "minimum": 10,
+                        "maximum": 30,
+                        "multipleOf": 10
+                    },
+                    "numberProp": {
+                        "type": "number",
+                        "minimum": 10,
+                        "maximum": 30,
+                        "multipleOf": 1e-10
+                    },
+                    "dateTimeProp": {
+                        "format": "date-time"
+                    },
+                    "booleanProp": {
+                        "type": "boolean"
+                    },
+                    "arrayOfSimpleTypeProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 3
+                        }
+                    },
+                    "arrayOfAbstractEntityProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "$ref": "#/definitions/SimpleAbstractEntityType"
+                        }
+                    },
+                    "arrayOfLinkedEntityProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "_id": {
+                                    "type": "string"
+                                },
+                                "stringProp": {
+                                    "type": "string",
+                                    "minLength": 2,
+                                    "maxLength": 3,
+                                    "pattern": "^[A-Z]*$"
+                                }
+                            },
+                            "required": [
+                                "_id",
+                                "stringProp"
+                            ]
+                        }
+                    },
+                    "abstractEntityProp": {
+                        "$ref": "#/definitions/SimpleAbstractEntityType"
+                    },
+                    "linkedEntityProp": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "_id": {
+                                "type": "string"
+                            },
+                            "stringProp": {
+                                "type": "string",
+                                "minLength": 2,
+                                "maxLength": 3,
+                                "pattern": "^[A-Z]*$"
+                            }
+                        },
+                        "required": [
+                            "_id",
+                            "stringProp"
+                        ]
+                    }
+                },
+                "required": [
+                    "_id",
+                    "stringProp"
+                ]
+            }
+        },
+        "required": [
+            "_id",
+            "createdAt",
+            "createdBy",
+            "stringProp"
+        ],
+        "definitions": {
+            "ComplexAbstractEntityType": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "stringProp": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 3,
+                        "pattern": "^[A-Z]*$"
+                    },
+                    "intProp": {
+                        "type": "integer",
+                        "minimum": 10,
+                        "maximum": 30,
+                        "multipleOf": 10
+                    },
+                    "numberProp": {
+                        "type": "number",
+                        "minimum": 10,
+                        "maximum": 30,
+                        "multipleOf": 1e-10
+                    },
+                    "dateTimeProp": {
+                        "format": "date-time"
+                    },
+                    "booleanProp": {
+                        "type": "boolean"
+                    },
+                    "arrayOfSimpleTypeProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 3
+                        }
+                    },
+                    "arrayOfAbstractEntityProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "$ref": "#/definitions/SimpleAbstractEntityType"
+                        }
+                    },
+                    "arrayOfLinkedEntityProp": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "_id": {
+                                    "type": "string"
+                                },
+                                "stringProp": {
+                                    "type": "string",
+                                    "minLength": 2,
+                                    "maxLength": 3,
+                                    "pattern": "^[A-Z]*$"
+                                }
+                            },
+                            "required": [
+                                "_id",
+                                "stringProp"
+                            ]
+                        }
+                    },
+                    "abstractEntityProp": {
+                        "$ref": "#/definitions/SimpleAbstractEntityType"
+                    },
+                    "linkedEntityProp": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "_id": {
+                                "type": "string"
+                            },
+                            "stringProp": {
+                                "type": "string",
+                                "minLength": 2,
+                                "maxLength": 3,
+                                "pattern": "^[A-Z]*$"
+                            }
+                        },
+                        "required": [
+                            "_id",
+                            "stringProp"
+                        ]
+                    }
+                },
+                "required": [
+                    "stringProp"
+                ]
+            },
+            "SimpleAbstractEntityType": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "stringProp": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 3,
+                        "pattern": "^[A-Z]*$"
+                    }
+                },
+                "required": [
+                    "stringProp"
+                ]
+            }
+        }
+    }
+}

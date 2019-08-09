@@ -14,22 +14,22 @@ const validationFuncs = new Map<string, ValidateFunction>();
  */
 export async function validateSchema<T extends IConcreteEntity>(request: ICommandRequest<T>) {
 
-    const { context, entityType, entity } = request;
+    // const { context, entityType, entity } = request;
 
-    const entityTypeRepo = await context.colection(SysEntities.entitySchema);
-    const schemaColl = await context.colection(SysEntities.entitySchema);
+    // const entityTypeRepo = await context.colection(SysEntities.entitySchema);
+    // const schemaColl = await context.colection(SysEntities.entitySchema);
 
-    // Instantiates ajv library, compiles the schema, them validates the entity.
-    let valFunc = validationFuncs.get(entityType._id);
-    if (!valFunc) {
-        // find entity schema or build it.
-        const schema = await schemaColl.findOne({}) || (await new EntitySchemaBuilder(entityTypeRepo)
-            .buildSchema(entityType)).getSchema();
+    // // Instantiates ajv library, compiles the schema, them validates the entity.
+    // let valFunc = validationFuncs.get(entityType._id);
+    // if (!valFunc) {
+    //     // find entity schema or build it.
+    //     const schema = await schemaColl.findOne({}) || (await new EntitySchemaBuilder(entityTypeRepo)
+    //         .buildSchema(entityType)).getSchema();
 
-        valFunc = buildValidationFunc(schema);
-        validationFuncs.set(entityType._id, valFunc);
-    }
+    //     valFunc = buildValidationFunc(schema);
+    //     validationFuncs.set(entityType._id, valFunc);
+    // }
 
-    // Get schema problems and return it.
-    request.problems = [...request.problems, ...validateEntity(valFunc, entity as IConcreteEntity)];
+    // // Get schema problems and return it.
+    // request.problems = [...request.problems, ...validateEntity(valFunc, entity as IConcreteEntity)];
 }
