@@ -2,11 +2,26 @@ import { ConcreteEntityService } from "./concrete-entity-service";
 import { IEntityType, IValidation, PropertyTypes, ProblemKeywords, SysProperties } from "@poseidon/core-models";
 import { ValidationProblem, SysMsgs } from "../exceptions";
 import { BuiltInEntries, IRepositoryFactory, IRepository } from "../data";
+import { applyDefaultsAndConvention } from "../pipelines/command/common/apply-defaults-and-convention";
+import { validateSchema } from "../pipelines/command/common/validate-schema";
+import { publishDomainEvent } from "../pipelines/command/common/publish-domain-event";
+import { CommandPipeline } from "../pipelines/command/command-pipeline";
+import { addMandatoryProps } from "../pipelines/command/entity-type/add-mandatory-props";
 
 export class EntityTypeService extends ConcreteEntityService<IEntityType> {
 
     constructor(repo: IRepository<IEntityType>, repoFactory: IRepositoryFactory) {
         super(repo, repoFactory);
+    }
+
+    protected buildPipelines() {
+        const createHandlers = [
+            applyDefaultsAndConvention,
+            addMandatoryProps,
+            validateSchema,
+            publishDomainEvent
+        ];
+        this.createPipeline = new CommandPipeline<IEntityType>(createHandlers);
     }
 
     private validatePatternProperties(entity: IEntityType)
