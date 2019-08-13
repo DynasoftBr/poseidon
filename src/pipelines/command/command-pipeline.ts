@@ -10,7 +10,8 @@ export class CommandPipeline<T extends IConcreteEntity = IConcreteEntity> {
             throw new Error("The 'handlers' param must be an not null array with at least one element.");
         }
 
-        this.handlers = [...handlers, async () => { return; }].map((h, i) => req => h(req, handlers[i + 1]));
+        this.handlers = [...handlers, async () => { return; }]
+            .map((h, i) => req => h(req, this.handlers[i + 1]));
     }
 
     public async handle(request: ICommandRequest<T>): Promise<void> {
