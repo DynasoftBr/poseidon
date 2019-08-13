@@ -3,9 +3,9 @@ import { NextPipelineItem } from "../command-pipeline-item";
 import { BuiltInEntries } from "../../../data";
 import * as _ from "lodash";
 import { ValidationProblem, SysMsgs } from "../../../exceptions";
-import { ProblemKeywords } from "@poseidon/core-models/src";
+import { ProblemKeywords, IEntityType } from "@poseidon/core-models/src";
 
-export function AddMandatoryProps(request: ICommandRequest, next: NextPipelineItem) {
+export async function addMandatoryProps(request: ICommandRequest<IEntityType>, next?: NextPipelineItem) {
 
     const problems = request.problems = request.problems || [];
     const entity = request.entity;
