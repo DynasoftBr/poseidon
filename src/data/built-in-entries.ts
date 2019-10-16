@@ -469,7 +469,6 @@ export class BuiltInEntries {
     public get entityTypeRef(): EntityTypeRef {
         return {
             _id: SysEntities.entityType,
-            label: SysEntities.entityType,
             name: SysEntities.entityType
         };
     }
@@ -477,7 +476,6 @@ export class BuiltInEntries {
     public get entityPropertyRef(): EntityTypeRef {
         return {
             _id: SysEntities.entityProperty,
-            label: SysEntities.entityProperty,
             name: SysEntities.entityProperty
         };
     }
@@ -485,7 +483,6 @@ export class BuiltInEntries {
     public get validationRef(): EntityTypeRef {
         return {
             _id: SysEntities.validation,
-            label: SysEntities.validation,
             name: SysEntities.validation
         };
     }
@@ -493,7 +490,6 @@ export class BuiltInEntries {
     public get linkedPropertyRef(): EntityTypeRef {
         return {
             _id: SysEntities.linkedProperty,
-            label: SysEntities.linkedProperty,
             name: SysEntities.linkedProperty
         };
     }
@@ -502,7 +498,6 @@ export class BuiltInEntries {
         return {
             _id: SysEntities.user,
             name: SysEntities.user,
-            label: SysEntities.user
         };
     }
 

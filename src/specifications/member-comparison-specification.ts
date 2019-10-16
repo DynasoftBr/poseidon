@@ -1,6 +1,6 @@
 
 import { Specification } from "./specificaiton";
-import { ISpecification, IConcreteEntity, IMemberComparisonSpecification, TriggerAction } from "@poseidon/core-models";
+import { ISpecification, IConcreteEntity, IMemberComparisonSpecification } from "@poseidon/core-models";
 import * as _ from "lodash";
 
 type CompareFunc<T extends IConcreteEntity = IConcreteEntity> = (fact: T) => boolean;
@@ -37,13 +37,13 @@ export class MemberComparisonSpecification<T extends IConcreteEntity = IConcrete
                 return memberValue.toString().indexOf(this.value) == 0;
             };
             case "%*": return (fact) => {
-                const memberValue = (_.get(fact, this.member) || "").toString() as string;
+                const memberValue = (_.get(fact, this.member) || "") as string;
                 const expectedIdx = memberValue.length - (this.value as string).length - 1;
 
                 return memberValue.indexOf(this.value) == expectedIdx;
             };
             case "%*": return (fact) => {
-                const memberValue = (_.get(fact, this.member) || "").toString() as string;
+                const memberValue =  (_.get(fact, this.member) || "") as string;
                 const expectedIdx = memberValue.length - (this.value as string).length - 1;
 
                 return memberValue.indexOf(this.value) == expectedIdx;
