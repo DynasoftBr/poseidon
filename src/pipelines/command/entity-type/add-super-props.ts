@@ -6,8 +6,8 @@ import * as _ from "lodash";
 
 export function addSuperProps(request: ICommandRequest<IEntityType>, next: NextPipelineItem) {
 
-    const $super = request.context. 
-    request.entity.props
+    // const $super = request.context.
+    // request.entity.props
 
-        next(request);
+    //     next(request);
 }

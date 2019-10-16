@@ -2,7 +2,7 @@ import * as Ajv from "ajv";
 import _ = require("lodash");
 import { SchemaModel } from "json-schema-fluent-builder";
 import { EntitySchemaBuilder } from "../../schema-builder/entity-schema-builder";
-import { IEntityType, IEntity, SysEntities, PropertyTypes } from "@poseidon/core-models";
+import { IEntityType, IEntity, SysEntities, PropertyTypes, ProblemKeywords } from "@poseidon/core-models";
 import { ValidationProblem, SysMsgs } from "../..//exceptions";
 import { IRepositoryFactory } from "../repositories";
 
@@ -83,7 +83,7 @@ export class EntityValidator {
 
                 // If we can't find an entity with the linked id, add a validation problem.
                 if (lkdEntity == null) {
-                    problems.push(new ValidationProblem(prop.name, "linkedEntity", SysMsgs.validation.linkedEntityDoesNotExist,
+                    problems.push(new ValidationProblem(prop.name, ProblemKeywords.invalidLinkedEntityId , SysMsgs.validation.linkedEntityDoesNotExist,
                     propValidation.ref.name, entity[prop.name]._id));
                 } else {
                     // Iterate the linked properties and check if it equals the lineked entity values.
@@ -92,7 +92,7 @@ export class EntityValidator {
                         // Check if the value provided in linked properties equals linked entity values.
                         if (!_.isEqual(entity[prop.name][lkdProp.name], lkdEntity[lkdProp.name])) {
                             const p = prop.name + "." + lkdProp.name;
-                            problems.push(new ValidationProblem(p, "linkedValue", SysMsgs.validation.divergentLinkedValue, p, lkdEntity[lkdProp.name]));
+                            problems.push(new ValidationProblem(p, ProblemKeywords.invalidLinkedValue , SysMsgs.validation.divergentLinkedValue, p, lkdEntity[lkdProp.name]));
                         }
                     });
                 }
