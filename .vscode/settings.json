@@ -9,5 +9,9 @@
     "tslint.enable": true,
     "tslint.ignoreDefinitionFiles": false,
     "tslint.autoFixOnSave": true,
-    "tslint.exclude": "**/node_modules/**/*"
+    "tslint.exclude": "**/node_modules/**/*",
+    "prettier.disableLanguages": [],
+    "prettier.printWidth": 100,
+    "prettier.tabWidth": 4,
+    "editor.formatOnSave": true
 }
