@@ -42,6 +42,7 @@ function initApp(storage: IDataStorage) {
    * Create Express server.
    */
   const app = new Koa();
+  const cors = require("@koa/cors");
 
   /**
    * Express configuration.
@@ -50,6 +51,7 @@ function initApp(storage: IDataStorage) {
   app.use(compress());
   app.use(bodyParser({ enableTypes: ["json"] }));
   app.use(unhandledException());
+  app.use(cors());
 
   // Instantiate the repositories and services factory.
   const repoFactory = new RepositoryFactory(storage);
