@@ -14,13 +14,13 @@ export class ConcreteEntityService<T extends IConcreteEntity> implements IServic
     protected deletePipeline: CommandPipeline<T>;
     protected entityType: IEntityType;
 
-    constructor(protected repo: IRepository<IConcreteEntity>, protected repoFactory: IRepositoryFactory) {
+    constructor(protected repo: IRepository<T>, protected repoFactory: IRepositoryFactory) {
         this.entityType = repo.entityType;
         this.buildPipelines();
     }
 
     public findMany(filter: object, skip?: number, limit?: number, sort?: object): Promise<T[]> {
-        throw new Error("Method not implemented.");
+        return this.repo.findMany(filter, skip, limit);
     }
 
     public findOne(filter: object): Promise<T> {

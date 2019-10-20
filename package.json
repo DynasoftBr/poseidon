@@ -27,6 +27,7 @@
     "tslint": "tslint -c tslint.json -p tsconfig.json"
   },
   "dependencies": {
+    "@koa/cors": "^2.2.3",
     "@poseidon/core-models": "file:poseidon-core-models",
     "ajv": "^6.10.2",
     "dotenv": "^8.2.0",
