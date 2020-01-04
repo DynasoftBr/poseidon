@@ -29,7 +29,7 @@
   "dependencies": {
     "ajv": "^6.4.0",
     "json-schema-fluent-builder": "^0.10.3",
-    "lodash": "^4.17.5",
+    "lodash": "^4.17.13",
     "moment": "^2.22.1",
     "mongodb": "^3.0.7",
     "winston": "^2.4.2"
