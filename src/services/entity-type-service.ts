@@ -10,7 +10,7 @@ export class EntityTypeService extends ConcreteEntityService<IEntityType> {
     }
 
     protected buildPipelines() {
-
+        super.buildPipelines();
     }
 
     private validatePatternProperties(entity: IEntityType)
