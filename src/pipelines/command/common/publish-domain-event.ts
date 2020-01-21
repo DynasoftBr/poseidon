@@ -12,7 +12,7 @@ export async function publishDomainEvent(request: ICommandRequest<IConcreteEntit
     // TODO: Use an custom error.
     try {
         this.messagePublisher.publish(message);
-        return next(request);
+        return await next(request);
     } catch (error) {
         throw error;
     }
