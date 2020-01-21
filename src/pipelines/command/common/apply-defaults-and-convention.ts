@@ -1,26 +1,30 @@
-import { IConcreteEntity, PropertyConventions, PropertyTypes } from "@poseidon/core-models";
+import {
+  IConcreteEntity,
+  PropertyConventions,
+  PropertyTypes
+} from "@poseidon/core-models";
 import { ICommandRequest } from "../command-request";
 import { NextPipelineItem } from "../command-pipeline-item";
 
 export async function applyDefaultsAndConvention<T extends IConcreteEntity>(
-    request: ICommandRequest<T>,
-    next?: NextPipelineItem) {
+  request: ICommandRequest<T>,
+  next?: NextPipelineItem
+) {
+  const { entity, entityType } = request;
 
-    const { entity, entityType } = request;
+  entityType.props.forEach(p => {
+    const { validation, name } = p;
 
-    entityType.props.forEach(p => {
-        const { validation, name } = p;
+    // Apply defaults just on insert operations.
+    if (request.operation == "insert" && validation.default && !entity[name])
+      (entity as any)[name] = parseDefault(validation.default, validation.type);
 
-        // Apply defaults just on insert operations.
-        if (request.operation == "insert" && validation.default && !entity[name])
-            entity[name] = parseDefault(validation.default, validation.type);
+    // Apply convention.
+    if (validation.convention && entity[name])
+      (entity as any)[name] = toConvention(entity[name], validation.convention);
+  });
 
-        // Apply convention.
-        if (validation.convention && entity[name])
-            entity[name] = toConvention(entity[name], validation.convention);
-    });
-
-    next(request);
+  await next(request);
 }
 
 /**
@@ -29,16 +33,19 @@ export async function applyDefaultsAndConvention<T extends IConcreteEntity>(
  * @param convention The convention to apply.
  * @return A string with the convention applied.
  */
-function toConvention(propVal: string, convention: PropertyConventions): string {
-    if (convention === PropertyConventions.lowerCase)
-        return propVal.toLowerCase();
-    else if (convention === PropertyConventions.uppercase)
-        return propVal.toUpperCase();
-    else if (convention === PropertyConventions.capitalizeFirstLetter) {
-        return propVal.replace(/\w\S*/g, function (txt) {
-            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-        });
-    }
+function toConvention(
+  propVal: string,
+  convention: PropertyConventions
+): string {
+  if (convention === PropertyConventions.lowerCase)
+    return propVal.toLowerCase();
+  else if (convention === PropertyConventions.uppercase)
+    return propVal.toUpperCase();
+  else if (convention === PropertyConventions.capitalizeFirstLetter) {
+    return propVal.replace(/\w\S*/g, function(txt) {
+      return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+  }
 }
 
 /**
@@ -48,22 +55,16 @@ function toConvention(propVal: string, convention: PropertyConventions): string 
  * @return The parsed default value according the property type.
  */
 function parseDefault(defaultVal: string, type: PropertyTypes): any {
-    const parsed: string = handleConstants(defaultVal);
+  const parsed: string = handleConstants(defaultVal);
 
-    if (type === PropertyTypes.string || type === PropertyTypes.enum)
-        return parsed;
-    else if (type === PropertyTypes.boolean)
-        return new Boolean(parsed);
-    else if (type === PropertyTypes.array)
-        return [parsed];
-    else if (type === PropertyTypes.dateTime)
-        return new Date(parsed);
-    else if (type === PropertyTypes.number)
-        return Number.parseFloat(parsed);
-    else if (type === PropertyTypes.int)
-        return Number.parseInt(parsed);
-    else
-        throw Error("");
+  if (type === PropertyTypes.string || type === PropertyTypes.enum)
+    return parsed;
+  else if (type === PropertyTypes.boolean) return new Boolean(parsed);
+  else if (type === PropertyTypes.array) return [parsed];
+  else if (type === PropertyTypes.dateTime) return new Date(parsed);
+  else if (type === PropertyTypes.number) return Number.parseFloat(parsed);
+  else if (type === PropertyTypes.int) return Number.parseInt(parsed);
+  else throw Error("");
 }
 
 /**
@@ -72,15 +73,13 @@ function parseDefault(defaultVal: string, type: PropertyTypes): any {
  * @return The text replaced the found constants.
  */
 function handleConstants(text: string) {
-    const matches = text.match(/\[\[(\w*)\]\]/);
+  const matches = text.match(/\[\[(\w*)\]\]/);
 
-    if (!matches)
-        return text;
+  if (!matches) return text;
 
-    matches.forEach((key, idx) => {
-        if (key === "[[NOW]]")
-            text = text.replace(key, new Date().toISOString());
-    });
+  matches.forEach((key, idx) => {
+    if (key === "[[NOW]]") text = text.replace(key, new Date().toISOString());
+  });
 
-    return text;
+  return text;
 }
