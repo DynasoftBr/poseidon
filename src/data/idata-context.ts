@@ -1,4 +1,3 @@
-import { IEntityType } from "@poseidon/core-models/src";
+import { IEntityType } from "@poseidon/core-models";
 
-export interface IDataContext {
-}
+export interface IDataContext {}

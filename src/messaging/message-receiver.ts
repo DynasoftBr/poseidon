@@ -1,26 +1,14 @@
-import { EventEmitter } from "events";
 import { IMessage } from "@poseidon/core-models/";
+import messagePublisher from "./message-publisher";
 
-class Receiver extends EventEmitter {
+class Receiver {
+  public async subscribe<T = any>(subject: string, callback: (content: IMessage<T>) => void) {
+    messagePublisher.on(subject, callback);
+  }
 
-    async receive() {
+  private onAck(message: IMessage) {}
 
-        const message = { name: "teste" } as any;
-        await this.publish(message);
-
-    }
-
-    async publish(message: IMessage): Promise<void> {
-
-    }
-
-    private onAck(message: IMessage) {
-
-    }
-
-    private onNack(message: IMessage) {
-
-    }
+  private onNack(message: IMessage) {}
 }
 
 export default new Receiver();

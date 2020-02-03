@@ -1,9 +1,12 @@
-import { ICommandRequest } from "../command-request";
+import { ICommandRequest, PartialWithIndex } from "../command-request";
 import { IConcreteEntity, SysEntities } from "@poseidon/core-models";
 import { EntitySchemaBuilder } from "../../../schema-builder/entity-schema-builder";
 import { buildValidationFunc } from "../../../validation/build-validation-func";
 import { validateEntity } from "../../../validation/validate-entity";
 import { ValidateFunction } from "ajv";
+import { ValidationError } from "../../../exceptions";
+import { PipelineItem } from "../../pipeline-item";
+import { IResponse } from "../../response";
 
 const validationFuncs = new Map<string, ValidateFunction>();
 
@@ -12,24 +15,30 @@ const validationFuncs = new Map<string, ValidateFunction>();
  * @param entitytype The entity type of the entity to be validated.
  * @param entity The entity to be validated.
  */
-export async function validateSchema<T extends IConcreteEntity>(request: ICommandRequest<T>) {
+export async function validateSchema<T extends IConcreteEntity = IConcreteEntity>(
+  request: ICommandRequest<T>,
+  next: PipelineItem<PartialWithIndex<T>>
+): Promise<IResponse> {
+  const { context, entityType, payload: content } = request;
 
-    const { context, entityType, entity } = request;
+  let valFunc = validationFuncs.get(entityType._id);
 
-    const entityTypeRepo = await context.colection(SysEntities.entitySchema);
-    const schemaColl = await context.colection(SysEntities.entitySchema);
+  if (!valFunc) {
+    // find entity schema or build it.
+    let schema = null; // (await context.get(SysEntities.entitySchema, { _id: entityType._id }))[0];
+    schema = schema || (await new EntitySchemaBuilder(context).buildSchema(entityType)).getSchema();
 
     // Instantiates ajv library, compiles the schema, them validates the entity.
-    let valFunc = validationFuncs.get(entityType._id);
-    if (!valFunc) {
-        // find entity schema or build it.
-        const schema = await schemaColl.findOne({}) || (await new EntitySchemaBuilder(entityTypeRepo)
-            .buildSchema(entityType)).getSchema();
+    valFunc = buildValidationFunc(schema);
+    validationFuncs.set(entityType._id, valFunc);
+  }
 
-        valFunc = buildValidationFunc(schema);
-        validationFuncs.set(entityType._id, valFunc);
-    }
+  const problems = validateEntity(valFunc, content);
+  if (problems.length > 0) {
+    request.response = {
+      error: new ValidationError(problems)
+    };
+  }
 
-    // Get schema problems and return it.
-    request.problems = [...request.problems, ...validateEntity(valFunc, entity as IConcreteEntity)];
+  return next(request);
 }

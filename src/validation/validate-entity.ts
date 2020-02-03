@@ -8,7 +8,7 @@ import { ValidationProblem } from "../exceptions";
  * @param entity The entity to be validated.
  * @returns An ValidationProblem[].
  */
-export function validateEntity(valFunc: ValidateFunction, entity: IConcreteEntity): ValidationProblem[] {
+export function validateEntity(valFunc: ValidateFunction, entity: Partial<IConcreteEntity>): ValidationProblem[] {
     const valid = valFunc(entity);
 
     // If the obj is valid just return an empty array.

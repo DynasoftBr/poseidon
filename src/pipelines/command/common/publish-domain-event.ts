@@ -1,19 +1,37 @@
 import { IConcreteEntity, IMessage } from "@poseidon/core-models";
 import { ICommandRequest } from "../command-request";
-import { MessageType } from "@poseidon/core-models";
-import { NextPipelineItem } from "../command-pipeline-item";
+import { PipelineItem } from "../../pipeline-item";
+import { IResponse } from "../../response";
+import messagePublisher from "../../../messaging/message-publisher";
 
-export async function publishDomainEvent(request: ICommandRequest<IConcreteEntity>, next: NextPipelineItem): Promise<void> {
-    const message: IMessage = {
-        type: MessageType.command,
-        content: request.entity
-    } as IMessage;
+export interface EventSourcingEvent {
+  event: string;
+  entityTypeId: string;
+  content: Partial<IConcreteEntity>;
+  date: Date;
+  userId: string;
+}
 
-    // TODO: Use an custom error.
-    try {
-        this.messagePublisher.publish(message);
-        return await next(request);
-    } catch (error) {
-        throw error;
+export async function publishDomainEvent(
+  request: ICommandRequest<IConcreteEntity>,
+  next: PipelineItem
+): Promise<IResponse> {
+  if (request.response && request.response.error) return request.response;
+
+  const message: IMessage<EventSourcingEvent> = {
+    subject: "EventSourcingEvent",
+    content: {
+      entityTypeId: request.entityType._id,
+      event: request.event,
+      content: request.payload,
+      date: new Date(),
+      userId: request.context.user._id
     }
+  } as IMessage<EventSourcingEvent>;
+
+  messagePublisher.publish(message);
+  request.response = {
+    result: message.content
+  };
+  return next(request);
 }

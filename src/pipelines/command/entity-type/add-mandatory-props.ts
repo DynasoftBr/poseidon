@@ -1,34 +1,39 @@
 import { ICommandRequest } from "../command-request";
-import { NextPipelineItem } from "../command-pipeline-item";
 import { BuiltInEntries } from "../../../data";
 import * as _ from "lodash";
 import { ValidationProblem, SysMsgs } from "../../../exceptions";
-import { ProblemKeywords } from "@poseidon/core-models/src";
+import { ProblemKeywords, IEntityType } from "@poseidon/core-models";
+import { PipelineItem } from "../../pipeline-item";
+import { IResponse } from "../../response";
 
-export function AddMandatoryProps(request: ICommandRequest, next: NextPipelineItem) {
+export async function addMandatoryProps(request: ICommandRequest<IEntityType>, next: PipelineItem): Promise<IResponse> {
+  const problems: ValidationProblem[] = [];
+  const entity = request.payload;
+  const buildIn = new BuiltInEntries();
+  const requiredProps = [
+    buildIn.idPropertyDefinition,
+    buildIn.createdAtPropertyDefinition,
+    buildIn.createdByPropertyDefinition,
+    buildIn.changedAtPropertyDefinition,
+    buildIn.changedByPropertyDefinition
+  ];
+  const entityTypeProps = entity.props || [];
 
-    const problems = request.problems = request.problems || [];
-    const entity = request.entity;
-    const buildIn = new BuiltInEntries();
-    const requiredProps = [
-        buildIn.idPropertyDefinition,
-        buildIn.createdAtPropertyDefinition,
-        buildIn.createdByPropertyDefinition,
-        buildIn.changedAtPropertyDefinition,
-        buildIn.changedByPropertyDefinition
-    ];
+  requiredProps.forEach(reqProp => {
+    const prop = _.find(entity.props, { name: reqProp.name });
+    if (prop != null) {
+      problems.push(
+        new ValidationProblem(
+          reqProp.name,
+          ProblemKeywords.invalidMandatoryEntityProperty,
+          SysMsgs.validation.invalidRequiredEntityProperty,
+          reqProp.name
+        )
+      );
+    } else {
+      entityTypeProps.push(reqProp);
+    }
+  });
 
-    requiredProps.forEach((reqProp) => {
-        const prop = _.find(entity.props, { name: reqProp.name });
-
-        if (prop == null)
-            problems.push(new ValidationProblem(reqProp.name, ProblemKeywords.missingMadatoryEntityProperty ,
-                SysMsgs.validation.missingRequiredEntityProperty, reqProp.name));
-
-        else if (!_.isEqual(prop, reqProp))
-            problems.push(new ValidationProblem(reqProp.name, ProblemKeywords.invalidMandatoryEntityProperty ,
-                SysMsgs.validation.invalidRequiredEntityProperty, reqProp.name));
-    });
-
-    next(request);
+  return next(request);
 }

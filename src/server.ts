@@ -12,20 +12,20 @@ import * as koaLogger from "koa-logger";
 import { ApiV1 } from "./v1/api-v1";
 
 import { AddressInfo } from "net";
-import { InMemoryStorage, DatabasePopulator, IDataStorage, RepositoryFactory } from "./data";
-import { ServiceFactory } from "./services";
+import { DatabasePopulator, IDataStorage, RepositoryFactory } from "./data";
 import { SysMsgs } from "./exceptions";
 import { env } from "./env.config";
 
 // Middlewares
 import { unhandledException } from "./middlewares/exception-middleware";
+import { ProjectionBuilder } from "./projection/projection-builder";
+import { MongoDbInMemoryStorage } from "./data/storage/mongodb/mongodb-inmemory-storage";
 
 export async function init(): Promise<void> {
-
   // Connect to the storage.
-  let storage = new InMemoryStorage();
+  let storage = new MongoDbInMemoryStorage();
   try {
-    await storage.connect();
+    await storage.connect({ dbName: "poseidon", url: "" });
 
     const populator = new DatabasePopulator(storage);
     await populator.populate();
@@ -55,17 +55,18 @@ function initApp(storage: IDataStorage) {
 
   // Instantiate the repositories and services factory.
   const repoFactory = new RepositoryFactory(storage);
-  const servicesFactory = new ServiceFactory(repoFactory);
 
   // API V1
-  app.use(ApiV1.getRouter(servicesFactory).routes());
+  app.use(ApiV1.getRouter(repoFactory).routes());
+
+  new ProjectionBuilder(repoFactory);
 
   /**
    * Start server.
    */
   const server = app.listen(env.port || 3000, () => {
     const address = server.address() as AddressInfo;
-    logger.info((`App is running at http://localhost:${address.port} in ${env.nodeEnv} mode.`));
+    logger.info(`App is running at http://localhost:${address.port} in ${env.nodeEnv} mode.`);
     logger.info("Press CTRL-C to stop\n");
   });
 
