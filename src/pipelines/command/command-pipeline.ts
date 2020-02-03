@@ -1,24 +1,75 @@
-import { IConcreteEntity, IEntityType } from "@poseidon/core-models";
+import { IConcreteEntity, IEntityType, EntityTypePipelineItems, SysEntities } from "@poseidon/core-models";
+import { RequestPipeline } from "../request-pipeline";
+import { PipelineItem } from "../pipeline-item";
+import { addMandatoryProps } from "./entity-type/add-mandatory-props";
+import { validateMandatoryProps } from "./entity-type/validate-mandatory-props";
 import { ICommandRequest } from "./command-request";
-import { CommandPipelineItem } from "./command-pipeline-item";
+import UntrustedCodeRunner from "../../util/untrusted-code-runner";
+import { Context } from "../../context";
+import { applyDefaultsAndConvention } from "./common/apply-defaults-and-convention";
+import { request } from "http";
+import { validateSchema } from "./common/validate-schema";
+import { publishDomainEvent } from "./common/publish-domain-event";
+import { AddCreationInfo } from "./common/add-creation-info";
+import { AssignIdentity } from "./common/assign-identity";
 
-export class CommandPipeline<T extends IConcreteEntity = IConcreteEntity> {
-  constructor(private readonly handlers: CommandPipelineItem[]) {
-    if (!handlers || handlers.length == 0) {
-      throw new Error(
-        "The 'handlers' param must be an not null array with at least one element."
-      );
-    }
+export class CommandPipeline<
+  T extends any = any,
+  TResponse extends IConcreteEntity = IConcreteEntity
+> extends RequestPipeline<T, TResponse> {
+  private static SysEntitiesItems = Object.values(SysEntities) as string[];
 
-    this.handlers = [
-      ...handlers,
-      async () => {
-        return;
-      }
-    ].map((h, i) => async req => await h(req, handlers[i + 1]));
+  constructor(context: Context, entityType: IEntityType, payload: any, handlers: PipelineItem<T, TResponse>[]) {
+    super({ context, entityType, payload } as ICommandRequest, handlers);
   }
 
-  public async handle(request: ICommandRequest<T>): Promise<void> {
-    await this.handlers[0](request);
+  public static async create(context: Context, entityType: IEntityType, commandName: string, payload: any) {
+    const command = entityType.commands.find(c => c.name === commandName);
+    let customPipelineItems = null;
+
+    if (this.SysEntitiesItems.includes(entityType.name)) {
+      switch (entityType.name) {
+        case SysEntities.entityType:
+          customPipelineItems = this.buildEntityTypeCommandPipeline(entityType, commandName);
+          break;
+
+        default:
+          throw "Not implemented";
+      }
+    } else {
+      customPipelineItems = command.pipeline.map(item => async (_request: ICommandRequest, _next: PipelineItem) => {
+        var untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
+        return untrustedFunc(_request, async r => _next(r));
+      });
+    }
+
+    return new CommandPipeline(context, entityType, payload, [
+      ...customPipelineItems,
+      applyDefaultsAndConvention,
+      AssignIdentity,
+      AddCreationInfo,
+      validateSchema,
+      publishDomainEvent
+    ]);
+  }
+
+  private static buildEntityTypeCommandPipeline(entityType: IEntityType, commandName: string): PipelineItem[] {
+    const command = entityType.commands.find(c => c.name === commandName);
+
+    return command.pipeline.map(item => {
+      switch (item.name) {
+        case EntityTypePipelineItems.AddMandatoryPropeties:
+          return addMandatoryProps;
+
+        case EntityTypePipelineItems.ValidateMandatoryPropeties:
+          return validateMandatoryProps;
+
+        default:
+          return async (_request: ICommandRequest, _next: PipelineItem) => {
+            var untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
+            return untrustedFunc(_request, async r => _next(r));
+          };
+      }
+    });
   }
 }

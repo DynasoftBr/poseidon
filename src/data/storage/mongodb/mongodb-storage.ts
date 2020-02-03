@@ -7,39 +7,43 @@ import { IConcreteEntity } from "@poseidon/core-models";
 import { logger } from "../../../logger";
 
 export class MongoDbStorage implements IDataStorage {
+  private mongoClient: MongoClient;
+  private db: Db;
+  public connected: boolean = false;
+  async connect(connetionOptions: MongoDbStorageConnectionOptions): Promise<void> {
+    let retries = 0;
+    connetionOptions.retries = connetionOptions.retries || 0;
+    while (retries <= connetionOptions.retries && this.connected === false) {
+      try {
+        this.mongoClient = await MongoClient.connect(connetionOptions.url, { useUnifiedTopology: true });
+        this.setDatabase(connetionOptions.dbName);
 
-    private mongoClient: MongoClient;
-    private db: Db;
-    public connected: boolean;
-    async connect(connetionOptions: MongoDbStorageConnectionOptions): Promise<void> {
+        this.connected = true;
 
-        let retries = 0;
-        while (retries <= connetionOptions.retries && this.connected === false) {
+        logger.info(SysMsgs.info.connectedToDatabase.message);
+      } catch (err) {
+        if (retries < connetionOptions.retries) {
+          // Retry for configurated times.
+          retries++;
 
-            try {
-                this.mongoClient = await MongoClient.connect(connetionOptions.url);
-                this.setDatabase(connetionOptions.dbName);
+          // log a warn.
+          logger.warn(SysMsgs.format(SysMsgs.info.cannotConnectToDatabase, connetionOptions.timeBetweenRetries));
 
-                logger.info(SysMsgs.info.connectedToDatabase.message);
-            } catch (err) {
-                // Retry for configurated times.
-                retries++;
-
-                // log a warn.
-                logger.warn(SysMsgs.format(SysMsgs.info.cannotConnectToDatabase, connetionOptions.timeBetweenRetries));
-
-                // After configurated time retry connect to database.
-                const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-                await delay(connetionOptions.timeBetweenRetries * 1000);
-            }
+          // After configurated time retry connect to database.
+          const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+          await delay(connetionOptions.timeBetweenRetries * 1000);
+        } else {
+          throw err;
         }
+      }
     }
+  }
 
-    setDatabase(name: string) {
-        this.db = this.mongoClient.db(name);
-    }
+  setDatabase(name: string) {
+    this.db = this.mongoClient.db(name);
+  }
 
-    collection<T extends IConcreteEntity = IConcreteEntity>(name: string): IStorageCollection<T> {
-        return new MongoDbStorageCollection(this.db, name);
-    }
+  collection<T extends IConcreteEntity = IConcreteEntity>(name: string): IStorageCollection<T> {
+    return new MongoDbStorageCollection(this.db, name);
+  }
 }

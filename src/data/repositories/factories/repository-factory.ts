@@ -1,56 +1,54 @@
 import { EntityTypeRepository } from "../entity-type-repository";
 import { ConcreteEntityRepository } from "../concrete-entity-repository";
-import { AbstractRepository } from "../abstract-repository";
 import { IRepositoryFactory } from "./irepository-factory";
 import { IConcreteEntity, SysEntities, IEntityType } from "@poseidon/core-models";
 import { IDataStorage } from "../../../data";
 import { DatabaseError, SysMsgs } from "../../../exceptions";
+import { IRepository } from "../irepository";
 
 export class RepositoryFactory implements IRepositoryFactory {
+  private reposById: Map<string, IRepository<IConcreteEntity>> = new Map();
 
-    private repositories: Map<string, AbstractRepository<IConcreteEntity>> = new Map();
-    public constructor(
-        private storage: IDataStorage) { }
+  public constructor(private storage: IDataStorage) {}
 
-    async createByName(entityTypeName: string): Promise<ConcreteEntityRepository> {
-        if (entityTypeName === SysEntities.entityType)
-            return await this.entityType();
+  async createById<TEntity extends IConcreteEntity = IConcreteEntity>(
+    entityTypeId: string
+  ): Promise<IRepository<TEntity>> {
+    // try to find an existent instance, and return it.
+    let repo = this.reposById.get(entityTypeId) as IRepository<TEntity>;
+    if (repo) return repo as IRepository<TEntity>;
 
-        // try to find an existent instance, and return it.
-        let repo = this.repositories.get(entityTypeName);
-        if (repo) return repo;
+    if (entityTypeId === SysEntities.entityType) return ((await this.entityType()) as unknown) as IRepository<TEntity>;
 
-        // As there is no repository instance for this entity type yet, create one and store it on cache.
-        repo = await this.createConcreteEntityRepository(entityTypeName);
-        this.repositories.set(entityTypeName, repo);
+    // As there is no repository instance for this entity type yet, create one and store it on cache.
+    repo = (await this.createConcreteEntityRepository(entityTypeId)) as IRepository<TEntity>;
+    this.reposById.set(entityTypeId, repo);
 
-        return repo;
-    }
+    return repo;
+  }
 
-    private async createConcreteEntityRepository(entityTypeName: string):
-        Promise<ConcreteEntityRepository> {
+  private async createConcreteEntityRepository(entityTypeId: string): Promise<IRepository<IConcreteEntity>> {
+    const entityTypeRepo = await this.entityType();
+    const entityType = await entityTypeRepo.findById(entityTypeId);
 
-        const entityTypeRepo = await this.entityType();
-        const entityType = await entityTypeRepo.findByName(entityTypeName);
+    if (entityType == null) throw new DatabaseError(SysMsgs.error.entityTypeNotFound, entityTypeId);
 
-        if (entityType == null)
-            throw new DatabaseError(SysMsgs.error.entityTypeNotFound, entityTypeName);
+    if (entityType.abstract === true) throw new DatabaseError(SysMsgs.error.abstractEntityType, entityTypeId);
 
-        if (entityType.abstract === true)
-            throw new DatabaseError(SysMsgs.error.abstractEntityType, entityTypeName);
+    return new ConcreteEntityRepository(this.storage, entityType);
+  }
 
-        return new ConcreteEntityRepository(this.storage, entityType);
-    }
+  entityTypeRepo: EntityTypeRepository;
+  async entityType(): Promise<EntityTypeRepository> {
+    if (this.entityTypeRepo != null) return this.entityTypeRepo;
 
-    entityTypeRepo: EntityTypeRepository;
-    async entityType(): Promise<EntityTypeRepository> {
+    const entityType = await this.storage
+      .collection<IEntityType>(SysEntities.entityType)
+      .findOne({ name: SysEntities.entityType });
 
-        if (this.entityTypeRepo != null)
-            return this.entityTypeRepo;
+    this.entityTypeRepo = new EntityTypeRepository(this.storage, entityType);
+    this.reposById.set(entityType._id, this.entityTypeRepo);
 
-        const entityType = await this.storage.collection<IEntityType>(SysEntities.entityType)
-            .findOne({ name: SysEntities.entityType });
-
-        return this.entityTypeRepo = new EntityTypeRepository(this.storage, entityType);
-    }
+    return this.entityTypeRepo;
+  }
 }

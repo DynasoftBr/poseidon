@@ -10,10 +10,11 @@ import { EnumPropertySchemaBuilder } from "./enum-property-schema-builder";
 import { ArrayPropertySchemaBuilder } from "./array-property-schema-builder";
 import { IRepository } from "../data";
 import { IEntityType, IValidation, PropertyTypes } from "@poseidon/core-models";
+import { Context } from "../context";
 
 export class EntitySchemaBuilder {
 
-    constructor(private readonly entityTypeRepository: IRepository<IEntityType>) { }
+    constructor(private readonly context: Context) { }
 
     /**
      * Builds the schema for the specified entity type.
@@ -49,11 +50,11 @@ export class EntitySchemaBuilder {
 
         switch (validation.type) {
             case PropertyTypes.linkedEntity:
-                return new LinkedEntitySchemaBuilder(this.entityTypeRepository, this)
+                return new LinkedEntitySchemaBuilder(this.context, this)
                     .build(rootSchema, validation);
 
             case PropertyTypes.abstractEntity:
-                return new AbstractEntitySchamBuilder(this.entityTypeRepository, this)
+                return new AbstractEntitySchamBuilder(this.context, this)
                     .build(rootSchema, validation);
 
             case PropertyTypes.array:

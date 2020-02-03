@@ -1,11 +1,12 @@
 import { IEntityType, IConcreteEntity } from "@poseidon/core-models";
-import { ValidationProblem } from "../../exceptions";
+import { Context } from "../../context";
+import { IResponse } from "../response";
+import { IRequest } from "../request";
 
-export interface ICommandRequest<T extends IConcreteEntity = IConcreteEntity> {
-    entity: Partial<T>;
-    entityType: IEntityType;
-    context: any;
-    eventName: string;
-    operation: "insert" | "update" | "delete";
-    problems?: ValidationProblem[];
+export type PartialWithIndex<T> = Partial<T> & { [key: string]: any };
+export interface ICommandRequest<T extends IConcreteEntity = IConcreteEntity, TResponse = any>
+  extends IRequest<PartialWithIndex<T>, TResponse> {
+  command: string;
+  event?: string;
+  payload: T; 
 }

@@ -30,9 +30,8 @@ export function unhandledException(): Middleware {
     try {
       await next();
     } catch (error) {
-      ctx.status =
-        errosCodeMap.get((error as SysError).code) ||
-        HttpStatus.INTERNAL_SERVER_ERROR;
+      console.log(error);
+      ctx.status = errosCodeMap.get((error as SysError).code) || HttpStatus.INTERNAL_SERVER_ERROR;
 
       if (ctx.status == HttpStatus.INTERNAL_SERVER_ERROR) {
         logger.error(error.message, error);
