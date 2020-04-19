@@ -9,14 +9,8 @@ import { IResponse } from "../../response";
 export async function addMandatoryProps(request: ICommandRequest<IEntityType>, next: PipelineItem): Promise<IResponse> {
   const problems: ValidationProblem[] = [];
   const entity = request.payload;
-  const buildIn = new BuiltInEntries();
-  const requiredProps = [
-    buildIn.idPropertyDefinition,
-    buildIn.createdAtPropertyDefinition,
-    buildIn.createdByPropertyDefinition,
-    buildIn.changedAtPropertyDefinition,
-    buildIn.changedByPropertyDefinition
-  ];
+  const buildIn = BuiltInEntries.build();
+  const requiredProps = [buildIn.idProperty, buildIn.createdAtProperty, buildIn.changedAtProperty];
   const entityTypeProps = entity.props || [];
 
   requiredProps.forEach(reqProp => {

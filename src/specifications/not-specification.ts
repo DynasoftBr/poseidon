@@ -1,7 +1,7 @@
 import { Specification } from "./specificaiton";
-import { IAndSpecification, ISpecification, IConcreteEntity, INotSpecification } from "@poseidon/core-models";
+import { IAndSpecification, ISpecification, IEntity, INotSpecification } from "@poseidon/core-models";
 
-export class NotSpecification<T extends IConcreteEntity = IConcreteEntity>
+export class NotSpecification<T extends IEntity = IEntity>
     extends Specification<T> implements INotSpecification {
 
     condition: ISpecification;

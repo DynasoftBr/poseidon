@@ -3,7 +3,7 @@ import { MongoDbStorageCollection } from "./mongodb-storage-collection";
 import { MongoDbStorageConnectionOptions } from "./mongodb-storage-connection-options";
 import { IDataStorage, IStorageCollection } from "..";
 import { SysMsgs } from "../../../exceptions";
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 import { logger } from "../../../logger";
 
 export class MongoDbStorage implements IDataStorage {
@@ -43,7 +43,7 @@ export class MongoDbStorage implements IDataStorage {
     this.db = this.mongoClient.db(name);
   }
 
-  collection<T extends IConcreteEntity = IConcreteEntity>(name: string): IStorageCollection<T> {
+  collection<T extends IEntity = IEntity>(name: string): IStorageCollection<T> {
     return new MongoDbStorageCollection(this.db, name);
   }
 }

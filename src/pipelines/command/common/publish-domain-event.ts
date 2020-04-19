@@ -1,4 +1,4 @@
-import { IConcreteEntity, IMessage } from "@poseidon/core-models";
+import { IEntity, IMessage } from "@poseidon/core-models";
 import { ICommandRequest } from "../command-request";
 import { PipelineItem } from "../../pipeline-item";
 import { IResponse } from "../../response";
@@ -7,13 +7,13 @@ import messagePublisher from "../../../messaging/message-publisher";
 export interface EventSourcingEvent {
   event: string;
   entityTypeId: string;
-  content: Partial<IConcreteEntity>;
+  content: Partial<IEntity>;
   date: Date;
   userId: string;
 }
 
 export async function publishDomainEvent(
-  request: ICommandRequest<IConcreteEntity>,
+  request: ICommandRequest<IEntity>,
   next: PipelineItem
 ): Promise<IResponse> {
   if (request.response && request.response.error) return request.response;

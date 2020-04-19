@@ -1,17 +1,17 @@
 import { EntityTypeRepository } from "../entity-type-repository";
 import { ConcreteEntityRepository } from "../concrete-entity-repository";
 import { IRepositoryFactory } from "./irepository-factory";
-import { IConcreteEntity, SysEntities, IEntityType } from "@poseidon/core-models";
+import { IEntity, SysEntities, IEntityType } from "@poseidon/core-models";
 import { IDataStorage } from "../../../data";
 import { DatabaseError, SysMsgs } from "../../../exceptions";
 import { IRepository } from "../irepository";
 
 export class RepositoryFactory implements IRepositoryFactory {
-  private reposById: Map<string, IRepository<IConcreteEntity>> = new Map();
+  private reposById: Map<string, IRepository<IEntity>> = new Map();
 
   public constructor(private storage: IDataStorage) {}
 
-  async createById<TEntity extends IConcreteEntity = IConcreteEntity>(
+  async createById<TEntity extends IEntity = IEntity>(
     entityTypeId: string
   ): Promise<IRepository<TEntity>> {
     // try to find an existent instance, and return it.
@@ -27,7 +27,7 @@ export class RepositoryFactory implements IRepositoryFactory {
     return repo;
   }
 
-  private async createConcreteEntityRepository(entityTypeId: string): Promise<IRepository<IConcreteEntity>> {
+  private async createConcreteEntityRepository(entityTypeId: string): Promise<IRepository<IEntity>> {
     const entityTypeRepo = await this.entityType();
     const entityType = await entityTypeRepo.findById(entityTypeId);
 

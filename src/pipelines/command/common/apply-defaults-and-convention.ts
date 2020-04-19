@@ -1,24 +1,23 @@
-import { IConcreteEntity, PropertyConventions, PropertyTypes } from "@poseidon/core-models";
+import { IEntity, PropertyConventions, PropertyTypes } from "@poseidon/core-models";
 import { ICommandRequest } from "../command-request";
 import { PipelineItem } from "../../pipeline-item";
 import { IResponse } from "../../response";
 
-export async function applyDefaultsAndConvention<T extends IConcreteEntity>(
+export async function applyDefaultsAndConvention<T extends IEntity>(
   request: ICommandRequest<T>,
   next: PipelineItem
 ): Promise<IResponse> {
   const { payload: content, entityType } = request;
 
   entityType.props.forEach(p => {
-    const { validation, name } = p;
+    const { convention, name } = p;
 
     // Apply defaults just on insert operations.
     // if (request.operation == "insert" && validation.default && !content[name])
     //   (content as any)[name] = parseDefault(validation.default, validation.type);
 
     // Apply convention.
-    if (validation.convention && content[name])
-      (content as any)[name] = toConvention(content[name], validation.convention);
+    if (convention && content[name]) (content as any)[name] = toConvention(content[name], convention);
   });
 
   return await next(request);

@@ -1,6 +1,7 @@
-import { IRepositoryFactory } from "../data";
+import { IRepositoryFactory, IRepository } from "../data";
 import messageReceiver from "../messaging/message-receiver";
 import { EventSourcingEvent } from "../pipelines/command/common/publish-domain-event";
+import { IEntityType } from "@poseidon/core-models/src";
 
 export class ProjectionBuilder {
   constructor(private repoFactory: IRepositoryFactory) {
@@ -25,10 +26,9 @@ export class ProjectionBuilder {
   }
 
   private setCreatedInfo(event: EventSourcingEvent): this {
-    event.content._changedBy = {
-      _id: event.userId,
-      name: event.userId
-    };
+    // event.content._changedBy = {
+    //   _id: event.userId
+    // };
     return this;
   }
 }

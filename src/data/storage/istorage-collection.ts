@@ -1,11 +1,11 @@
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 
-export interface IStorageCollection<T extends IConcreteEntity = IConcreteEntity> {
+export interface IStorageCollection<T extends IEntity = IEntity> {
     ensureIndex(indexName: string, field: string, unique: boolean): void;
     dropIndex(indexName: string): void;
     drop(): void;
     findOne(upsert: object): Promise<T>;
-    findMany(query: object, skip?: number, limit?: number, sort?: object): Promise<T[]>;
+    findMany(query: object[]): Promise<T[]>;
     findOne(query: object): Promise<T>;
     insertOne(doc: T): Promise<boolean>;
     upsert(doc: T): Promise<boolean>;

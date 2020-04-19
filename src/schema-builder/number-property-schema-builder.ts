@@ -1,27 +1,24 @@
 import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { IValidation } from "@poseidon/core-models";
+import { IEntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for number properties.
  * @class
  */
 export class NumberPropertySchemaBuilder implements ISchamaBuilderStrategy {
-    async build(rootSchema: FluentSchemaBuilder, validation: IValidation): Promise<FluentSchemaBuilder> {
-        const propTypeName = validation.type.toLowerCase();
+  async build(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+    const propTypeName = prop.type.toLowerCase();
 
-        const propSchema = new SchemaBuilder().type(<"integer" | "number">propTypeName);
+    const propSchema = new SchemaBuilder().type(<"integer" | "number">propTypeName);
 
-        if (validation.min)
-            propSchema.min(validation.min);
+    if (prop.min) propSchema.min(prop.min);
 
-        if (validation.max)
-            propSchema.max(validation.max);
+    if (prop.max) propSchema.max(prop.max);
 
-        if (validation.multipleOf)
-            propSchema.multipleOf(validation.multipleOf);
+    if (prop.multipleOf) propSchema.multipleOf(prop.multipleOf);
 
-        return propSchema;
-    }
+    return propSchema;
+  }
 }

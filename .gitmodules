@@ -2,3 +2,6 @@
 	path = poseidon-core-models
 	url = https://github.com/DynasoftBr/poseidon-core-models.git
 	branch = master
+[submodule "poseidon-query-builder"]
+	path = poseidon-query-builder
+	url = https://github.com/DynasoftBr/poseidon-query-builder.git

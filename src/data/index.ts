@@ -1,4 +1,4 @@
 export * from "./repositories";
-export * from "./built-in-entries";
+export * from "./builtin-entries";
 export * from "./database-populator";
 export * from "./storage";

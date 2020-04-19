@@ -62,9 +62,12 @@ if (cluster.isMaster) {
     })
     .listen(8083);
   const wss = new WebSocket.Server({ server });
-  wss.on("connection", (s: WebSocket, r: IncomingMessage) =>
-    console.log(`Process ${process.pid} has: ${totalConnections++}`)
-  );
+  wss.on("connection", (s: WebSocket, r: IncomingMessage) => {
+    console.log(`Process ${process.pid} has: ${totalConnections++}`);
+    s.on("message", data => {
+      return;
+    });
+  });
 
   console.log(`Worker ${process.pid} started`);
 }

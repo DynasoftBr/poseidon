@@ -1,6 +1,6 @@
-import { ISpecification, IConcreteEntity } from "@poseidon/core-models";
+import { ISpecification, IEntity } from "@poseidon/core-models";
 
-export abstract class Specification<T extends IConcreteEntity = IConcreteEntity>
+export abstract class Specification<T extends IEntity = IEntity>
     implements ISpecification<T> {
 
     abstract async eval(fact: T): Promise<boolean>;

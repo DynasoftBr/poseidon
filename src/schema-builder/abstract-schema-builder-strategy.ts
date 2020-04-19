@@ -1,6 +1,6 @@
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
-import { IValidation } from "@poseidon/core-models";
+import { IEntityProperty } from "@poseidon/core-models";
 
 export interface ISchamaBuilderStrategy {
-    build(rootSchema: FluentSchemaBuilder, validation: IValidation): Promise<FluentSchemaBuilder>;
+    build(rootSchema: FluentSchemaBuilder, prop?: IEntityProperty): Promise<FluentSchemaBuilder>;
 }

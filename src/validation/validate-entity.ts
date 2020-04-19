@@ -1,5 +1,5 @@
 import { ValidateFunction } from "ajv";
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 import { ValidationProblem } from "../exceptions";
 
 /**
@@ -8,7 +8,7 @@ import { ValidationProblem } from "../exceptions";
  * @param entity The entity to be validated.
  * @returns An ValidationProblem[].
  */
-export function validateEntity(valFunc: ValidateFunction, entity: Partial<IConcreteEntity>): ValidationProblem[] {
+export function validateEntity(valFunc: ValidateFunction, entity: Partial<IEntity>): ValidationProblem[] {
     const valid = valFunc(entity);
 
     // If the obj is valid just return an empty array.

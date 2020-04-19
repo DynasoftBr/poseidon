@@ -1,8 +1,8 @@
 import { IDataStorage, IStorageCollection } from "../storage";
-import { IConcreteEntity, IEntityType } from "@poseidon/core-models";
+import { IEntity, IEntityType } from "@poseidon/core-models";
 import { IRepository } from "./irepository";
 
-export class ConcreteEntityRepository<T extends IConcreteEntity = IConcreteEntity> implements IRepository<T> {
+export class ConcreteEntityRepository<T extends IEntity = IEntity> implements IRepository<T> {
   protected readonly collection: IStorageCollection<T>;
   constructor(protected readonly storage: IDataStorage, public readonly entityType: IEntityType) {
     this.collection = storage.collection<T>(entityType.name);
@@ -28,8 +28,8 @@ export class ConcreteEntityRepository<T extends IConcreteEntity = IConcreteEntit
     return await this.collection.findOne({ _id: id });
   }
 
-  async findMany(query: object, skip: number, limit: number): Promise<T[]> {
-    return await this.collection.findMany(query, skip, limit);
+  async findMany(query: object[]): Promise<T[]> {
+    return await this.collection.findMany(query);
   }
 
   async findOne(query: object) {

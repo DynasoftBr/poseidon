@@ -33,7 +33,7 @@ export function unhandledException(): Middleware {
       console.log(error);
       ctx.status = errosCodeMap.get((error as SysError).code) || HttpStatus.INTERNAL_SERVER_ERROR;
 
-      if (ctx.status == HttpStatus.INTERNAL_SERVER_ERROR) {
+      if (ctx.status === HttpStatus.INTERNAL_SERVER_ERROR) {
         logger.error(error.message, error);
 
         return (ctx.body = new UnexpectedError(error));

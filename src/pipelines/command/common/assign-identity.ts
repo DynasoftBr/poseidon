@@ -1,4 +1,4 @@
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 import { ObjectID } from "bson";
 import { ICommandRequest } from "../command-request";
 import { PipelineItem } from "../../pipeline-item";

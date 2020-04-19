@@ -1,25 +1,22 @@
 import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { IValidation } from "@poseidon/core-models";
+import { IEntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for string properties.
  * @class
  */
 export class StringPropertySchemaBuilder implements ISchamaBuilderStrategy {
-    async build(rootSchema: FluentSchemaBuilder, validation: IValidation): Promise<FluentSchemaBuilder> {
-        const propSchema = new SchemaBuilder().string();
+  async build(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+    const propSchema = new SchemaBuilder().string();
 
-        if (validation.min)
-            propSchema.minLength(validation.min);
+    if (prop.min) propSchema.minLength(prop.min);
 
-        if (validation.max)
-            propSchema.maxLength(validation.max);
+    if (prop.max) propSchema.maxLength(prop.max);
 
-        if (validation.pattern)
-            propSchema.pattern(validation.pattern);
+    if (prop.pattern) propSchema.pattern(prop.pattern);
 
-        return propSchema;
-    }
+    return propSchema;
+  }
 }

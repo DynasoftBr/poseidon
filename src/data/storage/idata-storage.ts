@@ -1,6 +1,6 @@
 import { IStorageCollection } from "./istorage-collection";
 import { IStorageConnectionOptions } from "./istorage-connection-options";
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 
 export interface IDataStorage {
     /**
@@ -16,5 +16,5 @@ export interface IDataStorage {
      * @returns A StorageCollection<T> instance.
      * @function
      */
-    collection<T extends IConcreteEntity = IConcreteEntity>(collectionName: string): IStorageCollection<T>;
+    collection<T extends IEntity = IEntity>(collectionName: string): IStorageCollection<T>;
 }

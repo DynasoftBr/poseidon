@@ -1,11 +1,11 @@
 
 import { Specification } from "./specificaiton";
-import { ISpecification, IConcreteEntity, IMemberComparisonSpecification } from "@poseidon/core-models";
+import { ISpecification, IEntity, IMemberComparisonSpecification } from "@poseidon/core-models";
 import * as _ from "lodash";
 
-type CompareFunc<T extends IConcreteEntity = IConcreteEntity> = (fact: T) => boolean;
+type CompareFunc<T extends IEntity = IEntity> = (fact: T) => boolean;
 
-export class MemberComparisonSpecification<T extends IConcreteEntity = IConcreteEntity>
+export class MemberComparisonSpecification<T extends IEntity = IEntity>
     extends Specification<T> implements IMemberComparisonSpecification {
 
     member: string;
@@ -46,7 +46,7 @@ export class MemberComparisonSpecification<T extends IConcreteEntity = IConcrete
                 const memberValue =  (_.get(fact, this.member) || "") as string;
                 const expectedIdx = memberValue.length - (this.value as string).length - 1;
 
-                return memberValue.indexOf(this.value) == expectedIdx;
+                return memberValue.indexOf(this.value) === expectedIdx;
             };
         }
     }

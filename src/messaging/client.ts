@@ -8,7 +8,7 @@ function connect() {
   });
 
   ws.on("open", function open() {
-    setInterval(() => ws.send("something"), 10000);
+    setInterval(() => ws.send("something"), 1000);
     on++;
     console.log(`Connecttion: ${on}`);
     if (on > 16000) {

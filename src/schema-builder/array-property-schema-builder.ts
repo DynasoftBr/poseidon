@@ -2,37 +2,29 @@ import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
-import { IValidation } from "@poseidon/core-models";
+import { IEntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for array properties.
  * @class
  */
 export class ArrayPropertySchemaBuilder implements ISchamaBuilderStrategy {
+  constructor(private readonly entitySchemaBuilder: EntitySchemaBuilder) {}
 
-    constructor(private readonly entitySchemaBuilder: EntitySchemaBuilder) { }
+  async build(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+    const propSchema = new SchemaBuilder().array();
 
-    async build(rootSchema: FluentSchemaBuilder, validation: IValidation): Promise<FluentSchemaBuilder> {
+    // No additional items allowed.
+    propSchema.additionalItems(false);
 
-        const propSchema = new SchemaBuilder().array();
+    if (prop.uniqueItems) propSchema.uniqueItems(true);
 
-        // No additional items allowed.
-        propSchema.additionalItems(false);
+    if (prop.min) propSchema.minItems(prop.min);
 
-        if (validation.uniqueItems)
-            propSchema.uniqueItems(true);
+    if (prop.max) propSchema.maxItems(prop.max);
 
-        if (validation.min)
-            propSchema.minItems(validation.min);
+    propSchema.items({ type: prop.items as any });
 
-        if (validation.max)
-            propSchema.maxItems(validation.max);
-
-        // Get the schema for items.
-        const itemsSchema = await this.entitySchemaBuilder.buildSchemaValidation(rootSchema, validation.items);
-
-        propSchema.items(itemsSchema);
-
-        return propSchema;
-    }
+    return propSchema;
+  }
 }

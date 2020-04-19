@@ -1,4 +1,4 @@
-import { IConcreteEntity, IEntityType, EntityTypePipelineItems, SysEntities } from "@poseidon/core-models";
+import { IEntity, IEntityType, EntityTypePipelineItems, SysEntities } from "@poseidon/core-models";
 import { RequestPipeline } from "../request-pipeline";
 import { PipelineItem } from "../pipeline-item";
 import { addMandatoryProps } from "./entity-type/add-mandatory-props";
@@ -7,7 +7,6 @@ import { ICommandRequest } from "./command-request";
 import UntrustedCodeRunner from "../../util/untrusted-code-runner";
 import { Context } from "../../context";
 import { applyDefaultsAndConvention } from "./common/apply-defaults-and-convention";
-import { request } from "http";
 import { validateSchema } from "./common/validate-schema";
 import { publishDomainEvent } from "./common/publish-domain-event";
 import { AddCreationInfo } from "./common/add-creation-info";
@@ -15,7 +14,7 @@ import { AssignIdentity } from "./common/assign-identity";
 
 export class CommandPipeline<
   T extends any = any,
-  TResponse extends IConcreteEntity = IConcreteEntity
+  TResponse extends IEntity = IEntity
 > extends RequestPipeline<T, TResponse> {
   private static SysEntitiesItems = Object.values(SysEntities) as string[];
 
@@ -38,7 +37,7 @@ export class CommandPipeline<
       }
     } else {
       customPipelineItems = command.pipeline.map(item => async (_request: ICommandRequest, _next: PipelineItem) => {
-        var untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
+        const untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
         return untrustedFunc(_request, async r => _next(r));
       });
     }
@@ -66,7 +65,7 @@ export class CommandPipeline<
 
         default:
           return async (_request: ICommandRequest, _next: PipelineItem) => {
-            var untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
+            const untrustedFunc = (await UntrustedCodeRunner.run<any>(item.code, null, true)).default as PipelineItem;
             return untrustedFunc(_request, async r => _next(r));
           };
       }

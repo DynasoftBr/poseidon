@@ -1,5 +1,5 @@
 import { ICommandRequest, PartialWithIndex } from "../command-request";
-import { IConcreteEntity, SysEntities } from "@poseidon/core-models";
+import { IEntity, SysEntities } from "@poseidon/core-models";
 import { EntitySchemaBuilder } from "../../../schema-builder/entity-schema-builder";
 import { buildValidationFunc } from "../../../validation/build-validation-func";
 import { validateEntity } from "../../../validation/validate-entity";
@@ -15,7 +15,7 @@ const validationFuncs = new Map<string, ValidateFunction>();
  * @param entitytype The entity type of the entity to be validated.
  * @param entity The entity to be validated.
  */
-export async function validateSchema<T extends IConcreteEntity = IConcreteEntity>(
+export async function validateSchema<T extends IEntity = IEntity>(
   request: ICommandRequest<T>,
   next: PipelineItem<PartialWithIndex<T>>
 ): Promise<IResponse> {

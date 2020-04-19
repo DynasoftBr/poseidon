@@ -1,8 +1,8 @@
 import { IStorageCollection } from "../istorage-collection";
 import { Db, Collection } from "mongodb";
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 
-export class MongoDbStorageCollection<T extends IConcreteEntity = IConcreteEntity> implements IStorageCollection<T> {
+export class MongoDbStorageCollection<T extends IEntity = IEntity> implements IStorageCollection<T> {
   private collection: Collection<T>;
   constructor(private readonly db: Db, collectionName: string) {
     this.collection = db.collection<T>(collectionName);
@@ -20,8 +20,9 @@ export class MongoDbStorageCollection<T extends IConcreteEntity = IConcreteEntit
     throw new Error("Method not implemented.");
   }
 
-  async findMany(query: object, skip?: number, limit?: number, sort?: object): Promise<T[]> {
-    return await this.collection.find(query, { skip: skip, limit: limit, sort }).toArray();
+  async findMany(query: object[]): Promise<T[]> {
+    const result = await this.collection.aggregate(query).toArray();
+    return result;
   }
 
   async findOne(query: object): Promise<T> {
@@ -34,7 +35,7 @@ export class MongoDbStorageCollection<T extends IConcreteEntity = IConcreteEntit
 
   public async upsert(doc: T): Promise<boolean> {
     const result = (await this.collection.updateOne({ _id: doc._id } as any, { $set: doc }, { upsert: true })).result;
-    return result.ok == 1;
+    return result.ok === 1;
   }
 
   async insertOne(doc: T): Promise<boolean> {

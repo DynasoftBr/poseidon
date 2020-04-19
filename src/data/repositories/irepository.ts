@@ -1,8 +1,8 @@
-import { IConcreteEntity, IEntityType } from "@poseidon/core-models";
+import { IEntity, IEntityType } from "@poseidon/core-models";
 
-export interface IRepository<T extends IConcreteEntity = IConcreteEntity> {
+export interface IRepository<T extends IEntity = IEntity> {
   entityType: IEntityType;
-  findMany(query: object, skip?: number, limit?: number, sort?: object): Promise<T[]>;
+  findMany(query: object[]): Promise<T[]>;
   findOne(query: object): Promise<T>;
   findById(id: string): Promise<T>;
   insertOne(doc: T): Promise<boolean>;

@@ -2,9 +2,10 @@ import * as Router from "koa-router";
 
 import * as HttpStatus from "http-status-codes";
 import { ParameterizedContext } from "koa";
-import { IConcreteEntity } from "@poseidon/core-models";
+import { IEntity } from "@poseidon/core-models";
 import { Context } from "../context";
 import { IRepositoryFactory } from "../data";
+import qs = require("qs");
 
 export class ApiV1 {
   private constructor(private readonly repoFactory: IRepositoryFactory) {}
@@ -19,9 +20,26 @@ export class ApiV1 {
     const routeBase: string = "/api/v1/:etName";
 
     // Starts configuring routes for api
-    router.get(routeBase, async ctx => api.list(ctx));
-    router.post(`${routeBase}/:command`, async ctx => api.execCommand(ctx));
+    router.get(`/test`, async ctx => (ctx.response.body = "Hello World!"));
+    router.post(`${routeBase}/:command`, async ctx => api.exec(ctx));
+    router.get(`${routeBase}/:id`, async ctx => api.getById(ctx));
+    router.get(routeBase, async ctx => api.query(ctx));
     return router;
+  }
+
+  /**
+   * Gets document by id.
+   * @param req Request
+   * @param res Response
+   */
+  private async getById(ctx: ParameterizedContext) {
+    ``;
+    const pContext = await Context.create("", "", this.repoFactory);
+
+    const response = await pContext.getById(ctx.params.etName, ctx.params.id);
+
+    ctx.status = HttpStatus.OK;
+    ctx.body = response;
   }
 
   /**
@@ -30,14 +48,15 @@ export class ApiV1 {
    * @param req Request
    * @param res Response
    */
-  private async list(ctx: ParameterizedContext) {
+  private async query(ctx: ParameterizedContext) {
     const pContext = await Context.create("", "", this.repoFactory);
-    const { query } = ctx;
+    const { querystring } = ctx;
+    const query = qs.parse(querystring, { strictNullHandling: true, depth: 100 });
 
     // Get skip and limit from query string.
     // if not provided, use undefined to preserv function defaults.
-    const skip = query.skip ? parseInt(query.skip) : undefined;
-    const limit = query.limit ? parseInt(query.limit) : undefined;
+    query.$skip = query.$skip ? parseInt(query.$skip) : undefined;
+    query.$limit = query.$limit ? parseInt(query.$limit) : undefined;
 
     const response = await pContext.executeQuery(ctx.params.etName, query);
 
@@ -50,8 +69,8 @@ export class ApiV1 {
    * @param req Request
    * @param res Response
    */
-  private async execCommand(ctx: ParameterizedContext) {
-    const entity: IConcreteEntity = ctx.request.body;
+  private async exec(ctx: ParameterizedContext) {
+    const entity: IEntity = ctx.request.body;
     const pContext = await Context.create("", "", this.repoFactory);
     const { etName, command } = ctx.params;
     const result = await pContext.executeCommand(command, etName, entity);
