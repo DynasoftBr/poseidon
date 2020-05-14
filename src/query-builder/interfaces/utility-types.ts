@@ -1,6 +1,5 @@
-import { IncludeQueryBuilder } from "./include-query-builder";
 import { Query } from "./query";
-import { IUser2 } from "@poseidon/core-models/src";
+
 export type KnownKeys<T, TType = any> = {
   [K in keyof T]: string extends K ? never : number extends K ? never : K;
 } extends { [_ in keyof T]: infer U }
@@ -15,23 +14,19 @@ export type KnownKeys<T, TType = any> = {
 
 export type SimpleKeys<T> = KnownKeys<T, number> | KnownKeys<T, string> | KnownKeys<T, boolean> | KnownKeys<T, Date>;
 export type IncludableKeys<T> = Exclude<KnownKeys<T>, SimpleKeys<T>>;
-export type ExtractIncludable<T, K extends IncludableKeys<T>> = T[K] extends PaginatedList<infer I>
+export type ExtractIncludable<T, K extends IncludableKeys<T>> = T[K] extends PaginatedResult<infer I>
   ? I
   : T[K] extends Array<infer I>
   ? I
   : T[K];
 export type Operators = "$eq";
 
-export type IncludeBuilder<TRoot, K extends IncludableKeys<TRoot>, TIncludeResult> = (
-  includable: IncludeQueryBuilder<TRoot, K>
-) => IncludeQueryBuilder<TRoot, K>;
-
 export type KeySelector<T> = { [k in keyof T]: k extends SimpleKeys<T> ? void : KeySelector<T[k]> };
 
 export interface FilterBuilderInterface<T, TRoot = T> {
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: T[K]): this;
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: (root: KeySelector<TRoot>) => void): this;
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: K, field?: boolean): this;
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: T[K]): this;
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: (root: KeySelector<TRoot>) => void): this;
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: K, field?: boolean): this;
   $or(func: (builder: FilterBuilderInterface<T, TRoot>) => void): this;
 }
 
@@ -80,8 +75,10 @@ export type Included<T, TCurrent, K extends IncludableKeys<T>, TIncludeResult = 
 
 type IncludedResult<TOriginal, TIncludeResult = null> = TIncludeResult extends null ? Simplified<TOriginal> : TIncludeResult;
 
-export type SingleOrSet<T, K extends IncludableKeys<T>, TIncludeResult = null> = T[K] extends PaginatedList<infer I>
-  ? PaginatedList<IncludedResult<I, TIncludeResult>>
+export type SingleOrSet<T, K extends IncludableKeys<T>, TIncludeResult = null> = T[K] extends PaginatedResult<infer I>
+  ? PaginatedResult<IncludedResult<I, TIncludeResult>>
+  : T[K] extends Array<infer I>
+  ? Array<IncludedResult<I, TIncludeResult>>
   : IncludedResult<T[K], TIncludeResult>;
 
 export type NewProperty<T, K extends string, TK> = { [key in keyof T | K]: (T & { [k in K]: TK })[key] };
@@ -96,10 +93,9 @@ export interface AggregateBuilder<T, R = {}> {
 export type SelectResult<TResult, K extends SimpleKeys<TResult>> = { [k in K]: TResult[k] };
 export type Describe<T> = T extends T ? { [key in keyof T]: T[key] } : never;
 
-export interface PaginatedList<T> {
-  total: number;
-  perPage: number;
-  page: number;
+export interface PaginatedResult<T> {
+  page?: number;
+  total?: number;
   items: T[];
 }
 

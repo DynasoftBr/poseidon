@@ -66,6 +66,10 @@ export const SysMsgs = {
       code: 3011,
       message: "Query parse error: %s"
     },
+    ParameterCannotBeNull: {
+      code: 3012,
+      message: "Parameter cannot be null: %s"
+    },
   },
   validation: {
     validationErrorMsg: {

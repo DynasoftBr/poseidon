@@ -17,5 +17,12 @@
       }
     ]
   },
-  "include": ["src/**/*", "poseidon-query-builder/includable-query-builder.ts", "poseidon-query-builder/entity-query-builder.ts", "poseidon-query-builder/imatch-builder.ts", "poseidon-query-builder/query-model.ts", "poseidon-query-builder/match-builder.ts"]
+  "include": [
+    "src/**/*",
+    "poseidon-query-builder/includable-query-builder.ts",
+    "poseidon-query-builder/entity-query-builder.ts",
+    "poseidon-query-builder/imatch-builder.ts",
+    "poseidon-query-builder/query-model.ts",
+    "poseidon-query-builder/match-builder.ts"
+  ]
 }

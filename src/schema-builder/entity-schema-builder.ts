@@ -6,9 +6,8 @@ import { BooleanPropertySchemaBuilder } from "./boolean-property-schema-builder"
 import { NumberPropertySchemaBuilder } from "./number-property-schema-builder";
 import { EnumPropertySchemaBuilder } from "./enum-property-schema-builder";
 import { ArrayPropertySchemaBuilder } from "./array-property-schema-builder";
-import { IRepository } from "../data";
-import { IEntityType, PropertyTypes, IEntityProperty } from "@poseidon/core-models";
-import { Context } from "../context";
+import { EntityType, PropertyTypes, EntityProperty } from "@poseidon/core-models";
+import { Context } from "../data/context";
 
 export class EntitySchemaBuilder {
   constructor(private readonly context: Context) {}
@@ -16,7 +15,7 @@ export class EntitySchemaBuilder {
   /**
    * Builds the schema for the specified entity type.
    */
-  public async buildSchema(entityType: IEntityType): Promise<FluentSchemaBuilder> {
+  public async buildSchema(entityType: EntityType): Promise<FluentSchemaBuilder> {
     // The root schema.
     const schema = new SchemaBuilder().object();
 
@@ -40,7 +39,7 @@ export class EntitySchemaBuilder {
    * @param rootSchema The root schema.
    * @param prop A property object that is used to build the schema.
    */
-  public async buildSchemaValidation(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+  public async buildSchemaValidation(rootSchema: FluentSchemaBuilder, prop: EntityProperty): Promise<FluentSchemaBuilder> {
     let propSchema: FluentSchemaBuilder;
 
     switch (prop.type) {

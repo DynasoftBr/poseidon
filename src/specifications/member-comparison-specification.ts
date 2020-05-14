@@ -1,11 +1,11 @@
 
 import { Specification } from "./specificaiton";
-import { ISpecification, IEntity, IMemberComparisonSpecification } from "@poseidon/core-models";
+import { ISpecification, Entity, IMemberComparisonSpecification } from "@poseidon/core-models";
 import * as _ from "lodash";
 
-type CompareFunc<T extends IEntity = IEntity> = (fact: T) => boolean;
+type CompareFunc<T extends Entity = Entity> = (fact: T) => boolean;
 
-export class MemberComparisonSpecification<T extends IEntity = IEntity>
+export class MemberComparisonSpecification<T extends Entity = Entity>
     extends Specification<T> implements IMemberComparisonSpecification {
 
     member: string;

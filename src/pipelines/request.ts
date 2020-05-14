@@ -1,9 +1,9 @@
-import { Context } from "../context";
+import { Context } from "../data/context";
 import { IResponse } from "./response";
-import { IEntityType } from "@poseidon/core-models";
+import { EntityType } from "@poseidon/core-models";
 
 export interface IRequest<T = any, TResponse = any> {
   context: Context;
-  entityType?: IEntityType;
+  entityType?: EntityType;
   response?: IResponse<TResponse>;
 }

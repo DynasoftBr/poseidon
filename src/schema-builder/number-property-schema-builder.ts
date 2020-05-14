@@ -1,14 +1,14 @@
 import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
-import { IEntityProperty } from "@poseidon/core-models";
+import { EntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for number properties.
  * @class
  */
 export class NumberPropertySchemaBuilder implements ISchamaBuilderStrategy {
-  async build(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+  async build(rootSchema: FluentSchemaBuilder, prop: EntityProperty): Promise<FluentSchemaBuilder> {
     const propTypeName = prop.type.toLowerCase();
 
     const propSchema = new SchemaBuilder().type(<"integer" | "number">propTypeName);

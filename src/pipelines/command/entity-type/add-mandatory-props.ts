@@ -2,14 +2,14 @@ import { ICommandRequest } from "../command-request";
 import { BuiltInEntries } from "../../../data";
 import * as _ from "lodash";
 import { ValidationProblem, SysMsgs } from "../../../exceptions";
-import { ProblemKeywords, IEntityType } from "@poseidon/core-models";
+import { ProblemKeywords, EntityType } from "@poseidon/core-models";
 import { PipelineItem } from "../../pipeline-item";
 import { IResponse } from "../../response";
 
-export async function addMandatoryProps(request: ICommandRequest<IEntityType>, next: PipelineItem): Promise<IResponse> {
+export async function addMandatoryProps(request: ICommandRequest<EntityType>, next: PipelineItem): Promise<IResponse> {
   const problems: ValidationProblem[] = [];
   const entity = request.payload;
-  const buildIn = BuiltInEntries.build();
+  const buildIn = new BuiltInEntries();
   const requiredProps = [buildIn.idProperty, buildIn.createdAtProperty, buildIn.changedAtProperty];
   const entityTypeProps = entity.props || [];
 

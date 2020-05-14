@@ -6,5 +6,16 @@
     "**/dist": true
   },
   "typescript.referencesCodeLens.enabled": true,
-  "typescript.tsdk": "node_modules\\typescript\\lib"
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "sqltools.connections": [
+    {
+      "database": "poseidon",
+      "dialect": "PostgreSQL",
+      "name": "Localhost",
+      "password": "admin",
+      "port": 5432,
+      "server": "localhost",
+      "username": "postgres"
+    }
+  ]
 }

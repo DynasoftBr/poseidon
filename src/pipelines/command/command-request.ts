@@ -1,12 +1,9 @@
-import { IEntityType, IEntity } from "@poseidon/core-models";
-import { Context } from "../../context";
-import { IResponse } from "../response";
 import { IRequest } from "../request";
+import { Entity } from "@poseidon/core-models";
 
 export type PartialWithIndex<T> = Partial<T> & { [key: string]: any };
-export interface ICommandRequest<T extends IEntity = IEntity, TResponse = any>
-  extends IRequest<PartialWithIndex<T>, TResponse> {
+export interface ICommandRequest<T extends Entity = Entity, TResponse = any> extends IRequest<PartialWithIndex<T>, TResponse> {
   command: string;
   event?: string;
-  payload: T; 
+  payload: T;
 }

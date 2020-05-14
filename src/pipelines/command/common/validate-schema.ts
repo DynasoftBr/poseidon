@@ -1,5 +1,5 @@
 import { ICommandRequest, PartialWithIndex } from "../command-request";
-import { IEntity, SysEntities } from "@poseidon/core-models";
+import { Entity } from "@poseidon/core-models";
 import { EntitySchemaBuilder } from "../../../schema-builder/entity-schema-builder";
 import { buildValidationFunc } from "../../../validation/build-validation-func";
 import { validateEntity } from "../../../validation/validate-entity";
@@ -15,7 +15,7 @@ const validationFuncs = new Map<string, ValidateFunction>();
  * @param entitytype The entity type of the entity to be validated.
  * @param entity The entity to be validated.
  */
-export async function validateSchema<T extends IEntity = IEntity>(
+export async function validateSchema<T extends Entity = Entity>(
   request: ICommandRequest<T>,
   next: PipelineItem<PartialWithIndex<T>>
 ): Promise<IResponse> {
@@ -36,7 +36,7 @@ export async function validateSchema<T extends IEntity = IEntity>(
   const problems = validateEntity(valFunc, content);
   if (problems.length > 0) {
     request.response = {
-      error: new ValidationError(problems)
+      error: new ValidationError(problems),
     };
   }
 

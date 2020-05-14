@@ -1,6 +1,6 @@
-import { IEntity } from "@poseidon/core-models";
+import { Entity } from "@poseidon/core-models";
 
-export interface EventSourcingEvent<T extends IEntity = IEntity> {
+export interface EventSourcingEvent<T extends Entity = Entity> {
   _id: string;
   aggregateId: string;
   date: Date;

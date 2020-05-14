@@ -3,10 +3,10 @@ import { FilterBuilderInterface, ConditionGroup, SimpleKeys, Operators, Conditio
 export class QueryableFilter<T, TRoot> implements FilterBuilderInterface<T, TRoot> {
   constructor(private readonly group: ConditionGroup<T>) {}
 
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: T[K]): this;
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: (root: KeySelector<TRoot>) => void): this;
-  filter<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: K, field?: boolean): this;
-  filter<K extends SimpleKeys<T>>(
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: T[K]): this;
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: (root: KeySelector<TRoot>) => void): this;
+  where<K extends SimpleKeys<T>>(key: K, operator: Operators, operand: K, field?: boolean): this;
+  where<K extends SimpleKeys<T>>(
     key: K,
     operator: Operators,
     operand: T[K] | K | ((root: KeySelector<TRoot>) => void),

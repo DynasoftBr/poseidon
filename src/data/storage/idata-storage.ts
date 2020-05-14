@@ -1,20 +1,20 @@
-import { IStorageCollection } from "./istorage-collection";
-import { IStorageConnectionOptions } from "./istorage-connection-options";
-import { IEntity } from "@poseidon/core-models";
+import { Entity, EntityType } from "@poseidon/core-models";
+import { Query } from "../../query-builder/interfaces/query";
+import { Queryable } from "../../query-builder/queryable";
+import { MutationCollection } from "./mutation-collection";
 
 export interface IDataStorage {
-    /**
-     * Starts the connection with database.
-     * @param config The configuration parameters to connect to database.
-     * @function
-     */
-    connect(config: IStorageConnectionOptions): Promise<void>;
+  entityTypesByName: Map<string, EntityType>;
 
-    /**
-     * Gets the collection to be used to insert, update, delete or query data.
-     * @param collectionName An convention string in the format of 'database.collection'.
-     * @returns A StorageCollection<T> instance.
-     * @function
-     */
-    collection<T extends IEntity = IEntity>(collectionName: string): IStorageCollection<T>;
+  entityTypesById: Map<string, EntityType>;
+
+  mutate(items: MutationCollection, event: string): Promise<void>;
+
+  testConnection(): Promise<void>;
+
+  feed(): Promise<void>;
+
+  migrate(entityType: EntityType): Promise<void>;
+
+  query<T>(entityTypeName: string, callback: (res: T | T[]) => T | T[]): Queryable<T>;
 }

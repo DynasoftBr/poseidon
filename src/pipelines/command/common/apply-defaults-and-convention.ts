@@ -1,9 +1,9 @@
-import { IEntity, PropertyConventions, PropertyTypes } from "@poseidon/core-models";
+import { Entity, PropertyConventions, PropertyTypes } from "@poseidon/core-models";
 import { ICommandRequest } from "../command-request";
 import { PipelineItem } from "../../pipeline-item";
 import { IResponse } from "../../response";
 
-export async function applyDefaultsAndConvention<T extends IEntity>(
+export async function applyDefaultsAndConvention<T extends Entity>(
   request: ICommandRequest<T>,
   next: PipelineItem
 ): Promise<IResponse> {

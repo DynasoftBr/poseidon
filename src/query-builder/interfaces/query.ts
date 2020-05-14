@@ -13,4 +13,6 @@ export interface Query<T> {
   $select?: string[];
   $skip?: number;
   $take?: number;
+  $first?: boolean
+  $noTrack?: boolean
 }

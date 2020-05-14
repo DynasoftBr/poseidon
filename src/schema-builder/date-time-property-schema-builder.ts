@@ -1,6 +1,6 @@
 import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
-import { IEntityProperty } from "@poseidon/core-models";
+import { EntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for date-time properties.

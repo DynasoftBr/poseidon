@@ -2,7 +2,7 @@ import { ISchamaBuilderStrategy } from "./abstract-schema-builder-strategy";
 import { FluentSchemaBuilder } from "json-schema-fluent-builder";
 import { SchemaBuilder } from "json-schema-fluent-builder";
 import { EntitySchemaBuilder } from "./entity-schema-builder";
-import { IEntityProperty } from "@poseidon/core-models";
+import { EntityProperty } from "@poseidon/core-models";
 
 /**
  * Build JSON schama validation for array properties.
@@ -11,7 +11,7 @@ import { IEntityProperty } from "@poseidon/core-models";
 export class ArrayPropertySchemaBuilder implements ISchamaBuilderStrategy {
   constructor(private readonly entitySchemaBuilder: EntitySchemaBuilder) {}
 
-  async build(rootSchema: FluentSchemaBuilder, prop: IEntityProperty): Promise<FluentSchemaBuilder> {
+  async build(rootSchema: FluentSchemaBuilder, prop: EntityProperty): Promise<FluentSchemaBuilder> {
     const propSchema = new SchemaBuilder().array();
 
     // No additional items allowed.

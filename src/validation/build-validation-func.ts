@@ -6,6 +6,6 @@ import * as Ajv from "ajv";
  * @param schema A valid schema model.
  */
 export function buildValidationFunc(schema: SchemaModel) {
-    const jsonVal = new Ajv({ allErrors: true, verbose: true });
-    return jsonVal.compile(schema);
+  const jsonVal = new Ajv({ allErrors: true, verbose: true });
+  return jsonVal.compile(schema);
 }
