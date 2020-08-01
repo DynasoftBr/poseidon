@@ -8,20 +8,16 @@ import { v4 } from "uuid";
 async function test() {
   var storage = await PostgresStorage.init(env.storage);
 
-  // storage
-  //   .query<EntityType>(new BuiltInEntries().entityType.name)
-  //   .filter((q) => q.where("name", "$eq", "EntityType"))
-  //   .include("props")
-  //   .toArray()
-  //   .then((r) => {
-  //     console.log(JSON.stringify(r, null, 4));
-  //   });
+
+
+  console.time();
+  for (let index = 0; index < 200000; index++) {
+    await storage.insert();
+  }
+  console.timeEnd();
 }
 test().then(() => console.log("End"));
 
 // Server.init();
 
 // console.log("teste");
-
-
-

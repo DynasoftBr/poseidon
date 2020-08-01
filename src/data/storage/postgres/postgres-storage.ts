@@ -18,7 +18,7 @@ import { PostgresQueryBuilder } from "./postgres-query-builder";
 import { MutationCollection } from "../mutation-collection";
 import { ObservedEntity } from "../../mutation/observed-entity";
 import { EntityMutationState } from "../../mutation/entity-mutation-state";
-
+import { v4 } from "uuid";
 export class PostgresStorage implements IDataStorage {
   private knex: knex<any, unknown>;
   private readonly clientConfig: ClientConfig;
@@ -47,23 +47,30 @@ export class PostgresStorage implements IDataStorage {
     this.pool = new Pool(this.clientConfig);
   }
 
+  _client: PoolClient;
+  public async insert() {
+    if (this._client == null) this._client = await this.pool.connect();
+    const sql = 'INSERT INTO "Relation" ("_id", "_createdAt", "relationId", "this", "that") VALUES ($1, $2, $3, $4, $5);';
+
+    await this._client.query(sql, [v4(), new Date(), v4(), v4(), v4()]);
+  }
   public static async init(connOptions: Readonly<PostgresConnOptions>): Promise<PostgresStorage> {
     const storage = new PostgresStorage(connOptions);
-    await storage.feed();
+    // await storage.feed();
 
-    var entityTypes = await storage
-      .query<EntityType>(new BuiltInEntries().entityType)
-      .include("props", (p) => p.include("relatedEntityType"))
-      .toArray();
+    // var entityTypes = await storage
+    //   .query<EntityType>(new BuiltInEntries().entityType)
+    //   .include("props", (p) => p.include("relatedEntityType"))
+    //   .toArray();
 
-    entityTypes.forEach((e) => {
-      e.props.map((p) => {
-        p.relatedEntityType = entityTypes.find((e) => e._id === p.relatedEntityType._id);
-      });
+    // entityTypes.forEach((e) => {
+    //   e.props.map((p) => {
+    //     p.relatedEntityType = entityTypes.find((e) => e._id === p.relatedEntityType._id);
+    //   });
 
-      storage.entityTypesByName.set(e.name, e);
-      storage.entityTypesById.set(e._id, e);
-    });
+    //   storage.entityTypesByName.set(e.name, e);
+    //   storage.entityTypesById.set(e._id, e);
+    // });
 
     return storage;
   }
@@ -99,18 +106,19 @@ export class PostgresStorage implements IDataStorage {
     if (databaseExists) return;
 
     const builtIn = new BuiltInEntries();
-    const entityTypes = [builtIn.entityType, builtIn.entityTypeEntityProperty, builtIn.entityTypeUser];
+    const entityTypes = [builtIn.entityType, builtIn.entityTypeEntityProperty, builtIn.entityTypeUser, builtIn.entityTypeRelation];
 
     const client = await this.pool.connect();
     try {
       await this.beginTran(client);
 
+      const createdTables: string[] = [];
       for (const entityType of entityTypes) {
-        if (!(await this.tableExistis(entityType.name, client))) {
-          const cmd = await this.generateCmdsForNewEntityType(entityType);
-          console.log(cmd);
-          await client.query(cmd);
-        }
+        if (createdTables.some((t) => t === entityType.name)) continue;
+
+        const cmd = await this.generateCmdsForNewEntityType(entityType, createdTables);
+
+        await client.query(cmd);
       }
 
       const toMutate = new MutationCollection();
@@ -118,14 +126,14 @@ export class PostgresStorage implements IDataStorage {
 
       for (const entry of toMutate.toArray()) {
         await this.mutateInternal(entry, "Feed", client);
-        const relations = entry.entityType.props.filter((p) => p.type === PropertyTypes.relation);
+        // const relations = entry.entityType.props.filter((p) => p.type === PropertyTypes.relation);
 
-        for (const relation of relations) {
-          const related = entry.__entity[relation.name];
-          if (related == null) return;
-          
-          await this.mutateInternal(entry, "Feed", client);
-        }
+        // for (const relation of relations) {
+        //   const related = entry.__entity[relation.name];
+        //   if (related == null) return;
+
+        //   await this.mutateInternal(entry, "Feed", client);
+        // }
       }
 
       await this.commit(client);
@@ -214,38 +222,11 @@ export class PostgresStorage implements IDataStorage {
     for (const relation of relations) {
       if (!alreadyCreated.some((c) => c === relation.relatedEntityType.name))
         cmds.push(await this.generateCmdsForNewEntityType(relation.relatedEntityType as EntityType, alreadyCreated));
-
-      const relationTableCmd = await this.generateRelationTableCmd(entityType, relation);
-
-      cmds.push(relationTableCmd);
     }
 
     return cmds.reduce((prev, curr) => {
       return prev + (curr.endsWith(";") ? "\n" : ";\n") + curr;
     });
-  }
-
-  private async generateRelationTableCmd(entityType: EntityType, relation: EntityProperty): Promise<string> {
-    return this.knex.schema
-      .createTable(`${entityType.name}_${relation.name}`, (tRelation) => {
-        const entityCol = tRelation.uuid("entity").notNullable();
-        const relatedCol = tRelation.uuid("related").notNullable();
-
-        tRelation.foreign("entity").references(SysProperties._id).inTable(entityType.name);
-        tRelation.foreign("related").references(SysProperties._id).inTable(relation.relatedEntityType.name);
-
-        if (relation.kind === RelationKind.hasOne) {
-          entityCol.unique();
-          relatedCol.unique();
-        } else if (relation.kind === RelationKind.hasMany) {
-          relatedCol.unique();
-        } else if (relation.kind === RelationKind.belongsToOne) {
-          entityCol.unique();
-        } else if (relation.kind === RelationKind.belongsToMany) {
-          tRelation.unique(["entity", "related"]);
-        }
-      })
-      .toQuery();
   }
 
   private generateInsertCmd(entity: Entity, entityType: EntityType): [string, any[]] {
@@ -263,6 +244,7 @@ export class PostgresStorage implements IDataStorage {
     }
 
     const cmd = `INSERT INTO "${entityType.name}" (${colsToInsert.map((p) => `"${p}"`).join(", ")}) VALUES (${valuesVars.join(", ")});`;
+    console.log(cmd, values);
     return [cmd, values];
   }
 

@@ -16,6 +16,7 @@ import { EntityMutationState } from "./mutation/entity-mutation-state";
 export class Context {
   #observed: ObservedEntity[];
   #mutated = new MutationCollection();
+  #events = new MutationCollection();
   #storage: IDataStorage;
 
   private constructor(storage: IDataStorage, public readonly user: IUser) {
@@ -61,7 +62,7 @@ export class Context {
     throw "Not implemented";
   }
 
-  public createNew<T extends Entity = Entity>(entityTypeName: string): T {
+  public addEvent<T extends Entity = Entity>(entityTypeName: string, eventName: string, payload: Partial<Entity>): T {
     const newEt = {} as T;
     const entityType = this.#storage.entityTypesByName.get(entityTypeName);
     if (entityType == null) throw new DatabaseError(SysMsgs.error.entityTypeNotFound);

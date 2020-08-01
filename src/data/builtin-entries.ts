@@ -102,10 +102,10 @@ export class BuiltInEntries {
         ...this.createDefaultEntity,
         name: SysEntities.relation,
       };
-      this._entityTypeUser.props = [...this.internalProperties(SysEntities.user), this.relationId, this.this, this.that];
+      this._entityTypeRelation.props = [...this.internalProperties(SysEntities.user), this.relationId, this.this, this.that];
     }
 
-    return this._entityTypeUser;
+    return this._entityTypeRelation;
   }
 
   private _idProperty: EntityProperty;
@@ -488,7 +488,7 @@ export class BuiltInEntries {
     if (this._that == null)
       this._that = {
         ...this.createDefaultEntity,
-        name: SysProperties.this,
+        name: SysProperties.that,
         type: PropertyTypes.string,
         required: true,
       };
