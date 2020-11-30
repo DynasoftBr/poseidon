@@ -12,11 +12,13 @@ import {
   AggregateBuilder,
   Included,
   Resolver,
+  SimpleKeys,
+  KnownKeys,
 } from "./interfaces/utility-types";
 import { QueryBuilder, IncludeBuilder } from "./interfaces/query-builder";
 
-export class Queryable<T, TRoot = T, TResult = Simplified<T>, Paginated = false> implements QueryBuilder<T, TRoot, TResult, Paginated> {
-  public constructor(private resolver: Resolver, public readonly _query: Query<T> = {}) {
+export class Queryable<T, TRoot = T, TResult = T, Paginated = false> implements QueryBuilder<T, TRoot, TResult, Paginated> {
+  public constructor(private resolver: Resolver<T>, public readonly _query: Query<T> = {}) {
     if (_query == null) {
       throw new Error("'_query' cannot be null.");
     }

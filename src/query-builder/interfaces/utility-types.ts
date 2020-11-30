@@ -69,9 +69,11 @@ export type RecusiveIncluded<T, K extends string> = {
   [key in keyof T | K]: (T & { [k in K]: RecusiveIncluded<T, K> })[key];
 };
 
-export type Included<T, TCurrent, K extends IncludableKeys<T>, TIncludeResult = null> = {
-  [key in keyof TCurrent | K]: (TCurrent & { [k in K]: SingleOrSet<T, K, TIncludeResult> })[key];
-};
+export type Included<T, TCurrent, K extends IncludableKeys<T>, TIncludeResult = null> = TCurrent extends T
+  ? {
+      [key in keyof TCurrent]: (TCurrent & { [k in K]: SingleOrSet<T, K, TIncludeResult> })[key];
+    }
+  : { [key in keyof TCurrent | K]: (TCurrent & { [k in K]: SingleOrSet<T, K, TIncludeResult> })[key] };
 
 type IncludedResult<TOriginal, TIncludeResult = null> = TIncludeResult extends null ? Simplified<TOriginal> : TIncludeResult;
 
@@ -127,4 +129,4 @@ export type ConditionGroup<T> = (Condition<T> | ConditionGroup<T>)[];
 export type IncludedKeys<T> = {
   [key in IncludableKeys<T>]: Query<ExtractIncludable<T, key>> | true;
 };
-export type Resolver = <T, TResult>(query: Query<T>) => Promise<TResult>;
+export type Resolver<T> = (query: Query<T>) => Promise<any>;

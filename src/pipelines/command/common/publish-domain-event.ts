@@ -25,7 +25,7 @@ export async function publishDomainEvent(
       event: request.event,
       content: request.payload,
       date: new Date(),
-      userId: request.context.user._id
+      userId: request.context.loggedUser()._id
     }
   } as IMessage<EventSourcingEvent>;
 

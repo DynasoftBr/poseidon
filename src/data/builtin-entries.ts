@@ -7,43 +7,39 @@ import {
   SysUsers,
   IUser,
   RelationKind,
-  CommandOperations,
-  EntityTypeCommands,
-  EntityTypePipelineItems,
   Entity,
+  SysDatabases,
 } from "@poseidon/core-models";
-import { v4 as uuidv4 } from "uuid";
 
-export class BuiltInEntries {
+class BuiltInEntries {
+  public entityTypes = [this.entityType, this.entityTypeEntityProperty, this.entityTypeUser, this.entityTypeRelationLink];
+
   private _entityType: EntityType;
   public get entityType(): EntityType {
     if (!this._entityType) {
       this._entityType = {
-        ...this.createDefaultEntity,
+        _id: "5f304db8c7678bea21ea1f84",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysEntities.entityType,
-        commands: [
-          {
-            name: EntityTypeCommands.create,
-            _createdAt: new Date(),
-            pipeline: [
-              {
-                code: "// ommitted",
-                name: EntityTypePipelineItems.AddMandatoryPropeties,
-              },
-              {
-                code: "// ommitted",
-                name: EntityTypePipelineItems.ValidateMandatoryPropeties,
-              },
-              {
-                code: "// ommitted",
-                name: EntityTypePipelineItems.ApplyMigrations,
-              },
-            ],
-          },
-        ],
+        database: SysDatabases.poseidon,
       };
 
-      this._entityType.props = [...this.internalProperties(SysEntities.entityType), this.entityPropertyNameProperty, this.propsProperty];
+      const idProp = { ...this.idProperty, _id: "5f304ae9c7678bea21ea1f6a" };
+      const createdAtProp = { ...this.createdAtProperty, _id: "5f304b07c7678bea21ea1f6b" };
+      const createdByProp = { ...this.createdByProperty, _id: "5f304b1ac7678bea21ea1f6c" };
+      const changedAtProp = { ...this.changedAtProperty, _id: "5f304b34c7678bea21ea1f6d" };
+      const changedByProp = { ...this.changedByProperty, _id: "5f304b44c7678bea21ea1f6e" };
+
+      this._entityType.props = [
+        idProp,
+        createdAtProp,
+        changedAtProp,
+        createdByProp,
+        changedByProp,
+        this.entityPropertyNameProperty,
+        this.propsProperty,
+      ];
     }
     return this._entityType;
   }
@@ -52,11 +48,25 @@ export class BuiltInEntries {
   public get entityTypeEntityProperty(): EntityType {
     if (!this._entityTypeEntityProperty) {
       this._entityTypeEntityProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304de9c7678bea21ea1f85",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysEntities.entityProperty,
+        database: SysDatabases.poseidon,
       };
+
+      const idProp = { ...this.idProperty, _id: "5f304ba8c7678bea21ea1f6f" };
+      const createdAtProp = { ...this.createdAtProperty, _id: "5f304bafc7678bea21ea1f70" };
+      const createdByProp = { ...this.createdByProperty, _id: "5f304bb6c7678bea21ea1f71" };
+      const changedAtProp = { ...this.changedAtProperty, _id: "5f304bbcc7678bea21ea1f72" };
+      const changedByProp = { ...this.changedByProperty, _id: "5f304bc1c7678bea21ea1f73" };
+
       this.entityTypeEntityProperty.props = [
-        ...this.internalProperties(SysEntities.entityProperty),
+        idProp,
+        createdAtProp,
+        changedAtProp,
+        createdByProp,
+        changedByProp,
         this.propNameProperty,
         this.typeProperty,
         this.requiredProperty,
@@ -67,58 +77,112 @@ export class BuiltInEntries {
         this.multipleOfProperty,
         this.defaultProperty,
         this.conventionProperty,
-        this.relatedEntityProperty,
+        this.relatedEntityTypeProperty,
+        this.kindProperty,
       ];
     }
 
     return this._entityTypeEntityProperty;
   }
 
+  private _entityTypeEntitySchema: EntityType;
   public get entityTypeEntitySchema(): EntityType {
-    return {
-      ...this.createDefaultEntity,
-      name: SysEntities.entitySchema,
-      props: [...this.internalProperties(SysEntities.entitySchema), this.schemaProperty],
-    };
+    if (!this._entityTypeEntitySchema) {
+      this._entityTypeEntitySchema = {
+        _id: "5f304e71c7678bea21ea1f86",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        name: SysEntities.entitySchema,
+        database: SysDatabases.poseidon,
+      };
+
+      const idProp = { ...this.idProperty, _id: "5f304c54c7678bea21ea1f74" };
+      const createdAtProp = { ...this.createdAtProperty, _id: "5f304c5ac7678bea21ea1f75" };
+      const createdByProp = { ...this.createdByProperty, _id: "5f304c5ec7678bea21ea1f76" };
+      const changedAtProp = { ...this.changedAtProperty, _id: "5f304c63c7678bea21ea1f77" };
+      const changedByProp = { ...this.changedByProperty, _id: "5f304c68c7678bea21ea1f78" };
+
+      this.entityTypeEntitySchema.props = [idProp, createdAtProp, changedAtProp, createdByProp, changedByProp, this.schemaProperty];
+    }
+
+    return this._entityTypeEntitySchema;
   }
 
   private _entityTypeUser: EntityType;
   public get entityTypeUser(): EntityType {
     if (this._entityTypeUser == null) {
       this._entityTypeUser = {
-        ...this.createDefaultEntity,
+        _id: "5f304ea0c7678bea21ea1f87",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        database: SysDatabases.poseidon,
         name: SysEntities.user,
       };
-      this._entityTypeUser.props = [...this.internalProperties(SysEntities.user), this.userNameProperty, this.loginProperty];
+
+      const idProp = { ...this.idProperty, _id: "5f304cb3c7678bea21ea1f79" };
+      const createdAtProp = { ...this.createdAtProperty, _id: "5f304cbbc7678bea21ea1f7a" };
+      const createdByProp = { ...this.createdByProperty, _id: "5f304cc0c7678bea21ea1f7b" };
+      const changedAtProp = { ...this.changedAtProperty, _id: "5f304cc6c7678bea21ea1f7c" };
+      const changedByProp = { ...this.changedByProperty, _id: "5f304ccdc7678bea21ea1f7d" };
+
+      this._entityTypeUser.props = [
+        idProp,
+        createdAtProp,
+        changedAtProp,
+        createdByProp,
+        changedByProp,
+        this.userNameProperty,
+        this.loginProperty,
+      ];
     }
 
     return this._entityTypeUser;
   }
 
-  private _entityTypeRelation: EntityType;
-  public get entityTypeRelation(): EntityType {
-    if (this._entityTypeRelation == null) {
-      this._entityTypeRelation = {
-        ...this.createDefaultEntity,
-        name: SysEntities.relation,
+  private _entityTypeRelationLink: EntityType;
+  public get entityTypeRelationLink(): EntityType {
+    if (this._entityTypeRelationLink == null) {
+      this._entityTypeRelationLink = {
+        _id: "5f304ea9c7678bea21ea1f88",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        database: SysDatabases.poseidon,
+        name: SysEntities.relationLink,
       };
-      this._entityTypeRelation.props = [...this.internalProperties(SysEntities.user), this.relationId, this.this, this.that];
+
+      const idProp = { ...this.idProperty, _id: "5f304d17c7678bea21ea1f7e" };
+      const createdAtProp = { ...this.createdAtProperty, _id: "5f304d1dc7678bea21ea1f7f" };
+      const createdByProp = { ...this.createdByProperty, _id: "5f304d22c7678bea21ea1f80" };
+      const changedAtProp = { ...this.changedAtProperty, _id: "5f304d26c7678bea21ea1f81" };
+      const changedByProp = { ...this.changedByProperty, _id: "5f304d2bc7678bea21ea1f82" };
+
+      this._entityTypeRelationLink.props = [
+        idProp,
+        createdAtProp,
+        changedAtProp,
+        createdByProp,
+        changedByProp,
+        this.relationPropId,
+        this.thisId,
+        this.thatId,
+      ];
     }
 
-    return this._entityTypeRelation;
+    return this._entityTypeRelationLink;
   }
 
   private _idProperty: EntityProperty;
   public get idProperty(): EntityProperty {
     if (this._idProperty == null)
       this._idProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304eb0c7678bea21ea1f89",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties._id,
         type: PropertyTypes.string,
         required: true,
       };
 
-    this._idProperty._id = uuidv4();
     return this._idProperty;
   }
 
@@ -126,7 +190,9 @@ export class BuiltInEntries {
   public get userNameProperty(): EntityProperty {
     if (!this._userNameProperty) {
       this._userNameProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304eb7c7678bea21ea1f8a",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.name,
         type: PropertyTypes.string,
         required: true,
@@ -135,7 +201,6 @@ export class BuiltInEntries {
       };
     }
 
-    this._userNameProperty._id = uuidv4();
     return this._userNameProperty;
   }
 
@@ -143,16 +208,16 @@ export class BuiltInEntries {
   public get propsProperty(): EntityProperty {
     if (!this._propsProperty) {
       this._propsProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ebdc7678bea21ea1f8b",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.props,
         type: PropertyTypes.relation,
         relatedEntityType: this.entityTypeEntityProperty,
-        kind: RelationKind.hasMany,
-        _primary: true,
+        relationKind: RelationKind.hasMany
       };
     }
 
-    this._propsProperty._id = uuidv4();
     return this._propsProperty;
   }
 
@@ -160,7 +225,9 @@ export class BuiltInEntries {
   public get propNameProperty(): EntityProperty {
     if (!this._propsProperty) {
       this._propNameProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ec5c7678bea21ea1f8c",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.name,
         type: PropertyTypes.string,
         required: true,
@@ -170,7 +237,6 @@ export class BuiltInEntries {
       };
     }
 
-    this._propNameProperty._id = uuidv4();
     return this._propNameProperty;
   }
 
@@ -178,7 +244,9 @@ export class BuiltInEntries {
   public get entityPropertyNameProperty(): EntityProperty {
     if (!this._entityPropertyNameProperty) {
       this._entityPropertyNameProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ec8c7678bea21ea1f8d",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.name,
         type: PropertyTypes.string,
         required: true,
@@ -188,7 +256,6 @@ export class BuiltInEntries {
       };
     }
 
-    this._entityPropertyNameProperty._id = uuidv4();
     return this._entityPropertyNameProperty;
   }
 
@@ -196,14 +263,15 @@ export class BuiltInEntries {
   public get createdAtProperty(): EntityProperty {
     if (!this._createdAtProperty) {
       this._createdAtProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ecec7678bea21ea1f8e",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.createdAt,
         type: PropertyTypes.dateTime,
         required: true,
       };
     }
 
-    this._createdAtProperty._id = uuidv4();
     return this._createdAtProperty;
   }
 
@@ -211,13 +279,14 @@ export class BuiltInEntries {
   public get changedAtProperty(): EntityProperty {
     if (!this._changedAtProperty) {
       this._changedAtProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ed3c7678bea21ea1f8f",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.changedAt,
         type: PropertyTypes.dateTime,
       };
     }
 
-    this._changedAtProperty._id = uuidv4();
     return this._changedAtProperty;
   }
 
@@ -225,15 +294,16 @@ export class BuiltInEntries {
   public get changedByProperty(): EntityProperty {
     if (!this._changedByProperty) {
       this._changedByProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ed7c7678bea21ea1f90",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.changedBy,
         type: PropertyTypes.relation,
-        kind: RelationKind.belongsToOne,
-        _relationTable: "",
+        relationKind: RelationKind.belongsToOne,
+        relatedEntityType: this.entityTypeUser
       };
     }
 
-    this._changedByProperty._id = uuidv4();
     return this._changedByProperty;
   }
 
@@ -241,15 +311,16 @@ export class BuiltInEntries {
   public get createdByProperty(): EntityProperty {
     if (!this._createdByProperty) {
       this._createdByProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304edcc7678bea21ea1f91",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.createdBy,
         type: PropertyTypes.relation,
-        kind: RelationKind.belongsToOne,
-        _relationTable: "",
+        relationKind: RelationKind.belongsToOne,
+        relatedEntityType: this.entityTypeUser
       };
     }
 
-    this._createdByProperty._id = uuidv4();
     return this._createdByProperty;
   }
 
@@ -257,14 +328,15 @@ export class BuiltInEntries {
   public get schemaProperty(): EntityProperty {
     if (!this._schemaProperty) {
       this._schemaProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304ee1c7678bea21ea1f92",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.schema,
         type: PropertyTypes.string,
         required: true,
       };
     }
 
-    this._schemaProperty._id = uuidv4();
     return this._schemaProperty;
   }
 
@@ -272,14 +344,15 @@ export class BuiltInEntries {
   public get loginProperty(): EntityProperty {
     if (!this._loginProperty) {
       this._loginProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304efcc7678bea21ea1f93",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.login,
         type: PropertyTypes.string,
         required: true,
       };
     }
 
-    this._loginProperty._id = uuidv4();
     return this._loginProperty;
   }
 
@@ -287,14 +360,15 @@ export class BuiltInEntries {
   public get typeProperty(): EntityProperty {
     if (!this._typeProperty) {
       this._typeProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f02c7678bea21ea1f94",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.type,
         type: PropertyTypes.string,
         required: true,
       };
     }
 
-    this._typeProperty._id = uuidv4();
     return this._typeProperty;
   }
 
@@ -302,13 +376,14 @@ export class BuiltInEntries {
   public get requiredProperty(): EntityProperty {
     if (!this._requiredProperty) {
       this._requiredProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f08c7678bea21ea1f95",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.required,
         type: PropertyTypes.boolean,
       };
     }
 
-    this._requiredProperty._id = uuidv4();
     return this._requiredProperty;
   }
 
@@ -316,13 +391,14 @@ export class BuiltInEntries {
   public get minProperty(): EntityProperty {
     if (!this._minProperty) {
       this._minProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f0cc7678bea21ea1f96",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.min,
         type: PropertyTypes.number,
       };
     }
 
-    this._minProperty._id = uuidv4();
     return this._minProperty;
   }
 
@@ -330,13 +406,14 @@ export class BuiltInEntries {
   public get maxProperty(): EntityProperty {
     if (!this._maxProperty) {
       this._maxProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f10c7678bea21ea1f97",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.max,
         type: PropertyTypes.number,
       };
     }
 
-    this._maxProperty._id = uuidv4();
     return this._maxProperty;
   }
 
@@ -344,13 +421,14 @@ export class BuiltInEntries {
   public get patternProperty(): EntityProperty {
     if (!this._patternProperty) {
       this._patternProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f15c7678bea21ea1f98",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.pattern,
         type: PropertyTypes.string,
       };
     }
 
-    this._patternProperty._id = uuidv4();
     return this._patternProperty;
   }
 
@@ -358,14 +436,15 @@ export class BuiltInEntries {
   public get enumProperty(): EntityProperty {
     if (!this._enumProperty) {
       this._enumProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f1ec7678bea21ea1f99",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.enum,
         type: PropertyTypes.array,
         items: PropertyTypes.string,
       };
     }
 
-    this._enumProperty._id = uuidv4();
     return this._enumProperty;
   }
 
@@ -373,13 +452,14 @@ export class BuiltInEntries {
   public get itemsProperty(): EntityProperty {
     if (!this._itemsProperty) {
       this._itemsProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f25c7678bea21ea1f9a",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.items,
         type: PropertyTypes.string,
       };
     }
 
-    this._itemsProperty._id = uuidv4();
     return this._itemsProperty;
   }
 
@@ -387,13 +467,14 @@ export class BuiltInEntries {
   public get uniqueItemsProperty(): EntityProperty {
     if (!this._uniqueItemsProperty) {
       this._uniqueItemsProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f29c7678bea21ea1f9b",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.uniqueItems,
         type: PropertyTypes.boolean,
       };
     }
 
-    this._uniqueItemsProperty._id = uuidv4();
     return this._uniqueItemsProperty;
   }
 
@@ -401,13 +482,14 @@ export class BuiltInEntries {
   public get multipleOfProperty(): EntityProperty {
     if (!this._multipleOfProperty) {
       this._multipleOfProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f2ec7678bea21ea1f9c",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.multipleOf,
         type: PropertyTypes.number,
       };
     }
 
-    this._multipleOfProperty._id = uuidv4();
     return this._multipleOfProperty;
   }
 
@@ -415,13 +497,14 @@ export class BuiltInEntries {
   public get defaultProperty(): EntityProperty {
     if (!this._defaultProperty) {
       this._defaultProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f32c7678bea21ea1f9d",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.default,
         type: PropertyTypes.string,
       };
     }
 
-    this._defaultProperty._id = uuidv4();
     return this._defaultProperty;
   }
 
@@ -429,79 +512,101 @@ export class BuiltInEntries {
   public get conventionProperty(): EntityProperty {
     if (!this._conventionProperty) {
       this._conventionProperty = {
-        ...this.createDefaultEntity,
+        _id: "5f304f37c7678bea21ea1f9e",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.convention,
         type: PropertyTypes.string,
       };
     }
 
-    this._conventionProperty._id = uuidv4();
     return this._conventionProperty;
   }
 
-  private _relatedEntityProperty: EntityProperty;
-  public get relatedEntityProperty(): EntityProperty {
-    if (!this._relatedEntityProperty) {
-      this._relatedEntityProperty = {
-        ...this.createDefaultEntity,
+  private _relatedEntityTypeProperty: EntityProperty;
+  public get relatedEntityTypeProperty(): EntityProperty {
+    if (!this._relatedEntityTypeProperty) {
+      this._relatedEntityTypeProperty = {
+        _id: "5f304f4cc7678bea21ea1f9f",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
         name: SysProperties.relatedEntityType,
         type: PropertyTypes.relation,
+        relatedEntityType: this._entityType,
+        relationKind: RelationKind.hasOne,
       };
 
-      this._relatedEntityProperty.relatedEntityType = this.entityType;
+      this._relatedEntityTypeProperty.relatedEntityType = this.entityType;
     }
 
-    this._relatedEntityProperty._id = uuidv4();
-    return this._relatedEntityProperty;
+    return this._relatedEntityTypeProperty;
   }
 
-  private _relationId: EntityProperty;
-  public get relationId(): EntityProperty {
-    if (this._relationId == null)
-      this._relationId = {
-        ...this.createDefaultEntity,
-        name: SysProperties.relationId,
+  private _kindProperty: EntityProperty;
+  public get kindProperty(): EntityProperty {
+    if (!this._kindProperty) {
+      this._kindProperty = {
+        _id: "5f304f54c7678bea21ea1fa0",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        name: SysProperties.relationKind,
+        type: PropertyTypes.string,
+      };
+    }
+
+    return this._kindProperty;
+  }
+
+  private _relationPropId: EntityProperty;
+  public get relationPropId(): EntityProperty {
+    if (this._relationPropId == null)
+      this._relationPropId = {
+        _id: "5f304f59c7678bea21ea1fa1",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        name: SysProperties.relationPropId,
         type: PropertyTypes.string,
         required: true,
       };
 
-    this._relationId._id = uuidv4();
-    return this._relationId;
+    return this._relationPropId;
   }
 
-  private _this: EntityProperty;
-  public get this(): EntityProperty {
-    if (this._this == null)
-      this._this = {
-        ...this.createDefaultEntity,
-        name: SysProperties.this,
+  private _thisId: EntityProperty;
+  public get thisId(): EntityProperty {
+    if (this._thisId == null)
+      this._thisId = {
+        _id: "5f304f6ec7678bea21ea1fa3",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        name: SysProperties.thisId,
         type: PropertyTypes.string,
         required: true,
       };
 
-    this._this._id = uuidv4();
-    return this._this;
+    return this._thisId;
   }
 
-  private _that: EntityProperty;
-  public get that(): EntityProperty {
-    if (this._that == null)
-      this._that = {
-        ...this.createDefaultEntity,
-        name: SysProperties.that,
+  private _thatId: EntityProperty;
+  public get thatId(): EntityProperty {
+    if (this._thatId == null)
+      this._thatId = {
+        _id: "5f304f60c7678bea21ea1fa2",
+        _createdAt: new Date(),
+        _createdBy: this.rootUser,
+        name: SysProperties.thatId,
         type: PropertyTypes.string,
         required: true,
       };
 
-    this._that._id = uuidv4();
-    return this._that;
+    return this._thatId;
   }
 
   private _rootUser: IUser;
   public get rootUser(): IUser {
     if (!this._rootUser) {
       this._rootUser = {
-        _id: uuidv4(),
+        _id: "5f304dabc7678bea21ea1f83",
         _createdAt: new Date(),
         name: SysUsers.root,
         login: SysUsers.root,
@@ -513,34 +618,6 @@ export class BuiltInEntries {
 
     return this._rootUser;
   }
-
-  private internalProperties(name: string): EntityProperty[] {
-    const createdBy = { ...this.createdByProperty };
-    const changedBy = { ...this.changedByProperty };
-    const id = { ...this.idProperty };
-    const createdAt = { ...this.createdAtProperty };
-    const changedAt = { ...this.changedAtProperty };
-
-    createdBy._id = uuidv4();
-    createdBy.relatedEntityType = this.entityTypeUser;
-    createdBy._relationTable = `${name}_${RelationKind.belongsToOne}_${SysEntities.user}_As_${SysProperties.createdBy}`;
-
-    changedBy._id = uuidv4();
-    changedBy.relatedEntityType = this.entityTypeUser;
-    changedBy._relationTable = `${name}_${RelationKind.belongsToOne}_${SysEntities.user}_As_${SysProperties.changedBy}`;
-
-    id._id = uuidv4();
-    createdAt._id = uuidv4();
-    changedAt._id = uuidv4();
-
-    return [id, createdAt, createdBy, changedAt, changedBy];
-  }
-
-  private get createDefaultEntity(): Entity {
-    return {
-      _createdAt: new Date(),
-      _createdBy: this.rootUser,
-      _id: uuidv4(),
-    };
-  }
 }
+
+export const builtInEntries = new BuiltInEntries();

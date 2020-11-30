@@ -1,23 +1,27 @@
-import { BuiltInEntries } from "./data";
-import { EntityType } from "@poseidon/core-models/src";
-import { PostgresStorage } from "./data/storage/postgres/postgres-storage";
+import * as Server from "./server";
+import { DataStorage } from "./data";
+import { MongoDbStorage } from "./data/storage/mongodb/mongodb-storage";
 import { env } from "./env.config";
-import { Cluster } from "couchbase";
-import { v4 } from "uuid";
+import { Context } from "./data/context";
+import { SysEntities, EntityType, IUser } from "@poseidon/core-models";
 
-async function test() {
-  var storage = await PostgresStorage.init(env.storage);
+Server.init();
 
+async function run() {
+  const storage: DataStorage = await MongoDbStorage.init({ dbName: env.storage.db, url: env.storage.host }, null);
+  const context = await Context.create("", "", storage);
 
+  const et = (await context
+    .query<EntityType>(SysEntities.entityType)
+    .include("_createdBy")
+    .filter((f) => f.where("name", "$eq", SysEntities.entityType))
+    .first());
 
-  console.time();
-  for (let index = 0; index < 200000; index++) {
-    await storage.insert();
-  }
-  console.timeEnd();
+  // var newUser = context.newEntity<IUser>(SysEntities.user);
+  // et._createdBy = newUser;
+  et._createdBy.name = "teste3";
+
+  storage.persist(context.observedEntities());
 }
-test().then(() => console.log("End"));
 
-// Server.init();
-
-// console.log("teste");
+// run().then((r) => console.log("done"));

@@ -1,11 +1,11 @@
 import { IRequest } from "../../request";
 import { PipelineItem } from "../../pipeline-item";
-import { IDataStorage } from "../../../data";
+import { DataStorage } from "../../../data";
 
-export async function attachEntityType(storage: IDataStorage, entityTypeName: string) {
+export async function attachEntityType(storage: DataStorage, entityTypeName: string) {
   return async (request: IRequest, next: PipelineItem) => {
-    const entityType = storage.entityTypes.find((c) => c.name === entityTypeName);
-    request.entityType = entityType;
+    // const entityType = storage.entityTypes.find((c) => c.name === entityTypeName);
+    // request.entityType = entityType;
     return await next(request);
   };
 }

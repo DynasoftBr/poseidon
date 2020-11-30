@@ -1,56 +1,80 @@
-import { Entity, IUser, SysEntities, SysUsers, PropertyTypes } from "@poseidon/core-models";
+import { Entity, IUser, EntityType, EntityTypeCommands, Paginated, SysEntities } from "@poseidon/core-models";
 import { IResponse } from "../pipelines/response";
 import { IQueryResponse } from "../pipelines/query/query-response";
-import { CommandPipeline } from "../pipelines/command/command-pipeline";
 import { QueryRequestPipeline } from "../pipelines/query/query-request-pipeline";
-import { QueryBuilder } from "../../poseidon-query-builder/entity-query-builder";
 import { Query } from "../query-builder/interfaces/query";
-import { IDataStorage } from ".";
-import { DatabaseError, SysMsgs } from "../exceptions";
-import * as util from "util";
-import { MutationCollection } from "./storage/mutation-collection";
-import { ObservedEntity } from "./mutation/observed-entity";
+import { DataStorage } from ".";
 import { Queryable } from "../query-builder/queryable";
-import { EntityMutationState } from "./mutation/entity-mutation-state";
+import { ObservedEntityCollection } from "./mutation/observed-entity-collection";
+import { PaginatedResult, SimpleKeys } from "../query-builder/interfaces/utility-types";
+import { MutationState } from "./mutation/mutation-state";
+import { builtInEntries } from "./builtin-entries";
+import { UserInfo } from "os";
+
+export type Test = {
+  name: string;
+  test: number;
+  [key: string]: any;
+};
 
 export class Context {
-  #observed: ObservedEntity[];
-  #mutated = new MutationCollection();
-  #events = new MutationCollection();
-  #storage: IDataStorage;
+  #storage: DataStorage;
+  #observedEntities: ObservedEntityCollection;
+  #loggedUser: IUser;
 
-  private constructor(storage: IDataStorage, public readonly user: IUser) {
+  private constructor(storage: DataStorage) {
     this.#storage = storage;
+    this.#observedEntities = new ObservedEntityCollection(this);
   }
 
-  public static async create(userName: string, pass: string, repoFac: IDataStorage): Promise<Context> {
+  public static async create(userName: string, pass: string, storage: DataStorage): Promise<Context> {
     // const userRepo = await repoFac.createById<IUser>(SysEntities.user);
     // const user = await userRepo.findById(SysUsers.root);
     // return new Context(repoFac, user);
-    throw "Not implemented";
+
+    var ctx = new Context(storage);
+    const user = await ctx.getById<IUser>(SysEntities.user, builtInEntries.rootUser._id);
+
+    ctx.#loggedUser = user;
+
+    return ctx;
   }
 
-  public async getById<T extends Entity = Entity>(entityTypeName: string, id: string): Promise<IResponse<IQueryResponse<T>>> {
-    // const entityType = await (await this.repoFac.entityType()).findOne({ name: entityTypeName });
-    // const query = new QueryBuilder().where("_id", "$eq", id).getResult();
-    // const queryRequest = await QueryRequestPipeline.create<T>(this, entityType, query, this.repoFac);
-    // return await queryRequest.handle();
-
-    throw "Not implemented";
+  public getEntityTypeByName(name: string): EntityType {
+    return this.#storage.getEntityTypeByName(name);
   }
 
-  public query<T extends Entity = Entity>(entityTypeName: string, query: Query<T>): Queryable<Entity> {
-    return this.#storage.query(entityTypeName, (res: Entity | Entity[]) => {
-      if (Array.isArray(res)) {
-        return res.map((i) => {
-          const observed = this.#mutated.add(i as T, this.#storage.entityTypesByName.get(entityTypeName), EntityMutationState.unchanged);
-          return observed as any as T;
-        });
-      } else {
-        const observed = this.#mutated.add(res as T, this.#storage.entityTypesByName.get(entityTypeName), EntityMutationState.unchanged);
-        return observed as any as T;
+  public async getById<T extends Entity = Entity>(entityTypeName: string, id: string): Promise<T> {
+    var entity = (await (this.query<Entity>(entityTypeName)
+      .filter((f) => f.where("_id", "$eq", id))
+      .first() as unknown)) as T;
+
+    return entity;
+  }
+
+  public query<T extends Entity>(entityTypeName: string): Queryable<T> {
+    return new Queryable<T>(
+      async (query): Promise<any> => {
+        const result = await this.#storage.query<T>(entityTypeName, query);
+        const entityType = await this.#storage.getEntityTypeByName(entityTypeName);
+        const observedItems: T[] = [];
+        const dataArr: T[] = query.$take ? [...(<Paginated<T>>result).items] : <T[]>result;
+
+        for (const item of dataArr) {
+          const observed = this.#observedEntities.attach(item, entityType);
+          observedItems.push(observed);
+        }
+
+        if (query.$first) {
+          return observedItems[0];
+        } else if (query.$take) {
+          const page = <PaginatedResult<T>>result;
+          return <PaginatedResult<T>>{ items: observedItems, total: page.total, page: page.page };
+        } else {
+          return observedItems;
+        }
       }
-    });
+    );
   }
 
   public async command(name: string, entityTypeName: string, payload: any) {
@@ -62,20 +86,25 @@ export class Context {
     throw "Not implemented";
   }
 
-  public addEvent<T extends Entity = Entity>(entityTypeName: string, eventName: string, payload: Partial<Entity>): T {
-    const newEt = {} as T;
-    const entityType = this.#storage.entityTypesByName.get(entityTypeName);
-    if (entityType == null) throw new DatabaseError(SysMsgs.error.entityTypeNotFound);
+  public newEntity<T extends Entity>(entityTypeName: string): T {
+    const entityType = this.#storage.getEntityTypeByName(entityTypeName);
 
-    return (this.#mutated.add(newEt, entityType, EntityMutationState.added) as any) as T;
+    return this.#observedEntities.attach(
+      {
+        _id: this.#storage.newId(),
+        _createdAt: new Date(),
+        _createdBy: this.#loggedUser,
+      } as T,
+      entityType,
+      MutationState.added
+    );
   }
 
-  public attach(entity: Entity) {
-    if (entity == null) throw new Error(util.format(SysMsgs.error.ParameterCannotBeNull, "entity"));
+  public observedEntities() {
+    return this.#observedEntities.toArray();
+  }
 
-    const observed = <ObservedEntity>(<any>entity);
-    if (!observed.setState) throw new Error(util.format(SysMsgs.error.ParameterCannotBeNull, "entity"));
-
-    this.#observed.push(observed);
+  public loggedUser(): IUser {
+    return Object.assign({}, this.#loggedUser);
   }
 }

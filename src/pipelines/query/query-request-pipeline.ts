@@ -5,10 +5,10 @@ import { Entity, EntityType } from "@poseidon/core-models";
 import { IQueryResponse } from "./query-response";
 import { Context } from "../../data/context";
 import { queryDataFromRepo } from "./common/query-data-from-repo";
-import { IQueryModel } from "../../../poseidon-query-builder/query-model";
+import { Query } from "../../query-builder/interfaces/query";
 
 export class QueryRequestPipeline<TResponse extends Entity = Entity> extends RequestPipeline<any, IQueryResponse<TResponse>> {
-  private constructor(context: Context, entityType: EntityType, query: IQueryModel) {
+  public constructor(context: Context, entityType: EntityType, query: Query<TResponse>) {
     super({ context, entityType, query } as IQueryRequest, [queryDataFromRepo]);
   }
 }

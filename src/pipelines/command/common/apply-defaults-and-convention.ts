@@ -17,7 +17,7 @@ export async function applyDefaultsAndConvention<T extends Entity>(
     //   (content as any)[name] = parseDefault(validation.default, validation.type);
 
     // Apply convention.
-    if (convention && content[name]) (content as any)[name] = toConvention(content[name], convention);
+    if (convention && content[name as keyof Entity]) (content as any)[name] = toConvention(content[name as keyof Entity], convention);
   });
 
   return await next(request);

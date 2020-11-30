@@ -12,19 +12,22 @@ import * as koaLogger from "koa-logger";
 import { ApiV1 } from "./v1/api-v1";
 
 import { AddressInfo } from "net";
-import { IDataStorage } from "./data";
+import { DataStorage } from "./data";
 import { SysMsgs } from "./exceptions";
 import { env } from "./env.config";
 
 // Middlewares
 import { unhandledException } from "./middlewares/exception-middleware";
-import { PostgresStorage } from "./data/storage/postgres/postgres-storage";
+import { MongoDbStorage } from "./data/storage/mongodb/mongodb-storage";
+import { LocalProcessCache } from "./data/cache/local-process-cache";
 
 export async function init(): Promise<void> {
+  const cache = new LocalProcessCache();
+
   // Connect to the storage.
-  const storage = new PostgresStorage(env.storage);
+  const storage: DataStorage = await MongoDbStorage.init({ dbName: env.storage.db, url: env.storage.host }, cache);
+
   try {
-    await storage.testConnection();
     // storage.feed();
 
     initApp(storage);
@@ -34,7 +37,7 @@ export async function init(): Promise<void> {
   }
 }
 
-function initApp(storage: IDataStorage) {
+function initApp(storage: DataStorage) {
   /**
    * Create Express server.
    */
@@ -42,7 +45,7 @@ function initApp(storage: IDataStorage) {
   const cors = require("@koa/cors");
 
   /**
-   * Express configuration.
+   * Koa configuration.
    */
   app.use(koaLogger());
   app.use(compress());

@@ -8,16 +8,16 @@ export async function queryDataFromRepo<T extends object = object, TResponse ext
   request: IQueryRequest<T, TResponse>,
   next: PipelineItem<T, IQueryResponse<TResponse>>
 ): Promise<IResponse<IQueryResponse<TResponse>>> {
-  const { repoFactory, entityType, query } = request;
-  const repo = await repoFactory.createById<TResponse>(entityType._id);
+  const { entityType, query } = request;
+  // const repo = await repoFactory.createById<TResponse>(entityType._id);
 
-  const result = await repo.findMany(query);
-  request.response = {
-    result: {
-      total: result.length,
-      data: result
-    }
-  };
+  // const result = await repo.findMany(query);
+  // request.response = {
+  //   result: {
+  //     total: result.length,
+  //     data: result
+  //   }
+  // };
 
   return next(request);
 }

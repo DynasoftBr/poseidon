@@ -1,7 +1,4 @@
-import {
-  IncludableKeys, ExtractIncludable,
-  ConditionGroup, QueryAggregate, HavingConditionGroup, IncludedKeys
-} from "./utility-types";
+import { ConditionGroup, QueryAggregate, HavingConditionGroup, IncludedKeys } from "./utility-types";
 
 export interface Query<T> {
   $recursive?: boolean;
@@ -13,6 +10,6 @@ export interface Query<T> {
   $select?: string[];
   $skip?: number;
   $take?: number;
-  $first?: boolean
-  $noTrack?: boolean
+  $first?: boolean;
+  $noTrack?: boolean;
 }

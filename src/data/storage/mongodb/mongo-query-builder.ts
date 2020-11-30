@@ -1,12 +1,12 @@
-import { EntityType, SysProperties, SimpleTypes } from "@poseidon/core-models/src";
-import { Query } from "./query-builder/interfaces/query";
-import { IncludedKeys, Condition, ConditionGroup, SimpleKeys, Operators } from "./query-builder/interfaces/utility-types";
-import { DatabaseError, SysMsgs } from "./exceptions";
+import { EntityType, SysProperties, SimpleTypes, SysEntities, RelationKind } from "@poseidon/core-models";
+import { Query } from "../../../query-builder/interfaces/query";
+import { IncludedKeys, Condition, ConditionGroup, SimpleKeys, Operators } from "../../../query-builder/interfaces/utility-types";
+import { DatabaseError, SysMsgs } from "../../../exceptions";
 import { MongoAggregate, MongoLookup, MongoProjection, MongoMatch, MongoMatchOperator } from "./mongo-aggregate";
-import { Queryable } from "./query-builder/queryable";
-import { BuiltInEntries } from "./data";
+import { Queryable } from "../../../query-builder/queryable";
+import { preProcessFile } from "typescript";
 
-class MongoQueryBuilder {
+export class MongoQueryBuilder {
   public async buildQuery<T = any>(entityType: EntityType, query: Query<T>): Promise<MongoAggregate[]> {
     const where = this.buildWhere(query.$where, entityType.name);
     const included = await this.buildInclude(query.$include, entityType);
@@ -35,22 +35,32 @@ class MongoQueryBuilder {
 
       const included = await this.buildQuery(includedEt, includedQuery);
       var lookup: MongoLookup = {
-        from: "Relationship",
+        from: SysEntities.relationLink,
         let: { localField: `$${SysProperties._id}` },
         as: prop.name,
         pipeline: [
-          { $match: { $expr: { $eq: [`$this`, `$$localField`] } } },
+          {
+            $match: {
+              $expr: { $eq: [`$${SysProperties.thisId}`, `$$localField`] },
+              [SysProperties.relationPropId]: prop._id,
+            },
+          },
           {
             $lookup: {
               from: includedEt.name,
-              let: { foreignField: "$that" },
+              let: { foreignField: `$${SysProperties.thatId}` },
               as: "included",
               pipeline: [{ $match: { $expr: { $eq: [`$${SysProperties._id}`, "$$foreignField"] } } }, ...included],
             },
           },
+          { $addFields: { [`included`]: { $arrayElemAt: [`$included`, 0] } } },
         ],
       };
       lookups.push({ $lookup: lookup });
+
+      if (prop.relationKind === RelationKind.hasOne || prop.relationKind === RelationKind.belongsToOne) {
+        lookups.push({ $addFields: { [`${prop.name}`]: { $arrayElemAt: [`$${prop.name}`, 0] } } });
+      }
     }
 
     return lookups;
@@ -74,7 +84,7 @@ class MongoQueryBuilder {
   }
 
   private buildWhere<T>(conditionGroup: ConditionGroup<T>, root: string): MongoAggregate {
-    if (conditionGroup == null) return {}; // Empty match, which matches everything.
+    if (conditionGroup == null) return { $match: {} }; // Empty match, which matches everything.
 
     const buildClauses = (conditionGroup: ConditionGroup<T>, root: string): MongoMatch => {
       var mongoMatch: MongoMatch = {};
@@ -120,23 +130,3 @@ class MongoQueryBuilder {
     }
   }
 }
-
-new Queryable<EntityType>(async (r) => {
-  var mongoBuilder = new MongoQueryBuilder();
-  var builtIn = new BuiltInEntries();
-
-  var result = await mongoBuilder.buildQuery(builtIn.entityType, r);
-  console.log(JSON.stringify(r, null, 4));
-  return null;
-})
-  .filter((q) => q.where("name", "$eq", "EntityType"))
-  .include("_changedBy", (q) =>
-    q.filter((s) => s.where("_state", "$eq", "alive")
-                        .$or((b) => b.where("_state", "$eq", "alive"))
-                     .where("login", "$eq", "root"))
-     .include("_changedBy")
-  ).select("_id")
-  .toArray()
-  .then((r) => {
-    console.log(JSON.stringify(r, null, 4));
-  });

@@ -1,7 +1,8 @@
 import { Entity } from "@poseidon/core-models";
-export class ObservedColectionProxyHandler {
+export class ObservedCollectionProxyHandler {
   public get?(target: any, p: string, receiver: any): any {
     const val = target[p];
+    
     if (typeof val === "function") {
       if (["push", "unshift"].includes(p)) {
         return function (el: Entity) {
@@ -22,7 +23,6 @@ export class ObservedColectionProxyHandler {
     return val;
   }
   public set?(target: any, p: number, value: any, receiver: any): boolean {
-    console.log("mutating 4");
     target[p] = value;
     return true;
   }

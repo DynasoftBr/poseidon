@@ -6,14 +6,15 @@ import {
   FilterBuilderInterface,
   HavingBuilder,
   AggregateBuilder,
-  PaginatedResult,
+  SimpleKeys,
+  KnownKeys,
 } from "./utility-types";
 
 export type IncludeBuilder<T, TRoot, K extends IncludableKeys<T>, TResult> = (
   builder: QueryBuilder<ExtractIncludable<T, K>, TRoot>
-) => QueryBuilder<T, TRoot, TResult>;
+) => QueryBuilder<ExtractIncludable<T, K>, TRoot, TResult>;
 
-export interface QueryBuilder<T, TRoot = T, TResult = Simplified<T>, Paginated = false> {
+export interface QueryBuilder<T, TRoot = T, TResult = T, Paginated = false> {
   include<K extends IncludableKeys<T>>(key: K): QueryBuilder<T, TRoot, Included<T, TResult, K>, Paginated>;
   include<K extends IncludableKeys<T>, R>(
     key: K,

@@ -1,10 +1,12 @@
-import { Queryable } from "./query-builder/queryable";
+import { Queryable } from "../../../query-builder/queryable";
 
 export interface MongoAggregate {
   $lookup?: MongoLookup;
   $replaceRoot?: { newRoot: string };
   $match?: MongoMatch;
   $project?: MongoProjection;
+  $unwind?: string;
+  $addFields?: any; 
 }
 
 export interface MongoLookup {

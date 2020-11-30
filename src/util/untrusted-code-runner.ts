@@ -2,7 +2,7 @@ import { VM, VMScript, NodeVM } from "vm2";
 import * as ts from "typescript";
 
 class UntrustedCodeRunner {
-  private scriptMap = new Map<string, VMScript>();
+  private scriptMap = new Map<string, any>();
 
   public async run<TResponse = any>(code: string, sandbox?: any, isTs?: boolean): Promise<TResponse> {
     let script = this.scriptMap.get(code);

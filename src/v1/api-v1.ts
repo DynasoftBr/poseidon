@@ -5,14 +5,14 @@ import { ParameterizedContext } from "koa";
 import { Entity } from "@poseidon/core-models";
 import { Context } from "../data/context";
 import qs = require("qs");
-import { IDataStorage } from "../data";
+import { DataStorage } from "../data";
 
 export class ApiV1 {
-  private constructor(private readonly storage: IDataStorage) {}
+  private constructor(private readonly storage: DataStorage) {}
 
   private static router: Router;
 
-  public static getRouter(storage: IDataStorage) {
+  public static getRouter(storage: DataStorage) {
     if (ApiV1.router) return ApiV1.router;
 
     const router = (ApiV1.router = new Router());
@@ -56,10 +56,10 @@ export class ApiV1 {
     query.$skip = query.$skip ? parseInt(query.$skip) : undefined;
     query.$limit = query.$limit ? parseInt(query.$limit) : undefined;
 
-    const response = await pContext.query(ctx.params.etName, query);
+    // const response = await pContext.query(ctx.params.etName, query);
 
-    ctx.status = HttpStatus.OK;
-    ctx.body = response;
+    // ctx.status = HttpStatus.OK;
+    // ctx.body = response;
   }
 
   /**

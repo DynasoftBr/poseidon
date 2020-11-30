@@ -11,17 +11,6 @@
       "program": "${workspaceFolder}/src/index.ts",
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug",
-      "program": "${workspaceRoot}/src/index.ts",
-      "smartStep": true,
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "protocol": "inspector",
-      "preLaunchTask": "$tsc",
-      "sourceMaps": true
     }
   ]
 }

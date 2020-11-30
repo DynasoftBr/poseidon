@@ -8,6 +8,9 @@
     "outDir": "dist",
     "baseUrl": "../",
     "lib": ["esnext"],
+    "types": ["reflect-metadata"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "paths": {
       "*": ["node_modules/*", "src/types/*"]
     },
