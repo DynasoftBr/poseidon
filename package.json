@@ -43,7 +43,7 @@
     "koa-router": "7.4.0",
     "lodash": "4.17.15",
     "lokijs": "1.5.8",
-    "moment": "2.24.0",
+    "moment": "2.29.2",
     "mongodb": "3.5.2",
     "mongodb-memory-server": "^6.2.4",
     "socketcluster-server": "^15.0.1",
