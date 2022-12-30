@@ -67,7 +67,7 @@
     "@types/mongodb": "3.3.14",
     "@types/node": "13.1.8",
     "chai": "4.2.0",
-    "mocha": "7.0.0",
+    "mocha": "10.2.0",
     "nodemon": "2.0.2",
     "rimraf": "3.0.0",
     "typescript": "3.7.5",
