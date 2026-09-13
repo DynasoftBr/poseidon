@@ -1,0 +1,6 @@
+MESSAGE=$(cat "$1")
+
+if ! echo "$MESSAGE" | grep -qE '^(feat|fix|refactor|docs|test|chore|build|ci|perf|style|revert)\([a-z0-9@/-]+\): .+$'; then
+    echo "Expected commit format: <type>(<scope>): <subject>"
+    exit 1
+fi

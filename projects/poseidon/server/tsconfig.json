@@ -1,0 +1,15 @@
+{
+    "extends": "../../../tsconfig.base.json",
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "types": ["node", "vitest/globals"]
+    },
+    "references": [
+        { "path": "../../packages/data-access" },
+        { "path": "../../packages/runtime" },
+        { "path": "../../packages/service-utils" }
+    ],
+    "include": ["src/**/*"]
+}
