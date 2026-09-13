@@ -1,7 +1,7 @@
+import { toMongoSpecification } from './mongo-specification';
 import {
     entityMutationErrorCodes,
     type EntityEvent,
-    type EntityFilter,
     type Entity,
     type QueryEntitiesCommand,
 } from '@poseidon/model';
@@ -41,12 +41,17 @@ export class MongoEventProjectionStore {
         };
     }
 
-    public async findByEntityType(command: QueryEntitiesCommand): Promise<Entity[]> {
+    public async findByEntityType(
+        command: QueryEntitiesCommand,
+        propertyNames: ReadonlyMap<string, string>,
+    ): Promise<Entity[]> {
         const documents = await this.getProjectionCollection()
             .find({
                 entityTypeId: command.entityTypeId,
                 deletedAt: { $exists: false },
-                ...toMongoFilter(command.filter),
+                ...(command.filter === undefined
+                    ? {}
+                    : { $expr: toMongoSpecification(command.filter, propertyNames) }),
             })
             .skip(command.offset ?? 0)
             .limit(command.limit ?? 100)
@@ -182,25 +187,3 @@ function isDuplicateKeyError(error: unknown): error is { code: number } {
 }
 
 type StoredProjection = Omit<Entity, 'id'> & { _id: string };
-
-function toMongoFilter(filter: EntityFilter | undefined): Record<string, unknown> {
-    if (!filter) return {};
-
-    if (filter.operator === 'equals') {
-        return { [`data.${validatePropertyName(filter.property)}`]: filter.value };
-    }
-    if (filter.operator === 'contains') {
-        return { [`data.${validatePropertyName(filter.property)}`]: { $in: [filter.value] } };
-    }
-
-    const conditions = filter.filters.map(toMongoFilter);
-    return filter.operator === 'and' ? { $and: conditions } : { $or: conditions };
-}
-
-function validatePropertyName(property: string): string {
-    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(property)) {
-        throw new Error(`Invalid query property '${property}'.`);
-    }
-
-    return property;
-}

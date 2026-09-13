@@ -8,3 +8,4 @@ export * from './entity-property';
 export * from './entity-type';
 export * from './index-definition';
 export * from './system-user';
+export * from './specification';

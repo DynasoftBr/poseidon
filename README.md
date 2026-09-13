@@ -43,7 +43,7 @@ curl -X POST http://localhost:3000/api/v1/entities/person \
 
 curl -X POST http://localhost:3000/api/v1/entities/person/query \
   -H 'content-type: application/json' \
-  -d '{"filter":{"operator":"equals","property":"name","value":"Ada Lovelace"}}'
+  -d '{"filter":{"kind":"comparison","propertyId":"person:name","operator":"equals","value":"Ada Lovelace"}}'
 
 curl http://localhost:3000/api/v1/entities/person/ada
 

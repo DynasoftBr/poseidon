@@ -51,25 +51,49 @@ describe('MongoEventProjectionStore', () => {
         fake.entities.findOne.mockResolvedValueOnce(null);
         await expect(store.findProjection('missing')).resolves.toBeNull();
         await expect(
-            store.findByEntityType({
-                entityTypeId: 'person',
-                filter: {
-                    operator: 'and',
-                    filters: [
-                        { operator: 'equals', property: 'name', value: 'Ada' },
-                        { operator: 'contains', property: 'tags', value: 'math' },
-                    ],
+            store.findByEntityType(
+                {
+                    entityTypeId: 'person',
+                    filter: {
+                        kind: 'and',
+                        conditions: [
+                            {
+                                kind: 'comparison',
+                                operator: 'equals',
+                                propertyId: 'person:name',
+                                value: 'Ada',
+                            },
+                            {
+                                kind: 'comparison',
+                                operator: 'contains',
+                                propertyId: 'person:tags',
+                                value: 'math',
+                            },
+                        ],
+                    },
+                    offset: 2,
+                    limit: 5,
                 },
-                offset: 2,
-                limit: 5,
-            }),
+                new Map([
+                    ['person:name', 'name'],
+                    ['person:tags', 'tags'],
+                ]),
+            ),
         ).resolves.toHaveLength(1);
         await expect(
-            store.findByEntityType({
-                entityTypeId: 'person',
-                filter: { operator: 'equals', property: '$unsafe', value: true },
-            }),
-        ).rejects.toThrow("Invalid query property '$unsafe'.");
+            store.findByEntityType(
+                {
+                    entityTypeId: 'person',
+                    filter: {
+                        kind: 'comparison',
+                        operator: 'equals',
+                        propertyId: '$unsafe',
+                        value: true,
+                    },
+                },
+                new Map(),
+            ),
+        ).rejects.toThrow("Invalid specification property '$unsafe'.");
 
         expect(fake.entities.find).toHaveBeenCalledWith(
             expect.objectContaining({ entityTypeId: 'person', deletedAt: { $exists: false } }),

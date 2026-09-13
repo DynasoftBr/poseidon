@@ -7,3 +7,4 @@ export * from './entity-validator';
 export * from './event-publisher';
 export * from './poseidon-error';
 export * from './relation-events';
+export * from './specification';

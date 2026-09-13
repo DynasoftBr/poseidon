@@ -1,3 +1,4 @@
+import { validateSpecification } from './specification';
 /* eslint-disable complexity, max-lines, max-lines-per-function, max-params */
 import {
     entityEventTypes,
@@ -27,7 +28,10 @@ export interface EntityStore {
     hasEntity(id: string): Promise<boolean>;
     findProjection(id: string): Promise<Entity | null>;
     commit(events: EntityEvent[]): Promise<void>;
-    findByEntityType?(command: QueryEntitiesCommand): Promise<Entity[]>;
+    findByEntityType?(
+        command: QueryEntitiesCommand,
+        propertyNames: ReadonlyMap<string, string>,
+    ): Promise<Entity[]>;
 }
 
 /** Creates records for any EntityType through the same event/projection path. */
@@ -107,7 +111,7 @@ export class EntityService {
     }
 
     public async query(command: QueryEntitiesCommand): Promise<Entity[]> {
-        await this.requireEntityType(command.entityTypeId);
+        const entityType = await this.requireEntityType(command.entityTypeId);
         if (!this.store.findByEntityType) {
             throw new Error('Entity queries are not configured.');
         }
@@ -128,7 +132,12 @@ export class EntityService {
             ]);
         }
 
-        return this.store.findByEntityType(command);
+        const properties = await this.getProperties(entityType);
+        const propertyNames = new Map(
+            properties.map((property) => [property.id, property.data.name]),
+        );
+        if (command.filter !== undefined) validateSpecification(command.filter, propertyNames);
+        return this.store.findByEntityType(command, propertyNames);
     }
 
     public async update(command: UpdateEntityCommand, actorId: string): Promise<Entity> {

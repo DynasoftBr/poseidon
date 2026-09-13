@@ -1,4 +1,5 @@
 import type { EntityData, EntityId } from './entity';
+import type { Specification } from './specification';
 
 export interface NestedEntityEnvelope {
     id: EntityId;
@@ -27,13 +28,7 @@ export interface DeleteEntityCommand {
 
 export interface QueryEntitiesCommand {
     entityTypeId: EntityId;
-    filter?: EntityFilter;
+    filter?: Specification;
     limit?: number;
     offset?: number;
 }
-
-export type EntityFilter =
-    | { operator: 'equals'; property: string; value: unknown }
-    | { operator: 'contains'; property: string; value: unknown }
-    | { operator: 'and'; filters: EntityFilter[] }
-    | { operator: 'or'; filters: EntityFilter[] };

@@ -1,4 +1,5 @@
 import type { EntityId } from './entity';
+import type { Specification } from './specification';
 
 /** A declarative mutation supported by an EntityType. */
 export interface EntityCommand {
@@ -18,22 +19,6 @@ export interface EntityRule {
     specification: Specification;
     consequence: RuleConsequence;
 }
-
-export type Specification =
-    | { kind: 'comparison'; propertyId: EntityId; operator: ComparisonOperator; value: unknown }
-    | { kind: 'and'; conditions: Specification[] }
-    | { kind: 'or'; conditions: Specification[] }
-    | { kind: 'not'; condition: Specification };
-
-export const comparisonOperators = [
-    'equals',
-    'not-equals',
-    'greater-than',
-    'less-than',
-    'contains',
-    'exists',
-] as const;
-export type ComparisonOperator = (typeof comparisonOperators)[number];
 
 export type RuleConsequence =
     | { kind: 'reject'; message: string }

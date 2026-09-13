@@ -265,6 +265,32 @@ describe('EntityService', () => {
         });
     });
 
+    it('should resolve query specifications against the requested type before querying', async () => {
+        const store = graphStore([]);
+        const query = vi.spyOn(store, 'findByEntityType');
+        const service = new EntityService(store, new EventPublisher());
+        const filter = {
+            kind: 'comparison',
+            propertyId: 'appointment:patient',
+            operator: 'equals',
+            value: 'patient:ada',
+        } as const;
+        await service.query({ entityTypeId: 'appointment', filter });
+        expect(query).toHaveBeenCalledWith(
+            { entityTypeId: 'appointment', filter },
+            new Map([['appointment:patient', 'patient']]),
+        );
+        query.mockClear();
+        await expect(
+            service.query({
+                entityTypeId: 'appointment',
+                filter: { ...filter, propertyId: 'patient:name' },
+            }),
+        ).rejects.toMatchObject({ code: 'validation' });
+        expect(query).not.toHaveBeenCalled();
+        expect(store.events).toEqual([]);
+    });
+
     it('should preserve unchanged nested entities and reject a new entity version', async () => {
         const store = graphStore([projection('patient:ada', 'patient', { name: 'Ada' })]);
         const service = new EntityService(store, new EventPublisher());

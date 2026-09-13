@@ -32,7 +32,11 @@ Initially, an event and its current-state projection will be written in the same
 
 `Index` entities are reconciled to MongoDB indexes at startup and when their creation event is published. The Mongo index key always includes `entityTypeId`, so the generic `entities` collection can host independent indexes for every EntityType.
 
-EntityType commands carry typed specifications and consequences. The runtime evaluates those declarative rules during create and update operations; it never evaluates code stored in the model.
+Rules and query filters share `Specification`: comparisons address model property IDs and compose with `and`, `or`, and `not`. The runtime validates the full condition against the entity type, evaluates it for mutation rules, and passes the same condition and resolved property names to data access for MongoDB query translation; queries never execute rule consequences.
+
+Comparison values are JSON scalars (strings, finite numbers, booleans, or null). Equality compares the whole field without coercion or implicit array membership; missing differs from null. `contains` means a case-sensitive literal substring for strings or exact scalar membership for arrays, without string coercion. Ordering requires numbers on both sides, and `exists` accepts a boolean and treats null as present. Empty `and` matches everything and empty `or` matches nothing. Invalid conditions or undeclared properties produce validation errors. The query filter wire format now uses the same `kind`/`propertyId` structure as rules; the former `operator`/`property` filter format is removed.
+
+EntityType commands carry specifications and consequences evaluated during create and update operations; the runtime never evaluates code stored in the model.
 
 Relationship properties create `relation-link` entities alongside their owner in the same transaction. When a property declares `reversePropertyId`, Poseidon also creates or removes the inverse link, so both relationship directions remain queryable without duplicating values into entity data. These are ordinary event-sourced projections, not a special persistence path.
 
