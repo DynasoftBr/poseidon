@@ -1,5 +1,6 @@
 import type { EntityEvent, EntityProjection } from '@poseidon/model';
 import { EventPublisher } from './event-publisher';
+import { createBootstrapEvents, createBootstrapModel } from './bootstrap-model';
 import { EntityService, type EntityStore } from './entity-service';
 
 describe('EntityService', () => {
@@ -168,10 +169,298 @@ describe('EntityService', () => {
             ]),
         );
     });
+
+    it('should create a nested reference through the same graph transaction', async () => {
+        const store = new InMemoryEntityStore([
+            projection('appointment', 'entity-type', { properties: ['appointment:patient'] }),
+            projection('appointment:patient', 'entity-property', {
+                entityTypeId: 'appointment',
+                name: 'patient',
+                type: 'reference',
+                relatedEntityTypeId: 'patient',
+            }),
+            projection('patient', 'entity-type', { properties: ['patient:name'] }),
+            projection('patient:name', 'entity-property', {
+                entityTypeId: 'patient',
+                name: 'name',
+                type: 'string',
+                required: true,
+            }),
+        ]);
+
+        const result = await new EntityService(store, new EventPublisher()).create(
+            {
+                id: 'appointment:1',
+                entityTypeId: 'appointment',
+                data: { patient: { id: 'patient:ada', data: { name: 'Ada' } } },
+            },
+            'system',
+        );
+
+        expect(result.data).toEqual({ patient: 'patient:ada' });
+        expect(store.events.map((event) => event.entityId)).toEqual([
+            'patient:ada',
+            'appointment:1',
+        ]);
+    });
+
+    it('should patch an existing nested entity only with its current version', async () => {
+        const store = graphStore([projection('patient:ada', 'patient', { name: 'Ada' })]);
+        const service = new EntityService(store, new EventPublisher());
+
+        await service.create(
+            {
+                id: 'appointment:1',
+                entityTypeId: 'appointment',
+                data: {
+                    patient: {
+                        id: 'patient:ada',
+                        expectedVersion: 1,
+                        data: { name: 'Ada Lovelace' },
+                    },
+                },
+            },
+            'system',
+        );
+
+        expect(store.events.map((event) => event.type)).toEqual([
+            'entity-updated',
+            'entity-created',
+        ]);
+        await expect(
+            service.create(
+                {
+                    id: 'appointment:2',
+                    entityTypeId: 'appointment',
+                    data: { patient: { id: 'patient:ada', data: { name: 'Ada Byron' } } },
+                },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'entity-version-conflict' });
+    });
+
+    it('should expose generic reads and declarative queries', async () => {
+        const store = graphStore([
+            projection('appointment:1', 'appointment', { patient: 'patient:ada' }),
+        ]);
+        const service = new EntityService(store, new EventPublisher());
+
+        await expect(service.get('appointment', 'appointment:1')).resolves.toMatchObject({
+            id: 'appointment:1',
+        });
+        await expect(service.get('patient', 'appointment:1')).rejects.toMatchObject({
+            code: 'entity-not-found',
+        });
+        await expect(
+            service.query({ entityTypeId: 'appointment', limit: 1 }),
+        ).resolves.toHaveLength(1);
+        await expect(
+            service.query({ entityTypeId: 'appointment', offset: -1 }),
+        ).rejects.toMatchObject({ code: 'validation' });
+        await expect(
+            service.query({ entityTypeId: 'appointment', limit: 1.5 }),
+        ).rejects.toMatchObject({ code: 'validation' });
+        await expect(service.query({ entityTypeId: 'missing' })).rejects.toMatchObject({
+            code: 'entity-type-not-found',
+        });
+    });
+
+    it('should preserve unchanged nested entities and reject a new entity version', async () => {
+        const store = graphStore([projection('patient:ada', 'patient', { name: 'Ada' })]);
+        const service = new EntityService(store, new EventPublisher());
+
+        await service.create(
+            {
+                id: 'appointment:1',
+                entityTypeId: 'appointment',
+                data: { patient: { id: 'patient:ada', data: { name: 'Ada' } } },
+            },
+            'system',
+        );
+        expect(store.events).toHaveLength(1);
+        await expect(
+            service.create(
+                {
+                    id: 'appointment:2',
+                    entityTypeId: 'appointment',
+                    data: {
+                        patient: {
+                            id: 'patient:grace',
+                            expectedVersion: 1,
+                            data: { name: 'Grace' },
+                        },
+                    },
+                },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'validation' });
+    });
+
+    it('should map transactional conflicts to domain errors', async () => {
+        const store = graphStore([]);
+        const service = new EntityService(store, new EventPublisher());
+        store.failCommitWith = { code: 'entity-already-exists' };
+        await expect(
+            service.create(
+                { id: 'appointment:1', entityTypeId: 'appointment', data: {} },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'entity-already-exists' });
+        store.failCommitWith = { code: 'entity-version-conflict' };
+        await expect(
+            service.create(
+                { id: 'appointment:2', entityTypeId: 'appointment', data: {} },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'entity-version-conflict' });
+        store.failCommitWith = new Error('write failure');
+        await expect(
+            service.create(
+                { id: 'appointment:3', entityTypeId: 'appointment', data: {} },
+                'system',
+            ),
+        ).rejects.toThrow('write failure');
+    });
+
+    it('should not commit or publish a no-op root update', async () => {
+        const store = graphStore([
+            projection('appointment:1', 'appointment', { patient: 'patient:ada' }),
+            projection('patient:ada', 'patient', { name: 'Ada' }),
+        ]);
+        const publisher = new EventPublisher();
+        const listener = vi.fn();
+        publisher.subscribe('entity-updated', listener);
+
+        const result = await new EntityService(store, publisher).update(
+            {
+                id: 'appointment:1',
+                entityTypeId: 'appointment',
+                expectedVersion: 1,
+                data: { patient: 'patient:ada' },
+            },
+            'system',
+        );
+
+        expect(result.version).toBe(1);
+        expect(store.events).toEqual([]);
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('should reject reference arrays with duplicate configured values', async () => {
+        const store = graphStore([
+            projection('group', 'entity-type', { properties: ['group:members'] }),
+            projection('group:members', 'entity-property', {
+                entityTypeId: 'group',
+                name: 'members',
+                type: 'array',
+                itemsType: 'reference',
+                relatedEntityTypeId: 'patient',
+                uniqueBy: 'name',
+            }),
+            projection('patient:ada', 'patient', { name: 'Ada' }),
+            projection('patient:ada-copy', 'patient', { name: 'Ada' }),
+        ]);
+
+        await expect(
+            new EntityService(store, new EventPublisher()).create(
+                {
+                    id: 'group:1',
+                    entityTypeId: 'group',
+                    data: { members: ['patient:ada', 'patient:ada-copy'] },
+                },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'validation' });
+    });
+
+    it('should create an EntityType with nested property definitions', async () => {
+        const bootstrap = createBootstrapEvents(createBootstrapModel('system', new Date()));
+        const store = new InMemoryEntityStore(
+            bootstrap.map((event) => projection(event.entityId, event.entityTypeId, event.data)),
+        );
+
+        const entityType = await new EntityService(store, new EventPublisher()).create(
+            {
+                id: 'product',
+                entityTypeId: 'entity-type',
+                data: {
+                    name: 'Product',
+                    label: 'Product',
+                    properties: [
+                        {
+                            id: 'product:name',
+                            data: {
+                                entityTypeId: 'product',
+                                name: 'name',
+                                type: 'string',
+                                required: true,
+                            },
+                        },
+                    ],
+                },
+            },
+            'system',
+        );
+
+        expect(entityType.data.properties).toEqual(['product:name']);
+        expect(store.events.map((event) => event.entityId)).toEqual(['product:name', 'product']);
+    });
+
+    it('should validate nested EntityProperty metadata from the bootstrap model', async () => {
+        const bootstrap = createBootstrapEvents(createBootstrapModel('system', new Date()));
+        const store = new InMemoryEntityStore(
+            bootstrap.map((event) => projection(event.entityId, event.entityTypeId, event.data)),
+        );
+
+        await expect(
+            new EntityService(store, new EventPublisher()).create(
+                {
+                    id: 'invalid',
+                    entityTypeId: 'entity-type',
+                    data: {
+                        name: 'Invalid',
+                        label: 'Invalid',
+                        properties: [
+                            {
+                                id: 'invalid:value',
+                                data: {
+                                    entityTypeId: 'invalid',
+                                    name: 'value',
+                                    type: 'not-a-property-type',
+                                },
+                            },
+                        ],
+                    },
+                },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'validation' });
+    });
 });
+
+function graphStore(extra: EntityProjection[]): InMemoryEntityStore {
+    return new InMemoryEntityStore([
+        projection('appointment', 'entity-type', { properties: ['appointment:patient'] }),
+        projection('appointment:patient', 'entity-property', {
+            entityTypeId: 'appointment',
+            name: 'patient',
+            type: 'reference',
+            relatedEntityTypeId: 'patient',
+        }),
+        projection('patient', 'entity-type', { properties: ['patient:name'] }),
+        projection('patient:name', 'entity-property', {
+            entityTypeId: 'patient',
+            name: 'name',
+            type: 'string',
+            required: true,
+        }),
+        ...extra,
+    ]);
+}
 
 class InMemoryEntityStore implements EntityStore {
     public readonly events: EntityEvent[] = [];
+    public failCommitWith: unknown;
     private readonly projections = new Map<string, EntityProjection>();
 
     public constructor(projections: EntityProjection[]) {
@@ -186,7 +475,16 @@ class InMemoryEntityStore implements EntityStore {
         return Promise.resolve(this.projections.get(id) ?? null);
     }
 
+    public findByEntityType(command: { entityTypeId: string }): Promise<EntityProjection[]> {
+        return Promise.resolve(
+            [...this.projections.values()].filter(
+                (entity) => entity.entityTypeId === command.entityTypeId,
+            ),
+        );
+    }
+
     public commit(events: EntityEvent[]): Promise<void> {
+        if (this.failCommitWith) return Promise.reject(this.failCommitWith);
         this.events.push(...events);
         events.forEach((event) => {
             const current = this.projections.get(event.entityId);

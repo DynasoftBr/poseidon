@@ -1,3 +1,4 @@
+/* eslint-disable complexity, max-lines, max-lines-per-function, max-params */
 import {
     entityEventTypes,
     entityMutationErrorCodes,
@@ -6,6 +7,7 @@ import {
     type EntityEvent,
     type EntityProjection,
     type EntityProperty,
+    type QueryEntitiesCommand,
     type UpdateEntityCommand,
 } from '@poseidon/model';
 import type { EventPublisher } from './event-publisher';
@@ -15,6 +17,7 @@ import { createRelationEvents, deleteRelationEvents } from './relation-events';
 import { validateEntity } from './entity-validator';
 import {
     EntityAlreadyExistsError,
+    EntityNotFoundError,
     EntityTypeNotFoundError,
     EntityVersionConflictError,
     ValidationError,
@@ -24,6 +27,7 @@ export interface EntityStore {
     hasEntity(id: string): Promise<boolean>;
     findProjection(id: string): Promise<EntityProjection | null>;
     commit(events: EntityEvent[]): Promise<void>;
+    findByEntityType?(command: QueryEntitiesCommand): Promise<EntityProjection[]>;
 }
 
 /** Creates records for any EntityType through the same event/projection path. */
@@ -44,16 +48,23 @@ export class EntityService {
         }
 
         const properties = await this.getProperties(entityType);
+        const prepared = await this.prepareNestedMutations(
+            command.entityTypeId,
+            command.data,
+            actorId,
+            new Map([[command.id, { entityTypeId: command.entityTypeId, data: command.data }]]),
+            new Set([command.id]),
+        );
         const data = applyEntityRules(
             getCommands(entityType),
             'create',
             properties,
-            applyDefaultsAndConventions(command.data, properties),
+            applyDefaultsAndConventions(prepared.data, properties),
         );
         const problems = validateEntity(properties, data);
 
         if (problems.length > 0) throw new ValidationError(problems);
-        await this.validateReferences(properties, data);
+        await this.validateReferences(properties, data, prepared.staged);
 
         const event: EntityEvent = {
             id: `entity-created:${command.entityTypeId}:${command.id}`,
@@ -66,6 +77,7 @@ export class EntityService {
         };
 
         const events = [
+            ...prepared.events,
             event,
             ...createRelationEvents(event, properties, data, {
                 reverseProperties: await this.getReverseProperties(properties),
@@ -84,25 +96,70 @@ export class EntityService {
         };
     }
 
+    public async get(entityTypeId: string, id: string): Promise<EntityProjection> {
+        const projection = await this.store.findProjection(id);
+
+        if (!projection || projection.entityTypeId !== entityTypeId || projection.deletedAt) {
+            throw new EntityNotFoundError(id);
+        }
+
+        return projection;
+    }
+
+    public async query(command: QueryEntitiesCommand): Promise<EntityProjection[]> {
+        await this.requireEntityType(command.entityTypeId);
+        if (!this.store.findByEntityType) {
+            throw new Error('Entity queries are not configured.');
+        }
+        if (
+            command.limit !== undefined &&
+            (!Number.isInteger(command.limit) || command.limit < 1)
+        ) {
+            throw new ValidationError([
+                { property: 'limit', message: 'Limit must be a positive integer.' },
+            ]);
+        }
+        if (
+            command.offset !== undefined &&
+            (!Number.isInteger(command.offset) || command.offset < 0)
+        ) {
+            throw new ValidationError([
+                { property: 'offset', message: 'Offset must be a non-negative integer.' },
+            ]);
+        }
+
+        return this.store.findByEntityType(command);
+    }
+
     public async update(command: UpdateEntityCommand, actorId: string): Promise<EntityProjection> {
         const current = await this.requireCurrent(
             command.entityTypeId,
             command.id,
             command.expectedVersion,
         );
-        const properties = await this.getProperties(
-            await this.requireEntityType(command.entityTypeId),
+        const entityType = await this.requireEntityType(command.entityTypeId);
+        const properties = await this.getProperties(entityType);
+        const prepared = await this.prepareNestedMutations(
+            command.entityTypeId,
+            command.data,
+            actorId,
+            new Map([[command.id, { entityTypeId: command.entityTypeId, data: current.data }]]),
+            new Set([command.id]),
         );
         const data = applyEntityRules(
-            getCommands(await this.requireEntityType(command.entityTypeId)),
+            getCommands(entityType),
             'update',
             properties,
-            applyDefaultsAndConventions({ ...current.data, ...command.data }, properties),
+            applyConventions({ ...current.data, ...prepared.data }, properties),
         );
         const problems = validateEntity(properties, data);
 
         if (problems.length > 0) throw new ValidationError(problems);
-        await this.validateReferences(properties, data);
+        await this.validateReferences(properties, data, prepared.staged);
+
+        if (sameData(current.data, data) && prepared.events.length === 0) {
+            return current;
+        }
 
         const event: EntityEvent = {
             id: `entity-updated:${command.entityTypeId}:${command.id}:${command.expectedVersion + 1}`,
@@ -116,6 +173,7 @@ export class EntityService {
         };
 
         const events = [
+            ...prepared.events,
             event,
             ...createRelationEvents(event, properties, data, {
                 previousData: current.data,
@@ -207,12 +265,133 @@ export class EntityService {
         return projections.map((projection, index) => toProperty(projection, propertyIds[index]));
     }
 
+    private async prepareNestedMutations(
+        entityTypeId: string,
+        input: Record<string, unknown>,
+        actorId: string,
+        staged: Map<string, StagedEntity>,
+        definitions: Set<string>,
+    ): Promise<PreparedGraph> {
+        const entityType = await this.requireEntityType(entityTypeId);
+        const properties = await this.getProperties(entityType);
+        const data = { ...input };
+        const events: EntityEvent[] = [];
+
+        for (const property of properties.filter((candidate) => isReference(candidate))) {
+            const value = data[property.name];
+            if (value === undefined) continue;
+            const values = Array.isArray(value) ? value : [value];
+            const ids = await Promise.all(
+                values.map(async (reference) => {
+                    if (!isNestedEnvelope(reference)) return reference;
+                    if (definitions.has(reference.id)) {
+                        throw new ValidationError([
+                            {
+                                property: property.name,
+                                message: `Entity '${reference.id}' is defined more than once.`,
+                            },
+                        ]);
+                    }
+                    definitions.add(reference.id);
+                    const nested = await this.prepareNestedMutations(
+                        property.relatedEntityTypeId ?? '',
+                        reference.data,
+                        actorId,
+                        staged,
+                        definitions,
+                    );
+                    events.push(...nested.events);
+                    const existing = await this.store.findProjection(reference.id);
+                    if (!existing && reference.expectedVersion !== undefined) {
+                        throw new ValidationError([
+                            {
+                                property: property.name,
+                                message: 'New nested entities cannot specify an expected version.',
+                            },
+                        ]);
+                    }
+                    const nestedType = await this.requireEntityType(
+                        property.relatedEntityTypeId ?? '',
+                    );
+                    const nestedProperties = await this.getProperties(nestedType);
+                    const nextData = existing
+                        ? applyEntityRules(
+                              getCommands(nestedType),
+                              'update',
+                              nestedProperties,
+                              applyConventions(
+                                  { ...existing.data, ...nested.data },
+                                  nestedProperties,
+                              ),
+                          )
+                        : applyEntityRules(
+                              getCommands(nestedType),
+                              'create',
+                              nestedProperties,
+                              applyDefaultsAndConventions(nested.data, nestedProperties),
+                          );
+                    const problems = validateEntity(nestedProperties, nextData);
+                    if (problems.length > 0) throw new ValidationError(problems);
+                    staged.set(reference.id, {
+                        entityTypeId: property.relatedEntityTypeId ?? '',
+                        data: nextData,
+                    });
+                    await this.validateReferences(nestedProperties, nextData, staged);
+                    if (!existing) {
+                        const event = createEvent(
+                            'entity-created',
+                            property.relatedEntityTypeId ?? '',
+                            reference.id,
+                            nextData,
+                            actorId,
+                        );
+                        events.push(
+                            event,
+                            ...createRelationEvents(event, nestedProperties, nextData, {
+                                reverseProperties:
+                                    await this.getReverseProperties(nestedProperties),
+                            }),
+                        );
+                    } else if (!sameData(existing.data, nextData)) {
+                        if (
+                            reference.expectedVersion === undefined ||
+                            reference.expectedVersion !== existing.version
+                        ) {
+                            throw new EntityVersionConflictError(reference.id);
+                        }
+                        const event = createEvent(
+                            'entity-updated',
+                            property.relatedEntityTypeId ?? '',
+                            reference.id,
+                            nextData,
+                            actorId,
+                            existing.version,
+                        );
+                        events.push(
+                            event,
+                            ...createRelationEvents(event, nestedProperties, nextData, {
+                                previousData: existing.data,
+                                reverseProperties:
+                                    await this.getReverseProperties(nestedProperties),
+                            }),
+                        );
+                    }
+                    return reference.id;
+                }),
+            );
+            data[property.name] = Array.isArray(value) ? ids : ids[0];
+        }
+
+        return { data, events, staged };
+    }
+
     private async validateReferences(
         properties: EntityProperty[],
         data: Record<string, unknown>,
+        staged = new Map<string, StagedEntity>(),
     ): Promise<void> {
         const references = properties.filter(
-            (property) => property.type === 'reference' && data[property.name] !== undefined,
+            (property) => isReference(property) && data[property.name] !== undefined,
         );
 
         const problems = (
@@ -221,20 +400,45 @@ export class EntityService {
                     const value = data[property.name];
                     const ids = Array.isArray(value) ? value : [value];
                     const projections = await Promise.all(
-                        ids.map((id) => this.store.findProjection(String(id))),
+                        ids.map((id) => {
+                            const stagedEntity = staged.get(String(id));
+                            return stagedEntity
+                                ? projection(
+                                      String(id),
+                                      stagedEntity.entityTypeId,
+                                      stagedEntity.data,
+                                  )
+                                : this.store.findProjection(String(id));
+                        }),
                     );
 
-                    return projections.some(
-                        (projection) =>
-                            !projection ||
-                            projection.entityTypeId !== property.relatedEntityTypeId ||
-                            projection.deletedAt,
-                    )
-                        ? {
-                              property: property.name,
-                              message: 'Reference does not point to an existing related entity.',
-                          }
-                        : undefined;
+                    if (
+                        projections.some(
+                            (projection) =>
+                                !projection ||
+                                projection.entityTypeId !== property.relatedEntityTypeId ||
+                                projection.deletedAt,
+                        )
+                    ) {
+                        return {
+                            property: property.name,
+                            message: 'Reference does not point to an existing related entity.',
+                        };
+                    }
+                    if (
+                        property.uniqueBy &&
+                        !hasUniqueReferenceValues(
+                            projections.filter(isProjection),
+                            property.uniqueBy,
+                        )
+                    ) {
+                        return {
+                            property: property.name,
+                            message: `Reference values must be unique by '${property.uniqueBy}'.`,
+                        };
+                    }
+
+                    return undefined;
                 }),
             )
         ).filter(
@@ -269,6 +473,9 @@ export class EntityService {
             if (hasCode(error, entityMutationErrorCodes.versionConflict)) {
                 throw new EntityVersionConflictError(entityId);
             }
+            if (hasCode(error, entityMutationErrorCodes.alreadyExists)) {
+                throw new EntityAlreadyExistsError(entityId);
+            }
 
             throw error;
         }
@@ -296,6 +503,90 @@ function applyDefaultsAndConventions(
     });
 
     return data;
+}
+
+function applyConventions(
+    input: Record<string, unknown>,
+    properties: EntityProperty[],
+): Record<string, unknown> {
+    return applyDefaultsAndConventions(
+        input,
+        properties.filter((property) => property.default === undefined),
+    );
+}
+
+function isReference(property: EntityProperty): boolean {
+    return (
+        property.type === 'reference' ||
+        (property.type === 'array' && property.itemsType === 'reference')
+    );
+}
+
+function isNestedEnvelope(
+    value: unknown,
+): value is { id: string; data: Record<string, unknown>; expectedVersion?: number } {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'id' in value &&
+        'data' in value &&
+        typeof value.id === 'string' &&
+        typeof value.data === 'object' &&
+        value.data !== null &&
+        (!('expectedVersion' in value) || typeof value.expectedVersion === 'number')
+    );
+}
+
+function createEvent(
+    type: EntityEvent['type'],
+    entityTypeId: string,
+    entityId: string,
+    data: Record<string, unknown>,
+    actorId: string,
+    expectedVersion?: number,
+): EntityEvent {
+    const version = expectedVersion === undefined ? '' : `:${expectedVersion + 1}`;
+    return {
+        id: `${type}:${entityTypeId}:${entityId}${version}`,
+        type,
+        entityTypeId,
+        entityId,
+        data,
+        actorId,
+        occurredAt: new Date(),
+        expectedVersion,
+    };
+}
+
+function sameData(left: Record<string, unknown>, right: Record<string, unknown>): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function hasUniqueReferenceValues(projections: EntityProjection[], property: string): boolean {
+    const values = projections.map((projection) => JSON.stringify(projection.data[property]));
+    return new Set(values).size === values.length;
+}
+
+function isProjection(projection: EntityProjection | null): projection is EntityProjection {
+    return projection !== null;
+}
+
+interface StagedEntity {
+    entityTypeId: string;
+    data: Record<string, unknown>;
+}
+interface PreparedGraph {
+    data: Record<string, unknown>;
+    events: EntityEvent[];
+    staged: Map<string, StagedEntity>;
+}
+
+function projection(
+    id: string,
+    entityTypeId: string,
+    data: Record<string, unknown>,
+): EntityProjection {
+    return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
 }
 
 function resolveDefault(value: unknown): unknown {

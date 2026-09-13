@@ -10,6 +10,7 @@ export type EntityEventType = (typeof entityEventTypes)[keyof typeof entityEvent
 
 export const entityMutationErrorCodes = {
     versionConflict: 'entity-version-conflict',
+    alreadyExists: 'entity-already-exists',
 } as const;
 
 export type EntityData = Record<string, unknown>;

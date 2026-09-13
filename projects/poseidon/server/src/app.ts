@@ -1,12 +1,10 @@
 import express, { type Express } from 'express';
-import type { CreateEntityCommand, CreateEntityTypeCommand } from '@poseidon/model';
-import type { EntityQueryService, EntityService, EntityTypeService } from '@poseidon/runtime';
+import type { CreateEntityCommand } from '@poseidon/model';
+import type { EntityService } from '@poseidon/runtime';
 import { errorMiddleware } from './error-middleware';
 
 export interface AppDependencies {
-    entityTypeService?: EntityTypeService;
     entityService?: EntityService;
-    entityQueryService?: EntityQueryService;
 }
 
 export function createApp(dependencies: AppDependencies = {}): Express {
@@ -18,14 +16,8 @@ export function createApp(dependencies: AppDependencies = {}): Express {
         response.status(200).json({ status: 'ok' });
     });
 
-    if (dependencies.entityTypeService) {
-        configureEntityTypeRoutes(app, dependencies.entityTypeService);
-    }
     if (dependencies.entityService) {
         configureEntityRoutes(app, dependencies.entityService);
-    }
-    if (dependencies.entityQueryService) {
-        configureEntityQueryRoutes(app, dependencies.entityQueryService);
     }
 
     app.use(errorMiddleware);
@@ -33,24 +25,39 @@ export function createApp(dependencies: AppDependencies = {}): Express {
     return app;
 }
 
-function configureEntityQueryRoutes(app: Express, service: EntityQueryService): void {
+function configureEntityRoutes(app: Express, service: EntityService): void {
+    configureEntityReadRoutes(app, service);
+    configureEntityMutationRoutes(app, service);
+}
+
+function configureEntityReadRoutes(app: Express, service: EntityService): void {
+    app.get('/api/v1/entities/:entityTypeId/:id', async (request, response, next) => {
+        try {
+            response
+                .status(200)
+                .json(await service.get(request.params.entityTypeId, request.params.id));
+        } catch (error: unknown) {
+            next(error);
+        }
+    });
+
     app.post('/api/v1/entities/:entityTypeId/query', async (request, response, next) => {
         try {
-            const projections = await service.list({
-                entityTypeId: request.params.entityTypeId,
-                filter: request.body.filter,
-                limit: toOptionalNumber(request.body.limit),
-                offset: toOptionalNumber(request.body.offset),
-            });
-
-            response.status(200).json(projections);
+            response.status(200).json(
+                await service.query({
+                    entityTypeId: request.params.entityTypeId,
+                    filter: request.body.filter,
+                    limit: toOptionalNumber(request.body.limit),
+                    offset: toOptionalNumber(request.body.offset),
+                }),
+            );
         } catch (error: unknown) {
             next(error);
         }
     });
 }
 
-function configureEntityRoutes(app: Express, service: EntityService): void {
+function configureEntityMutationRoutes(app: Express, service: EntityService): void {
     app.post('/api/v1/entities/:entityTypeId', async (request, response, next) => {
         try {
             const projection = await service.create(
@@ -106,29 +113,4 @@ function configureEntityRoutes(app: Express, service: EntityService): void {
 function toOptionalNumber(value: unknown): number | undefined {
     if (value === undefined) return undefined;
     return Number(value);
-}
-
-function configureEntityTypeRoutes(app: Express, service: EntityTypeService): void {
-    app.post('/api/v1/entity-types', async (request, response, next) => {
-        try {
-            const projection = await service.create(
-                request.body as CreateEntityTypeCommand,
-                'system',
-            );
-
-            response.status(201).json(projection);
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
-
-    app.get('/api/v1/entity-types/:id', async (request, response, next) => {
-        try {
-            const projection = await service.get(request.params.id);
-
-            response.status(200).json(projection);
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
 }

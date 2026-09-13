@@ -1,6 +1,7 @@
 export const poseidonErrorCodes = {
     validation: 'validation',
     entityTypeNotFound: 'entity-type-not-found',
+    entityNotFound: 'entity-not-found',
     entityAlreadyExists: 'entity-already-exists',
     entityVersionConflict: 'entity-version-conflict',
     accessDenied: 'access-denied',
@@ -38,6 +39,13 @@ export class EntityTypeNotFoundError extends PoseidonError {
             `Entity type '${entityTypeName}' was not found.`,
         );
         this.name = 'EntityTypeNotFoundError';
+    }
+}
+
+export class EntityNotFoundError extends PoseidonError {
+    public constructor(entityId: string) {
+        super(poseidonErrorCodes.entityNotFound, `Entity '${entityId}' was not found.`);
+        this.name = 'EntityNotFoundError';
     }
 }
 

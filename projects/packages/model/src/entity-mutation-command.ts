@@ -1,6 +1,12 @@
 import type { EntityId } from './entity';
 import type { EntityData } from './entity-event';
 
+export interface NestedEntityEnvelope {
+    id: EntityId;
+    data: EntityData;
+    expectedVersion?: number;
+}
+
 export interface CreateEntityCommand {
     id: EntityId;
     entityTypeId: EntityId;

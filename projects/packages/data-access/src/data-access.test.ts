@@ -38,6 +38,8 @@ describe('MongoEventProjectionStore', () => {
             id: 'ada',
             data: { name: 'Ada' },
         });
+        fake.entities.findOne.mockResolvedValueOnce(null);
+        await expect(store.findProjection('missing')).resolves.toBeNull();
         await expect(
             store.findByEntityType({
                 entityTypeId: 'person',
@@ -66,6 +68,7 @@ describe('MongoEventProjectionStore', () => {
 
     it('should commit created, updated, and deleted projections in one transaction', async () => {
         const fake = createConnection();
+        fake.entities.insertOne.mockResolvedValue({});
         fake.entities.updateOne.mockResolvedValue({ matchedCount: 1 });
         const store = new MongoEventProjectionStore(fake.connection);
 
@@ -73,7 +76,8 @@ describe('MongoEventProjectionStore', () => {
 
         expect(fake.session.withTransaction).toHaveBeenCalledOnce();
         expect(fake.events.bulkWrite).toHaveBeenCalledOnce();
-        expect(fake.entities.updateOne).toHaveBeenCalledTimes(3);
+        expect(fake.entities.insertOne).toHaveBeenCalledOnce();
+        expect(fake.entities.updateOne).toHaveBeenCalledTimes(2);
         expect(fake.session.endSession).toHaveBeenCalledOnce();
     });
 
@@ -84,6 +88,24 @@ describe('MongoEventProjectionStore', () => {
         await expect(
             new MongoEventProjectionStore(fake.connection).commit([updatedEvent()]),
         ).rejects.toMatchObject({ code: 'entity-version-conflict' });
+    });
+
+    it('should reject a concurrent create without writing a projection', async () => {
+        const fake = createConnection();
+        fake.entities.insertOne.mockRejectedValue({ code: 11000 });
+
+        await expect(
+            new MongoEventProjectionStore(fake.connection).commit([createdEvent()]),
+        ).rejects.toMatchObject({ code: 'entity-already-exists' });
+    });
+
+    it('should retain unexpected projection write failures', async () => {
+        const fake = createConnection();
+        fake.entities.insertOne.mockRejectedValue(new Error('Database unavailable.'));
+
+        await expect(
+            new MongoEventProjectionStore(fake.connection).commit([createdEvent()]),
+        ).rejects.toThrow('Database unavailable.');
     });
 });
 
@@ -135,6 +157,7 @@ function createConnection() {
         findOne: vi.fn(),
         find: vi.fn(),
         updateOne: vi.fn(),
+        insertOne: vi.fn(),
         createIndex: vi.fn(),
     };
     const session = {

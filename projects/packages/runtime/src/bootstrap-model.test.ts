@@ -20,7 +20,18 @@ describe('createBootstrapModel', () => {
             { id: 'user', createdById: 'system', createdAt: now },
             { id: 'relation-link', createdById: 'system', createdAt: now },
         ]);
-        expect(model.entityProperties).toHaveLength(14);
+        expect(model.entityProperties).toHaveLength(33);
+        expect(model.entityProperties).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'entity-type:properties',
+                    itemsType: 'reference',
+                    relatedEntityTypeId: 'entity-property',
+                    uniqueBy: 'name',
+                }),
+                expect.objectContaining({ id: 'entity-property:default', type: 'json' }),
+            ]),
+        );
         expect(model.indexes).toHaveLength(2);
     });
 

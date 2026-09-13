@@ -9,6 +9,7 @@ export const propertyTypes = [
     'reference',
     'array',
     'object',
+    'json',
 ] as const;
 
 export type PropertyType = (typeof propertyTypes)[number];
@@ -41,4 +42,5 @@ export interface EntityProperty extends Entity {
     itemsType?: PropertyType;
     uniqueItems?: boolean;
     multipleOf?: number;
+    uniqueBy?: string;
 }

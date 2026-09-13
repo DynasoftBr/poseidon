@@ -1,5 +1,8 @@
 import {
     entityEventTypes,
+    propertyConventions,
+    propertyTypes,
+    relationKinds,
     type BootstrapModel,
     type EntityData,
     type EntityEvent,
@@ -93,10 +96,51 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
     return [
         createProperty(['entity-type', 'name', 'string', true], context),
         createProperty(['entity-type', 'label', 'string', true], context),
-        createProperty(['entity-type', 'properties', 'array', true], context),
-        createProperty(['entity-property', 'entityTypeId', 'reference', true], context),
+        createProperty(['entity-type', 'properties', 'array', true], context, {
+            itemsType: 'reference',
+            relatedEntityTypeId: 'entity-property',
+            uniqueBy: 'name',
+        }),
+        createProperty(['entity-type', 'abstract', 'boolean', false], context),
+        createProperty(['entity-type', 'superTypeId', 'reference', false], context, {
+            relatedEntityTypeId: 'entity-type',
+        }),
+        createProperty(['entity-type', 'commands', 'json', false], context),
+        createProperty(['entity-property', 'entityTypeId', 'reference', true], context, {
+            relatedEntityTypeId: 'entity-type',
+        }),
         createProperty(['entity-property', 'name', 'string', true], context),
-        createProperty(['entity-property', 'type', 'string', true], context),
+        createProperty(['entity-property', 'type', 'string', true], context, {
+            enum: [...propertyTypes],
+        }),
+        createProperty(['entity-property', 'required', 'boolean', false], context),
+        createProperty(['entity-property', 'minimum', 'number', false], context),
+        createProperty(['entity-property', 'maximum', 'number', false], context),
+        createProperty(['entity-property', 'minLength', 'integer', false], context),
+        createProperty(['entity-property', 'maxLength', 'integer', false], context),
+        createProperty(['entity-property', 'pattern', 'string', false], context),
+        createProperty(['entity-property', 'enum', 'array', false], context, {
+            itemsType: 'string',
+        }),
+        createProperty(['entity-property', 'default', 'json', false], context),
+        createProperty(['entity-property', 'convention', 'string', false], context, {
+            enum: [...propertyConventions],
+        }),
+        createProperty(['entity-property', 'relatedEntityTypeId', 'reference', false], context, {
+            relatedEntityTypeId: 'entity-type',
+        }),
+        createProperty(['entity-property', 'relationKind', 'string', false], context, {
+            enum: [...relationKinds],
+        }),
+        createProperty(['entity-property', 'reversePropertyId', 'reference', false], context, {
+            relatedEntityTypeId: 'entity-property',
+        }),
+        createProperty(['entity-property', 'itemsType', 'string', false], context, {
+            enum: [...propertyTypes],
+        }),
+        createProperty(['entity-property', 'uniqueItems', 'boolean', false], context),
+        createProperty(['entity-property', 'uniqueBy', 'string', false], context),
+        createProperty(['entity-property', 'multipleOf', 'number', false], context),
         createProperty(['index', 'entityTypeId', 'reference', true], context),
         createProperty(['index', 'name', 'string', true], context),
         createProperty(['index', 'propertyIds', 'array', true], context),
@@ -111,6 +155,7 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
 function createProperty(
     [entityTypeId, name, type, required]: [EntityId, string, PropertyType, boolean],
     context: BootstrapContext,
+    options: Partial<EntityProperty> = {},
 ): EntityProperty {
     return {
         id: `${entityTypeId}:${name}`,
@@ -118,6 +163,7 @@ function createProperty(
         name,
         type,
         required,
+        ...options,
         createdAt: context.now,
         createdById: context.systemUserId,
     };

@@ -94,10 +94,9 @@ export class MongoEventProjectionStore {
     private async writeProjections(events: EntityEvent[], session: ClientSession): Promise<void> {
         for (const event of events) {
             if (event.type === 'entity-created') {
-                await this.getEntities().updateOne(
-                    { _id: event.entityId },
-                    {
-                        $setOnInsert: {
+                try {
+                    await this.getEntities().insertOne(
+                        {
                             _id: event.entityId,
                             entityTypeId: event.entityTypeId,
                             data: event.data,
@@ -105,9 +104,14 @@ export class MongoEventProjectionStore {
                             createdAt: event.occurredAt,
                             createdById: event.actorId,
                         },
-                    },
-                    { upsert: true, session },
-                );
+                        { session },
+                    );
+                } catch (error: unknown) {
+                    if (isDuplicateKeyError(error)) {
+                        throw new ProjectionAlreadyExistsError(event.entityId);
+                    }
+                    throw error;
+                }
                 continue;
             }
 
@@ -148,7 +152,7 @@ export class MongoEventProjectionStore {
     }
 
     private getEntities() {
-        return this.connection.collection<{ _id: string }>('entities');
+        return this.connection.collection<StoredProjection>('entities');
     }
 
     private getProjectionCollection() {
@@ -163,6 +167,18 @@ class ProjectionVersionConflictError extends Error {
         super(`Entity projection '${entityId}' version mismatch.`);
         this.name = 'ProjectionVersionConflictError';
     }
+}
+
+class ProjectionAlreadyExistsError extends Error {
+    public readonly code = entityMutationErrorCodes.alreadyExists;
+    public constructor(entityId: string) {
+        super(`Entity projection '${entityId}' already exists.`);
+        this.name = 'ProjectionAlreadyExistsError';
+    }
+}
+
+function isDuplicateKeyError(error: unknown): error is { code: number } {
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
 interface StoredProjection {

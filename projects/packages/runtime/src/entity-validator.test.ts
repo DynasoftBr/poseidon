@@ -37,6 +37,15 @@ describe('validateEntity', () => {
             expect.arrayContaining(['name', '/age', '/tags', 'entity']),
         );
     });
+
+    it('should accept arbitrary JSON values for a json property', () => {
+        const jsonProperty = property({ id: 'person:metadata', name: 'metadata', type: 'json' });
+
+        expect(
+            validateEntity([jsonProperty], { metadata: { enabled: false, tags: ['math'] } }),
+        ).toEqual([]);
+        expect(validateEntity([jsonProperty], { metadata: null })).toEqual([]);
+    });
 });
 
 function property(

@@ -8,7 +8,7 @@ export interface JsonSchema {
 }
 
 interface PropertySchema {
-    type: string;
+    type?: string;
     format?: 'date-time';
     minimum?: number;
     maximum?: number;
@@ -60,6 +60,7 @@ function buildPropertySchema(property: EntityProperty): PropertySchema {
 
 function buildTypeSchema(property: EntityProperty): Pick<PropertySchema, 'type' | 'format'> {
     if (property.type === 'date-time') return { type: 'string', format: 'date-time' };
+    if (property.type === 'json') return {};
     return { type: toJsonSchemaType(property.type) };
 }
 

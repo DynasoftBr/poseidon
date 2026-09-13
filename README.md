@@ -30,12 +30,12 @@ The health check is available at `http://localhost:3000/health`.
 
 ## API smoke flow
 
-Create an EntityType, then create records through that EntityType's own properties:
+Create an EntityType and its properties through the same generic graph endpoint, then create records through that type:
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/entity-types \
+curl -X POST http://localhost:3000/api/v1/entities/entity-type \
   -H 'content-type: application/json' \
-  -d '{"id":"person","name":"Person","label":"Person","properties":[{"id":"person:name","name":"name","type":"string","required":true}]}'
+  -d '{"id":"person","data":{"name":"Person","label":"Person","properties":[{"id":"person:name","data":{"entityTypeId":"person","name":"name","type":"string","required":true}}]}}'
 
 curl -X POST http://localhost:3000/api/v1/entities/person \
   -H 'content-type: application/json' \
@@ -44,6 +44,8 @@ curl -X POST http://localhost:3000/api/v1/entities/person \
 curl -X POST http://localhost:3000/api/v1/entities/person/query \
   -H 'content-type: application/json' \
   -d '{"filter":{"operator":"equals","property":"name","value":"Ada Lovelace"}}'
+
+curl http://localhost:3000/api/v1/entities/person/ada
 
 curl -X PATCH http://localhost:3000/api/v1/entities/person/ada \
   -H 'content-type: application/json' \

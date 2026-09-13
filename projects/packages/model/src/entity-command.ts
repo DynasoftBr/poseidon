@@ -31,6 +31,7 @@ export const comparisonOperators = [
     'greater-than',
     'less-than',
     'contains',
+    'exists',
 ] as const;
 export type ComparisonOperator = (typeof comparisonOperators)[number];
 

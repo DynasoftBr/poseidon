@@ -1,10 +1,5 @@
 import type { EntityProjection } from '@poseidon/model';
-import {
-    type EntityQueryService,
-    type EntityService,
-    type EntityTypeService,
-    ValidationError,
-} from '@poseidon/runtime';
+import { type EntityService, ValidationError } from '@poseidon/runtime';
 import request from 'supertest';
 import { createApp } from './app';
 
@@ -24,15 +19,9 @@ describe('createApp', () => {
             status: 200,
             body: { status: 'ok' },
         });
-        await expect(
-            request(app).post('/api/v1/entity-types').send({ id: 'person' }),
-        ).resolves.toMatchObject({
-            status: 201,
-            body: { id: 'person' },
-        });
-        await expect(request(app).get('/api/v1/entity-types/person')).resolves.toMatchObject({
+        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
             status: 200,
-            body: { id: 'person' },
+            body: { id: 'ada' },
         });
         await expect(
             request(app)
@@ -51,7 +40,7 @@ describe('createApp', () => {
             request(app).post('/api/v1/entities/person/query').send({ limit: 10, offset: 0 }),
         ).resolves.toMatchObject({ status: 200, body: [{ id: 'ada' }] });
 
-        expect(services.entityQueryServiceMock.list).toHaveBeenCalledWith({
+        expect(services.entityServiceMock.query).toHaveBeenCalledWith({
             entityTypeId: 'person',
             filter: undefined,
             limit: 10,
@@ -74,7 +63,7 @@ describe('createApp', () => {
 
     it('should return an unexpected error from a query route', async () => {
         const services = createServices();
-        services.entityQueryServiceMock.list.mockRejectedValue(new Error('Database unavailable.'));
+        services.entityServiceMock.query.mockRejectedValue(new Error('Database unavailable.'));
 
         const response = await request(createApp(services))
             .post('/api/v1/entities/person/query')
@@ -88,16 +77,12 @@ describe('createApp', () => {
 
     it('should forward failures from remaining mutation routes', async () => {
         const services = createServices();
-        services.entityTypeServiceMock.get.mockRejectedValue(new Error('Missing type.'));
-        services.entityTypeServiceMock.create.mockRejectedValue(new Error('Create type failed.'));
+        services.entityServiceMock.get.mockRejectedValue(new Error('Missing entity.'));
         services.entityServiceMock.update.mockRejectedValue(new Error('Update failed.'));
         services.entityServiceMock.delete.mockRejectedValue(new Error('Delete failed.'));
         const app = createApp(services);
 
-        await expect(request(app).post('/api/v1/entity-types').send({})).resolves.toMatchObject({
-            status: 500,
-        });
-        await expect(request(app).get('/api/v1/entity-types/person')).resolves.toMatchObject({
+        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
             status: 500,
         });
         await expect(
@@ -112,26 +97,17 @@ describe('createApp', () => {
 });
 
 function createServices() {
-    const entityTypeService = {
-        create: vi.fn().mockResolvedValue(projection('person')),
-        get: vi.fn().mockResolvedValue(projection('person')),
-    };
     const entityService = {
         create: vi.fn().mockResolvedValue(projection('ada')),
         update: vi.fn().mockResolvedValue(projection('ada')),
         delete: vi.fn().mockResolvedValue(undefined),
-    };
-    const entityQueryService = {
-        list: vi.fn().mockResolvedValue([projection('ada')]),
+        get: vi.fn().mockResolvedValue(projection('ada')),
+        query: vi.fn().mockResolvedValue([projection('ada')]),
     };
 
     return {
-        entityTypeService: entityTypeService as unknown as EntityTypeService,
         entityService: entityService as unknown as EntityService,
-        entityQueryService: entityQueryService as unknown as EntityQueryService,
         entityServiceMock: entityService,
-        entityQueryServiceMock: entityQueryService,
-        entityTypeServiceMock: entityTypeService,
     };
 }
 

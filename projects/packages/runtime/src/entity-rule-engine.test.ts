@@ -171,6 +171,41 @@ describe('applyEntityRules', () => {
             }),
         );
     });
+
+    it('should distinguish absent properties from falsey values', () => {
+        const commands: EntityCommand[] = [
+            {
+                id: 'order:create',
+                name: 'create',
+                label: 'Create',
+                operation: 'create',
+                rules: [
+                    {
+                        id: 'missing-status',
+                        specification: {
+                            kind: 'comparison',
+                            propertyId: 'order:status',
+                            operator: 'exists',
+                            value: false,
+                        },
+                        consequence: {
+                            kind: 'set-value',
+                            propertyId: 'order:status',
+                            value: false,
+                        },
+                    },
+                ],
+            },
+        ];
+
+        expect(applyEntityRules(commands, 'create', properties, { total: 1 })).toEqual({
+            total: 1,
+            status: false,
+        });
+        expect(
+            applyEntityRules(commands, 'create', properties, { total: 1, status: false }),
+        ).toEqual({ total: 1, status: false });
+    });
 });
 
 function property(id: string, name: string): EntityProperty {

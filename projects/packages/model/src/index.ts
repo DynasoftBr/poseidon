@@ -2,7 +2,6 @@ export * from './entity';
 export * from './entity-event';
 export * from './entity-mutation-command';
 export * from './bootstrap-model';
-export * from './create-entity-type-command';
 export * from './core-entity-types';
 export * from './entity-command';
 export * from './entity-property';

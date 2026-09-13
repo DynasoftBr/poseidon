@@ -8,8 +8,6 @@ import {
     createBootstrapModel,
     ensureBootstrapModel,
     EntityService,
-    EntityQueryService,
-    EntityTypeService,
     EventPublisher,
 } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
@@ -46,9 +44,7 @@ async function start(): Promise<void> {
     await indexManager.reconcile();
     const port = Number(process.env.PORT ?? 3000);
     const app = createApp({
-        entityTypeService: new EntityTypeService(store, publisher),
         entityService: new EntityService(store, publisher),
-        entityQueryService: new EntityQueryService(store),
     });
 
     app.listen(port, () => {

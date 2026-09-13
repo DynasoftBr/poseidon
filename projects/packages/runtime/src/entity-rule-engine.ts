@@ -60,6 +60,7 @@ function some(
 }
 
 function compare(value: unknown, operator: ComparisonOperator, expected: unknown): boolean {
+    if (operator === 'exists') return (value !== undefined) === expected;
     if (operator === 'equals') return value === expected;
     if (operator === 'not-equals') return value !== expected;
     if (operator === 'greater-than') {
