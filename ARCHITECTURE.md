@@ -36,5 +36,6 @@ Relationship properties create `relation-link` entities alongside their owner in
 
 ## Deferred architecture work
 
+- Replace the best-effort post-commit `EventEmitter` notification with durable outbox delivery. The mutation transaction must record delivery work with the event and projection; a worker must publish committed events, retain delivery state, and retry failures until downstream consumers can receive them. Event publication must never occur before the transaction commits or trigger a compensating rollback after commit.
 - Replace synchronous projection updates with durable asynchronous projection consumers only when a projection can safely be eventually consistent.
 - That future projector must consume the stored event stream with checkpoints, idempotency, ordering, retries, and catch-up after restarts. It must not rely only on `EventEmitter`.
