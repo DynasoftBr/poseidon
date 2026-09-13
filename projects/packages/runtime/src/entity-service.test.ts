@@ -1,6 +1,6 @@
-import type { EntityEvent, EntityProjection } from '@poseidon/model';
+import type { EntityEvent, Entity } from '@poseidon/model';
 import { EventPublisher } from './event-publisher';
-import { createBootstrapEvents, createBootstrapModel } from './bootstrap-model';
+import { createBootstrapModel } from './bootstrap-model';
 import { EntityService, type EntityStore } from './entity-service';
 
 describe('EntityService', () => {
@@ -374,10 +374,13 @@ describe('EntityService', () => {
     });
 
     it('should create an EntityType with nested property definitions', async () => {
-        const bootstrap = createBootstrapEvents(createBootstrapModel('system', new Date()));
-        const store = new InMemoryEntityStore(
-            bootstrap.map((event) => projection(event.entityId, event.entityTypeId, event.data)),
-        );
+        const bootstrap = createBootstrapModel('system', new Date());
+        const store = new InMemoryEntityStore([
+            ...bootstrap.users,
+            ...bootstrap.entityTypes,
+            ...bootstrap.entityProperties,
+            ...bootstrap.indexes,
+        ]);
 
         const entityType = await new EntityService(store, new EventPublisher()).create(
             {
@@ -407,10 +410,13 @@ describe('EntityService', () => {
     });
 
     it('should validate nested EntityProperty metadata from the bootstrap model', async () => {
-        const bootstrap = createBootstrapEvents(createBootstrapModel('system', new Date()));
-        const store = new InMemoryEntityStore(
-            bootstrap.map((event) => projection(event.entityId, event.entityTypeId, event.data)),
-        );
+        const bootstrap = createBootstrapModel('system', new Date());
+        const store = new InMemoryEntityStore([
+            ...bootstrap.users,
+            ...bootstrap.entityTypes,
+            ...bootstrap.entityProperties,
+            ...bootstrap.indexes,
+        ]);
 
         await expect(
             new EntityService(store, new EventPublisher()).create(
@@ -438,7 +444,7 @@ describe('EntityService', () => {
     });
 });
 
-function graphStore(extra: EntityProjection[]): InMemoryEntityStore {
+function graphStore(extra: Entity[]): InMemoryEntityStore {
     return new InMemoryEntityStore([
         projection('appointment', 'entity-type', { properties: ['appointment:patient'] }),
         projection('appointment:patient', 'entity-property', {
@@ -461,9 +467,9 @@ function graphStore(extra: EntityProjection[]): InMemoryEntityStore {
 class InMemoryEntityStore implements EntityStore {
     public readonly events: EntityEvent[] = [];
     public failCommitWith: unknown;
-    private readonly projections = new Map<string, EntityProjection>();
+    private readonly projections = new Map<string, Entity>();
 
-    public constructor(projections: EntityProjection[]) {
+    public constructor(projections: Entity[]) {
         projections.forEach((projection) => this.projections.set(projection.id, projection));
     }
 
@@ -471,11 +477,11 @@ class InMemoryEntityStore implements EntityStore {
         return Promise.resolve(this.projections.has(id));
     }
 
-    public findProjection(id: string): Promise<EntityProjection | null> {
+    public findProjection(id: string): Promise<Entity | null> {
         return Promise.resolve(this.projections.get(id) ?? null);
     }
 
-    public findByEntityType(command: { entityTypeId: string }): Promise<EntityProjection[]> {
+    public findByEntityType(command: { entityTypeId: string }): Promise<Entity[]> {
         return Promise.resolve(
             [...this.projections.values()].filter(
                 (entity) => entity.entityTypeId === command.entityTypeId,
@@ -498,11 +504,7 @@ class InMemoryEntityStore implements EntityStore {
     }
 }
 
-function projection(
-    id: string,
-    entityTypeId: string,
-    data: Record<string, unknown>,
-): EntityProjection {
+function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
     return {
         id,
         entityTypeId,

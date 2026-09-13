@@ -16,6 +16,8 @@ projects/
 
 `@poseidon/model` and `@poseidon/runtime` do not know MongoDB or HTTP. The server composes the runtime with the MongoDB implementation from `@poseidon/data-access`.
 
+All runtime entities use `Entity<TData>`: `id`, `entityTypeId`, `data`, `version`, and audit metadata. Core types specialize the same envelope with typed data; for example, an EntityProperty has `entityTypeId: 'entity-property'`, while `data.entityTypeId` identifies the type that owns the property. Bootstrap records use this representation directly, and MongoDB only maps `id` to `_id` at the persistence boundary.
+
 ## Bootstrap
 
 Server startup connects to MongoDB and idempotently creates any missing system user, core EntityTypes, EntityProperties, and Index definitions. This makes bootstrap additive when a new core model record is introduced. The bootstrap model is ordinary Poseidon model data.

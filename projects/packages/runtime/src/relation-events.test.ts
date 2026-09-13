@@ -77,12 +77,16 @@ describe('relation events', () => {
 function property(id: string, name: string, reversePropertyId?: string): EntityProperty {
     return {
         id,
-        entityTypeId: 'appointment',
-        name,
-        type: 'reference',
-        relatedEntityTypeId: 'patient',
-        relationKind: 'has-many',
-        reversePropertyId,
+        entityTypeId: 'entity-property',
+        data: {
+            entityTypeId: 'appointment',
+            name,
+            type: 'reference',
+            relatedEntityTypeId: 'patient',
+            relationKind: 'has-many',
+            reversePropertyId,
+        },
+        version: 1,
         createdAt: new Date(),
         createdById: 'system',
     };

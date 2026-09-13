@@ -211,9 +211,9 @@ describe('applyEntityRules', () => {
 function property(id: string, name: string): EntityProperty {
     return {
         id,
-        entityTypeId: 'order',
-        name,
-        type: 'string',
+        entityTypeId: 'entity-property',
+        data: { entityTypeId: 'order', name, type: 'string' },
+        version: 1,
         createdAt: new Date(),
         createdById: 'system',
     };

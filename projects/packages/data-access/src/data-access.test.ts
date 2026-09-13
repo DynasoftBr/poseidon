@@ -1,33 +1,43 @@
 import type { EntityEvent } from '@poseidon/model';
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 import { connectDatabase, disconnectDatabase } from './database';
 import { MongoEventProjectionStore } from './mongo-event-projection-store';
 import { MongoIndexManager } from './mongo-index-manager';
 
-vi.mock('mongoose', () => ({
-    default: {
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-        connection: { name: 'default-connection' },
-    },
+vi.mock('mongodb', () => ({
+    MongoClient: vi.fn(
+        class {
+            public connect = vi.fn().mockResolvedValue(undefined);
+            public close = vi.fn().mockResolvedValue(undefined);
+        },
+    ),
 }));
 
 describe('database lifecycle', () => {
-    it('should connect and disconnect through Mongoose', async () => {
-        await expect(connectDatabase('mongodb://example.test/poseidon')).resolves.toBe(
-            mongoose.connection,
-        );
-        await disconnectDatabase();
+    it('should connect and close the selected client', async () => {
+        const client = await connectDatabase('mongodb://example.test/poseidon');
+        await disconnectDatabase(client);
 
-        expect(mongoose.connect).toHaveBeenCalledWith('mongodb://example.test/poseidon');
-        expect(mongoose.disconnect).toHaveBeenCalledOnce();
+        expect(MongoClient).toHaveBeenCalledWith('mongodb://example.test/poseidon');
+        expect(client.connect).toHaveBeenCalledOnce();
+        expect(client.close).toHaveBeenCalledOnce();
+    });
+
+    it('should keep database clients independent', async () => {
+        const first = await connectDatabase('mongodb://example.test/first');
+        const second = await connectDatabase('mongodb://example.test/second');
+        await disconnectDatabase(first);
+
+        expect(first).not.toBe(second);
+        expect(second.close).not.toHaveBeenCalled();
+        await disconnectDatabase(second);
     });
 });
 
 describe('MongoEventProjectionStore', () => {
     it('should read projections and construct filtered queries', async () => {
-        const fake = createConnection();
-        const store = new MongoEventProjectionStore(fake.connection);
+        const fake = createClient();
+        const store = new MongoEventProjectionStore(fake.client);
         const document = projectionDocument('ada', 'person', { name: 'Ada' });
         fake.entities.findOne.mockResolvedValueOnce(null).mockResolvedValue(document);
         fake.entities.find.mockReturnValue(cursor([document]));
@@ -67,10 +77,10 @@ describe('MongoEventProjectionStore', () => {
     });
 
     it('should commit created, updated, and deleted projections in one transaction', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.insertOne.mockResolvedValue({});
         fake.entities.updateOne.mockResolvedValue({ matchedCount: 1 });
-        const store = new MongoEventProjectionStore(fake.connection);
+        const store = new MongoEventProjectionStore(fake.client);
 
         await store.commit([createdEvent(), updatedEvent(), deletedEvent()]);
 
@@ -82,36 +92,36 @@ describe('MongoEventProjectionStore', () => {
     });
 
     it('should surface a projection version conflict', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.updateOne.mockResolvedValue({ matchedCount: 0 });
 
         await expect(
-            new MongoEventProjectionStore(fake.connection).commit([updatedEvent()]),
+            new MongoEventProjectionStore(fake.client).commit([updatedEvent()]),
         ).rejects.toMatchObject({ code: 'entity-version-conflict' });
     });
 
     it('should reject a concurrent create without writing a projection', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.insertOne.mockRejectedValue({ code: 11000 });
 
         await expect(
-            new MongoEventProjectionStore(fake.connection).commit([createdEvent()]),
+            new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
         ).rejects.toMatchObject({ code: 'entity-already-exists' });
     });
 
     it('should retain unexpected projection write failures', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.insertOne.mockRejectedValue(new Error('Database unavailable.'));
 
         await expect(
-            new MongoEventProjectionStore(fake.connection).commit([createdEvent()]),
+            new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
         ).rejects.toThrow('Database unavailable.');
     });
 });
 
 describe('MongoIndexManager', () => {
     it('should reconcile index entities into MongoDB indexes', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.find
             .mockReturnValueOnce(
                 cursor([
@@ -127,7 +137,7 @@ describe('MongoIndexManager', () => {
                 cursor([projectionDocument('person:name', 'entity-property', { name: 'name' })]),
             );
 
-        await new MongoIndexManager(fake.connection).reconcile();
+        await new MongoIndexManager(fake.client).reconcile();
 
         expect(fake.entities.createIndex).toHaveBeenCalledWith(
             { entityTypeId: 1, 'data.name': 1 },
@@ -136,9 +146,9 @@ describe('MongoIndexManager', () => {
     });
 
     it('should reject invalid or incomplete index definitions', async () => {
-        const fake = createConnection();
+        const fake = createClient();
         fake.entities.find.mockReturnValue(cursor([]));
-        const manager = new MongoIndexManager(fake.connection);
+        const manager = new MongoIndexManager(fake.client);
 
         await expect(manager.apply({})).rejects.toThrow('Index entity has an invalid definition.');
         await expect(
@@ -151,7 +161,7 @@ describe('MongoIndexManager', () => {
     });
 });
 
-function createConnection() {
+function createClient() {
     const events = { bulkWrite: vi.fn() };
     const entities = {
         findOne: vi.fn(),
@@ -164,12 +174,15 @@ function createConnection() {
         withTransaction: vi.fn((callback: () => Promise<void>) => callback()),
         endSession: vi.fn(),
     };
-    const connection = {
+    const database = {
         collection: vi.fn((name: string) => (name === 'events' ? events : entities)),
-        startSession: vi.fn().mockResolvedValue(session),
+    };
+    const client = {
+        db: vi.fn().mockReturnValue(database),
+        startSession: vi.fn().mockReturnValue(session),
     };
 
-    return { connection: connection as never, entities, events, session };
+    return { client: client as unknown as MongoClient, entities, events, session };
 }
 
 function cursor<T>(documents: T[]) {

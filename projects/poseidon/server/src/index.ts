@@ -22,10 +22,10 @@ async function start(): Promise<void> {
         throw new Error('MONGODB_URI must be configured.');
     }
 
-    const connection = await connectDatabase(databaseUri);
-    const store = new MongoEventProjectionStore(connection);
+    const client = await connectDatabase(databaseUri);
+    const store = new MongoEventProjectionStore(client);
     const publisher = new EventPublisher();
-    const indexManager = new MongoIndexManager(connection);
+    const indexManager = new MongoIndexManager(client);
     publisher.subscribe('entity-created', (event) => {
         if (event.entityTypeId === 'index') {
             void indexManager.apply(event.data).catch((error: unknown) => {

@@ -1,4 +1,4 @@
-import type { EntityId } from './entity';
+import type { EntityData, EntityId } from './entity';
 
 export const entityEventTypes = {
     created: 'entity-created',
@@ -13,8 +13,6 @@ export const entityMutationErrorCodes = {
     alreadyExists: 'entity-already-exists',
 } as const;
 
-export type EntityData = Record<string, unknown>;
-
 export interface EntityEvent {
     id: EntityId;
     type: EntityEventType;
@@ -24,17 +22,4 @@ export interface EntityEvent {
     occurredAt: Date;
     actorId: EntityId;
     expectedVersion?: number;
-}
-
-export interface EntityProjection {
-    id: EntityId;
-    entityTypeId: EntityId;
-    data: EntityData;
-    version: number;
-    createdAt: Date;
-    createdById: EntityId;
-    changedAt?: Date;
-    changedById?: EntityId;
-    deletedAt?: Date;
-    deletedById?: EntityId;
 }

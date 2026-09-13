@@ -22,7 +22,9 @@ export const relationKinds = ['has-one', 'belongs-to-one', 'has-many', 'belongs-
 
 export type RelationKind = (typeof relationKinds)[number];
 
-export interface EntityProperty extends Entity {
+export type EntityProperty = Entity<EntityPropertyData>;
+
+export type EntityPropertyData = {
     entityTypeId: EntityId;
     name: string;
     type: PropertyType;
@@ -43,4 +45,4 @@ export interface EntityProperty extends Entity {
     uniqueItems?: boolean;
     multipleOf?: number;
     uniqueBy?: string;
-}
+};

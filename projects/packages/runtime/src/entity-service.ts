@@ -5,7 +5,7 @@ import {
     type CreateEntityCommand,
     type DeleteEntityCommand,
     type EntityEvent,
-    type EntityProjection,
+    type Entity,
     type EntityProperty,
     type QueryEntitiesCommand,
     type UpdateEntityCommand,
@@ -25,9 +25,9 @@ import {
 
 export interface EntityStore {
     hasEntity(id: string): Promise<boolean>;
-    findProjection(id: string): Promise<EntityProjection | null>;
+    findProjection(id: string): Promise<Entity | null>;
     commit(events: EntityEvent[]): Promise<void>;
-    findByEntityType?(command: QueryEntitiesCommand): Promise<EntityProjection[]>;
+    findByEntityType?(command: QueryEntitiesCommand): Promise<Entity[]>;
 }
 
 /** Creates records for any EntityType through the same event/projection path. */
@@ -37,7 +37,7 @@ export class EntityService {
         private readonly publisher: EventPublisher,
     ) {}
 
-    public async create(command: CreateEntityCommand, actorId: string): Promise<EntityProjection> {
+    public async create(command: CreateEntityCommand, actorId: string): Promise<Entity> {
         const entityType = await this.store.findProjection(command.entityTypeId);
 
         if (!entityType || entityType.entityTypeId !== 'entity-type') {
@@ -96,7 +96,7 @@ export class EntityService {
         };
     }
 
-    public async get(entityTypeId: string, id: string): Promise<EntityProjection> {
+    public async get(entityTypeId: string, id: string): Promise<Entity> {
         const projection = await this.store.findProjection(id);
 
         if (!projection || projection.entityTypeId !== entityTypeId || projection.deletedAt) {
@@ -106,7 +106,7 @@ export class EntityService {
         return projection;
     }
 
-    public async query(command: QueryEntitiesCommand): Promise<EntityProjection[]> {
+    public async query(command: QueryEntitiesCommand): Promise<Entity[]> {
         await this.requireEntityType(command.entityTypeId);
         if (!this.store.findByEntityType) {
             throw new Error('Entity queries are not configured.');
@@ -131,7 +131,7 @@ export class EntityService {
         return this.store.findByEntityType(command);
     }
 
-    public async update(command: UpdateEntityCommand, actorId: string): Promise<EntityProjection> {
+    public async update(command: UpdateEntityCommand, actorId: string): Promise<Entity> {
         const current = await this.requireCurrent(
             command.entityTypeId,
             command.id,
@@ -221,7 +221,7 @@ export class EntityService {
         this.publisher.publish(events);
     }
 
-    private async requireEntityType(entityTypeId: string): Promise<EntityProjection> {
+    private async requireEntityType(entityTypeId: string): Promise<Entity> {
         const entityType = await this.store.findProjection(entityTypeId);
 
         if (!entityType || entityType.entityTypeId !== 'entity-type') {
@@ -235,7 +235,7 @@ export class EntityService {
         entityTypeId: string,
         id: string,
         expectedVersion: number,
-    ): Promise<EntityProjection> {
+    ): Promise<Entity> {
         const current = await this.store.findProjection(id);
 
         if (!current || current.entityTypeId !== entityTypeId || current.deletedAt) {
@@ -246,7 +246,7 @@ export class EntityService {
         return current;
     }
 
-    private async getProperties(entityType: EntityProjection): Promise<EntityProperty[]> {
+    private async getProperties(entityType: Entity): Promise<EntityProperty[]> {
         const propertyIds = entityType.data.properties;
 
         if (!Array.isArray(propertyIds) || !propertyIds.every((id) => typeof id === 'string')) {
@@ -278,7 +278,7 @@ export class EntityService {
         const events: EntityEvent[] = [];
 
         for (const property of properties.filter((candidate) => isReference(candidate))) {
-            const value = data[property.name];
+            const value = data[property.data.name];
             if (value === undefined) continue;
             const values = Array.isArray(value) ? value : [value];
             const ids = await Promise.all(
@@ -287,14 +287,14 @@ export class EntityService {
                     if (definitions.has(reference.id)) {
                         throw new ValidationError([
                             {
-                                property: property.name,
+                                property: property.data.name,
                                 message: `Entity '${reference.id}' is defined more than once.`,
                             },
                         ]);
                     }
                     definitions.add(reference.id);
                     const nested = await this.prepareNestedMutations(
-                        property.relatedEntityTypeId ?? '',
+                        property.data.relatedEntityTypeId ?? '',
                         reference.data,
                         actorId,
                         staged,
@@ -305,13 +305,13 @@ export class EntityService {
                     if (!existing && reference.expectedVersion !== undefined) {
                         throw new ValidationError([
                             {
-                                property: property.name,
+                                property: property.data.name,
                                 message: 'New nested entities cannot specify an expected version.',
                             },
                         ]);
                     }
                     const nestedType = await this.requireEntityType(
-                        property.relatedEntityTypeId ?? '',
+                        property.data.relatedEntityTypeId ?? '',
                     );
                     const nestedProperties = await this.getProperties(nestedType);
                     const nextData = existing
@@ -333,14 +333,14 @@ export class EntityService {
                     const problems = validateEntity(nestedProperties, nextData);
                     if (problems.length > 0) throw new ValidationError(problems);
                     staged.set(reference.id, {
-                        entityTypeId: property.relatedEntityTypeId ?? '',
+                        entityTypeId: property.data.relatedEntityTypeId ?? '',
                         data: nextData,
                     });
                     await this.validateReferences(nestedProperties, nextData, staged);
                     if (!existing) {
                         const event = createEvent(
                             'entity-created',
-                            property.relatedEntityTypeId ?? '',
+                            property.data.relatedEntityTypeId ?? '',
                             reference.id,
                             nextData,
                             actorId,
@@ -361,7 +361,7 @@ export class EntityService {
                         }
                         const event = createEvent(
                             'entity-updated',
-                            property.relatedEntityTypeId ?? '',
+                            property.data.relatedEntityTypeId ?? '',
                             reference.id,
                             nextData,
                             actorId,
@@ -379,7 +379,7 @@ export class EntityService {
                     return reference.id;
                 }),
             );
-            data[property.name] = Array.isArray(value) ? ids : ids[0];
+            data[property.data.name] = Array.isArray(value) ? ids : ids[0];
         }
 
         return { data, events, staged };
@@ -391,13 +391,13 @@ export class EntityService {
         staged = new Map<string, StagedEntity>(),
     ): Promise<void> {
         const references = properties.filter(
-            (property) => isReference(property) && data[property.name] !== undefined,
+            (property) => isReference(property) && data[property.data.name] !== undefined,
         );
 
         const problems = (
             await Promise.all(
                 references.map(async (property) => {
-                    const value = data[property.name];
+                    const value = data[property.data.name];
                     const ids = Array.isArray(value) ? value : [value];
                     const projections = await Promise.all(
                         ids.map((id) => {
@@ -416,25 +416,25 @@ export class EntityService {
                         projections.some(
                             (projection) =>
                                 !projection ||
-                                projection.entityTypeId !== property.relatedEntityTypeId ||
+                                projection.entityTypeId !== property.data.relatedEntityTypeId ||
                                 projection.deletedAt,
                         )
                     ) {
                         return {
-                            property: property.name,
+                            property: property.data.name,
                             message: 'Reference does not point to an existing related entity.',
                         };
                     }
                     if (
-                        property.uniqueBy &&
+                        property.data.uniqueBy &&
                         !hasUniqueReferenceValues(
                             projections.filter(isProjection),
-                            property.uniqueBy,
+                            property.data.uniqueBy,
                         )
                     ) {
                         return {
-                            property: property.name,
-                            message: `Reference values must be unique by '${property.uniqueBy}'.`,
+                            property: property.data.name,
+                            message: `Reference values must be unique by '${property.data.uniqueBy}'.`,
                         };
                     }
 
@@ -452,7 +452,7 @@ export class EntityService {
         properties: EntityProperty[],
     ): Promise<Map<string, EntityProperty>> {
         const reversePropertyIds = properties.flatMap((property) =>
-            property.reversePropertyId ? [property.reversePropertyId] : [],
+            property.data.reversePropertyId ? [property.data.reversePropertyId] : [],
         );
         const projections = await Promise.all(
             reversePropertyIds.map((id) => this.store.findProjection(id)),
@@ -493,12 +493,12 @@ function applyDefaultsAndConventions(
     const data = { ...input };
 
     properties.forEach((property) => {
-        if (data[property.name] === undefined && property.default !== undefined) {
-            data[property.name] = resolveDefault(property.default);
+        if (data[property.data.name] === undefined && property.data.default !== undefined) {
+            data[property.data.name] = resolveDefault(property.data.default);
         }
-        const value = data[property.name];
-        if (typeof value === 'string' && property.convention) {
-            data[property.name] = applyConvention(value, property.convention);
+        const value = data[property.data.name];
+        if (typeof value === 'string' && property.data.convention) {
+            data[property.data.name] = applyConvention(value, property.data.convention);
         }
     });
 
@@ -511,14 +511,14 @@ function applyConventions(
 ): Record<string, unknown> {
     return applyDefaultsAndConventions(
         input,
-        properties.filter((property) => property.default === undefined),
+        properties.filter((property) => property.data.default === undefined),
     );
 }
 
 function isReference(property: EntityProperty): boolean {
     return (
-        property.type === 'reference' ||
-        (property.type === 'array' && property.itemsType === 'reference')
+        property.data.type === 'reference' ||
+        (property.data.type === 'array' && property.data.itemsType === 'reference')
     );
 }
 
@@ -562,12 +562,12 @@ function sameData(left: Record<string, unknown>, right: Record<string, unknown>)
     return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function hasUniqueReferenceValues(projections: EntityProjection[], property: string): boolean {
+function hasUniqueReferenceValues(projections: Entity[], property: string): boolean {
     const values = projections.map((projection) => JSON.stringify(projection.data[property]));
     return new Set(values).size === values.length;
 }
 
-function isProjection(projection: EntityProjection | null): projection is EntityProjection {
+function isProjection(projection: Entity | null): projection is Entity {
     return projection !== null;
 }
 
@@ -581,11 +581,7 @@ interface PreparedGraph {
     staged: Map<string, StagedEntity>;
 }
 
-function projection(
-    id: string,
-    entityTypeId: string,
-    data: Record<string, unknown>,
-): EntityProjection {
+function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
     return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
 }
 
@@ -593,7 +589,7 @@ function resolveDefault(value: unknown): unknown {
     return value === '[[NOW]]' ? new Date().toISOString() : value;
 }
 
-function applyConvention(value: string, convention: EntityProperty['convention']): string {
+function applyConvention(value: string, convention: EntityProperty['data']['convention']): string {
     if (convention === 'lower-case') return value.toLowerCase();
     if (convention === 'upper-case') return value.toUpperCase();
     if (convention === 'capitalize-first-letter') {

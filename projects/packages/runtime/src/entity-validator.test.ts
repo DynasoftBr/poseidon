@@ -49,11 +49,15 @@ describe('validateEntity', () => {
 });
 
 function property(
-    input: Pick<EntityProperty, 'id' | 'name' | 'type'> & Partial<EntityProperty>,
+    input: { id: string } & Pick<EntityProperty['data'], 'name' | 'type'> &
+        Partial<EntityProperty['data']>,
 ): EntityProperty {
+    const { id, ...data } = input;
     return {
-        ...input,
-        entityTypeId: 'person',
+        id,
+        entityTypeId: 'entity-property',
+        data: { ...data, entityTypeId: 'person' },
+        version: 1,
         createdAt: new Date(),
         createdById: 'system',
     };

@@ -4,10 +4,11 @@ import {
     propertyTypes,
     relationKinds,
     type BootstrapModel,
-    type EntityData,
+    type Entity,
     type EntityEvent,
     type EntityId,
     type EntityProperty,
+    type EntityPropertyData,
     type EntityType,
     type IndexDefinition,
     type PropertyType,
@@ -25,8 +26,9 @@ export function createBootstrapModel(systemUserId: EntityId, now: Date): Bootstr
     const users: SystemUser[] = [
         {
             id: systemUserId,
-            name: 'System',
-            login: 'system',
+            entityTypeId: 'user',
+            data: { name: 'System', login: 'system' },
+            version: 1,
             createdAt: now,
             createdById: systemUserId,
         },
@@ -68,12 +70,9 @@ export async function ensureBootstrapModel(
 }
 
 export function createBootstrapEvents(model: BootstrapModel): EntityEvent[] {
-    return [
-        ...model.users.map((user) => createEvent('user', user)),
-        ...model.entityTypes.map((entityType) => createEvent('entity-type', entityType)),
-        ...model.entityProperties.map((property) => createEvent('entity-property', property)),
-        ...model.indexes.map((index) => createEvent('index', index)),
-    ];
+    return [...model.users, ...model.entityTypes, ...model.entityProperties, ...model.indexes].map(
+        createEvent,
+    );
 }
 
 function createCoreEntityTypes(
@@ -82,11 +81,15 @@ function createCoreEntityTypes(
 ): EntityType[] {
     return ['entity-type', 'entity-property', 'index', 'user', 'relation-link'].map((name) => ({
         id: name,
-        name,
-        label: name,
-        properties: properties
-            .filter((property) => property.entityTypeId === name)
-            .map((property) => property.id),
+        entityTypeId: 'entity-type',
+        data: {
+            name,
+            label: name,
+            properties: properties
+                .filter((property) => property.data.entityTypeId === name)
+                .map((property) => property.id),
+        },
+        version: 1,
         createdAt: context.now,
         createdById: context.systemUserId,
     }));
@@ -155,15 +158,13 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
 function createProperty(
     [entityTypeId, name, type, required]: [EntityId, string, PropertyType, boolean],
     context: BootstrapContext,
-    options: Partial<EntityProperty> = {},
+    options: Partial<EntityPropertyData> = {},
 ): EntityProperty {
     return {
         id: `${entityTypeId}:${name}`,
-        entityTypeId,
-        name,
-        type,
-        required,
-        ...options,
+        entityTypeId: 'entity-property',
+        data: { entityTypeId, name, type, required, ...options },
+        version: 1,
         createdAt: context.now,
         createdById: context.systemUserId,
     };
@@ -177,10 +178,9 @@ function createIndex(
 ): IndexDefinition {
     return {
         id: name,
-        entityTypeId,
-        name,
-        propertyIds,
-        unique: true,
+        entityTypeId: 'index',
+        data: { entityTypeId, name, propertyIds, unique: true },
+        version: 1,
         createdAt: context.now,
         createdById: context.systemUserId,
     };
@@ -191,18 +191,13 @@ interface BootstrapContext {
     now: Date;
 }
 
-function createEvent(
-    entityTypeId: EntityId,
-    entity: { id: EntityId; createdAt: Date; createdById: EntityId },
-): EntityEvent {
-    const { createdAt: _createdAt, createdById: _createdById, id: _id, ...data } = entity;
-
+function createEvent(entity: Entity): EntityEvent {
     return {
-        id: `bootstrap:${entityTypeId}:${entity.id}`,
+        id: `bootstrap:${entity.entityTypeId}:${entity.id}`,
         type: entityEventTypes.created,
-        entityTypeId,
+        entityTypeId: entity.entityTypeId,
         entityId: entity.id,
-        data: data as EntityData,
+        data: entity.data,
         occurredAt: entity.createdAt,
         actorId: entity.createdById,
     };

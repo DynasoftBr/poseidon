@@ -1,4 +1,4 @@
-import type { EntityProjection } from '@poseidon/model';
+import type { Entity } from '@poseidon/model';
 import { type EntityService, ValidationError } from '@poseidon/runtime';
 import request from 'supertest';
 import { createApp } from './app';
@@ -111,7 +111,7 @@ function createServices() {
     };
 }
 
-function projection(id: string): EntityProjection {
+function projection(id: string): Entity {
     return {
         id,
         entityTypeId: 'person',

@@ -1,5 +1,4 @@
-import type { EntityId } from './entity';
-import type { EntityData } from './entity-event';
+import type { EntityData, EntityId } from './entity';
 
 export interface NestedEntityEnvelope {
     id: EntityId;

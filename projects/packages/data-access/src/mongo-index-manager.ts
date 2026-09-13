@@ -1,12 +1,13 @@
-import type { EntityData } from '@poseidon/model';
-import type { Connection } from 'mongoose';
+import type { Entity, EntityData, IndexDefinitionData } from '@poseidon/model';
+import type { MongoClient } from 'mongodb';
 
 /** Realizes declarative Index entities on Poseidon's shared MongoDB projection collection. */
 export class MongoIndexManager {
-    public constructor(private readonly connection: Connection) {}
+    public constructor(private readonly client: MongoClient) {}
 
     public async reconcile(): Promise<void> {
-        const indexes = await this.connection
+        const indexes = await this.client
+            .db()
             .collection<StoredProjection>('entities')
             .find({ entityTypeId: 'index', deletedAt: { $exists: false } })
             .toArray();
@@ -16,7 +17,8 @@ export class MongoIndexManager {
 
     public async apply(data: EntityData): Promise<void> {
         const definition = parseIndexDefinition(data);
-        const properties = await this.connection
+        const properties = await this.client
+            .db()
             .collection<StoredProjection>('entities')
             .find({ _id: { $in: definition.propertyIds }, entityTypeId: 'entity-property' })
             .toArray();
@@ -29,36 +31,28 @@ export class MongoIndexManager {
             throw new Error(`Index '${definition.name}' references a missing property.`);
         }
 
-        await this.connection.collection('entities').createIndex(
-            {
-                entityTypeId: 1,
-                ...Object.fromEntries(propertyNames.map((name) => [`data.${name}`, 1])),
-            },
-            {
-                name: `poseidon__${definition.name}`,
-                unique: definition.unique,
-                partialFilterExpression: {
-                    entityTypeId: definition.entityTypeId,
+        await this.client
+            .db()
+            .collection('entities')
+            .createIndex(
+                {
+                    entityTypeId: 1,
+                    ...Object.fromEntries(propertyNames.map((name) => [`data.${name}`, 1])),
                 },
-            },
-        );
+                {
+                    name: `poseidon__${definition.name}`,
+                    unique: definition.unique,
+                    partialFilterExpression: {
+                        entityTypeId: definition.entityTypeId,
+                    },
+                },
+            );
     }
 }
 
-interface StoredProjection {
-    _id: string;
-    entityTypeId: string;
-    data: Record<string, unknown>;
-}
+type StoredProjection = Omit<Entity, 'id'> & { _id: string };
 
-interface ParsedIndexDefinition {
-    entityTypeId: string;
-    name: string;
-    propertyIds: string[];
-    unique: boolean;
-}
-
-function parseIndexDefinition(data: EntityData): ParsedIndexDefinition {
+function parseIndexDefinition(data: EntityData): IndexDefinitionData {
     if (
         typeof data.entityTypeId !== 'string' ||
         typeof data.name !== 'string' ||

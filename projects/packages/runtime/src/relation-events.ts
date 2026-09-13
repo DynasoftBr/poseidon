@@ -21,8 +21,8 @@ export function createRelationEvents(
 
         events.push(...createLinkEvents(sourceEvent, property, sourceEvent.entityId, thatId));
 
-        const reverseProperty = property.reversePropertyId
-            ? reverseProperties.get(property.reversePropertyId)
+        const reverseProperty = property.data.reversePropertyId
+            ? reverseProperties.get(property.data.reversePropertyId)
             : undefined;
         if (reverseProperty) {
             events.push(
@@ -57,8 +57,8 @@ export function deleteRelationEvents(
         )
         .flatMap(([property, thatId]) => {
             const events = deleteLinkEvents(sourceEvent, property, sourceEvent.entityId, thatId);
-            const reverseProperty = property.reversePropertyId
-                ? reverseProperties.get(property.reversePropertyId)
+            const reverseProperty = property.data.reversePropertyId
+                ? reverseProperties.get(property.data.reversePropertyId)
                 : undefined;
             return reverseProperty
                 ? [
@@ -126,9 +126,9 @@ function relationEntries(
     data: Record<string, unknown>,
 ): [EntityProperty, string][] {
     return properties
-        .filter((property) => property.relationKind && data[property.name] !== undefined)
+        .filter((property) => property.data.relationKind && data[property.data.name] !== undefined)
         .flatMap((property) => {
-            const value = data[property.name];
+            const value = data[property.data.name];
             const ids = Array.isArray(value) ? value : [value];
             return ids
                 .filter((id): id is string => typeof id === 'string')

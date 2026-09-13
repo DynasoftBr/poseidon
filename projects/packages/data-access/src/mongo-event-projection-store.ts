@@ -2,13 +2,13 @@ import {
     entityMutationErrorCodes,
     type EntityEvent,
     type EntityFilter,
-    type EntityProjection,
+    type Entity,
     type QueryEntitiesCommand,
 } from '@poseidon/model';
-import type { ClientSession, Connection } from 'mongoose';
+import type { ClientSession, MongoClient } from 'mongodb';
 
 export class MongoEventProjectionStore {
-    public constructor(private readonly connection: Connection) {}
+    public constructor(private readonly client: MongoClient) {}
 
     public async isInitialized(): Promise<boolean> {
         const systemUser = await this.getEntities().findOne({ _id: 'system' });
@@ -20,7 +20,7 @@ export class MongoEventProjectionStore {
         return (await this.getEntities().findOne({ _id: id })) !== null;
     }
 
-    public async findProjection(id: string): Promise<EntityProjection | null> {
+    public async findProjection(id: string): Promise<Entity | null> {
         const projection = await this.getProjectionCollection().findOne({ _id: id });
 
         if (!projection) {
@@ -41,7 +41,7 @@ export class MongoEventProjectionStore {
         };
     }
 
-    public async findByEntityType(command: QueryEntitiesCommand): Promise<EntityProjection[]> {
+    public async findByEntityType(command: QueryEntitiesCommand): Promise<Entity[]> {
         const documents = await this.getProjectionCollection()
             .find({
                 entityTypeId: command.entityTypeId,
@@ -65,7 +65,7 @@ export class MongoEventProjectionStore {
     }
 
     public async commit(events: EntityEvent[]): Promise<void> {
-        const session = await this.connection.startSession();
+        const session = this.client.startSession();
 
         try {
             await session.withTransaction(() => this.commitTransaction(events, session));
@@ -148,15 +148,15 @@ export class MongoEventProjectionStore {
     }
 
     private getEvents() {
-        return this.connection.collection<{ _id: string }>('events');
+        return this.client.db().collection<{ _id: string }>('events');
     }
 
     private getEntities() {
-        return this.connection.collection<StoredProjection>('entities');
+        return this.client.db().collection<StoredProjection>('entities');
     }
 
     private getProjectionCollection() {
-        return this.connection.collection<StoredProjection>('entities');
+        return this.client.db().collection<StoredProjection>('entities');
     }
 }
 
@@ -181,18 +181,7 @@ function isDuplicateKeyError(error: unknown): error is { code: number } {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
-interface StoredProjection {
-    _id: string;
-    entityTypeId: string;
-    data: Record<string, unknown>;
-    version: number;
-    createdAt: Date;
-    createdById: string;
-    changedAt?: Date;
-    changedById?: string;
-    deletedAt?: Date;
-    deletedById?: string;
-}
+type StoredProjection = Omit<Entity, 'id'> & { _id: string };
 
 function toMongoFilter(filter: EntityFilter | undefined): Record<string, unknown> {
     if (!filter) return {};
