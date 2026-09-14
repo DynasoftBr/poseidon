@@ -42,6 +42,7 @@ Relationship properties create `relation-link` entities alongside their owner in
 
 ## Deferred architecture work
 
+- Consider app-level permissions for the proposed `App` entity and iframe bridge. The agreed authorization model is per user; a separate permission set for each app is not decided. Such a limit could require bridge requests to be allowed by both the current user and the app, reducing the access available to component code running for other users. Revisit the benefit and configuration complexity when designing the bridge.
 - Replace the best-effort post-commit `EventEmitter` notification with durable outbox delivery. The mutation transaction must record delivery work with the event and projection; a worker must publish committed events, retain delivery state, and retry failures until downstream consumers can receive them. Event publication must never occur before the transaction commits or trigger a compensating rollback after commit.
 - Replace synchronous projection updates with durable asynchronous projection consumers only when a projection can safely be eventually consistent.
 - That future projector must consume the stored event stream with checkpoints, idempotency, ordering, retries, and catch-up after restarts. It must not rely only on `EventEmitter`.
