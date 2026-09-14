@@ -39,7 +39,7 @@ test('should reject unrelated window messages and stale channel messages', async
             requestId: 'injected',
         });
     });
-    await frame.getByRole('button', { name: 'New chat', exact: true }).first().click();
+    await frame.getByRole('button', { name: '＋ New chat', exact: true }).click();
     await expect(page).toHaveURL(/\/chat$/);
     expect(mutations).toBe(1);
 });

@@ -7,10 +7,16 @@ import Chat from '@components/portal-chat';
 import ResourceEditorPage from '@components/resource-editor-page';
 import Header from '@components/portal-header';
 import Sidebar from '@components/portal-sidebar';
-import TritonSidebar from '@components/triton-sidebar';
-import Icon from '@components/ui-icon';
 import { useEffect, useState, useRef } from 'react';
-import { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import {
+    MemoryRouter,
+    Routes,
+    Route,
+    Link,
+    useNavigate,
+    useLocation,
+    NavLink,
+} from 'react-router-dom';
 type Work = { title: string; steps: string[] };
 type Message = { role: string; text: string; work?: Work };
 type RecordItem = {
@@ -34,6 +40,7 @@ function Layout({ user, route, onEvent }: Props) {
     const [dark, setDark] = useState(false),
         [collapsed, setCollapsed] = useState(false),
         [menu, setMenu] = useState(false),
+        [platform, setPlatform] = useState(true),
         [mobile, setMobile] = useState(false);
     const [prompt, setPrompt] = useState(''),
         [messages, setMessages] = useState<Message[]>([]),
@@ -55,8 +62,6 @@ function Layout({ user, route, onEvent }: Props) {
     const navigate = useNavigate();
     const currentRoute = useLocation();
     const editing = ['/components', '/themes'].includes(currentRoute.pathname);
-    const tritonSection =
-        currentRoute.pathname === '/' || currentRoute.pathname.startsWith('/chat');
     const breadcrumb = breadcrumbFor(currentRoute.pathname);
     useEffect(() => {
         void onEvent('navigate', { path: currentRoute.pathname }).catch((reason) =>
@@ -87,13 +92,6 @@ function Layout({ user, route, onEvent }: Props) {
         setConversation(item);
         setWork(undefined);
         navigate('/chat/' + item.id);
-        setMobile(false);
-    }
-    function newChat() {
-        setMessages([]);
-        setConversation(undefined);
-        setWork(undefined);
-        navigate('/chat');
         setMobile(false);
     }
     async function send(stayOnPage = false) {
@@ -257,51 +255,118 @@ function Layout({ user, route, onEvent }: Props) {
                 className={
                     (mobile ? 'flex' : 'hidden') +
                     (collapsed ? ' md:hidden' : ' md:flex') +
-                    ' fixed z-20 bottom-0 top-14 left-0 w-60 flex-col border-r border-zinc-500/20 p-3 bg-surface md:w-20'
+                    ' fixed z-20 bottom-0 top-14 left-0 w-60 flex-col border-r border-zinc-500/20 p-3 bg-surface'
                 }
             >
                 <>
-                    <div className="px-3 py-6 text-xl font-semibold md:px-0 md:text-center">
-                        <span className="md:hidden">Poseidon </span>
-                        <span className="text-indigo-500">↗</span>
+                    <div className="px-3 py-6 text-xl font-semibold">
+                        Poseidon <span className="text-indigo-500">↗</span>
                     </div>
-                    <Link
-                        className={
-                            button +
-                            ' flex items-center gap-3 md:flex-col md:justify-center md:px-1 md:text-center md:text-xs' +
-                            (tritonSection ? ' bg-selected text-primary' : '')
+                    <NavLink
+                        className={({ isActive }) =>
+                            button + (isActive ? ' bg-selected text-primary' : '')
                         }
                         to="/"
                         onClick={() => setMobile(false)}
                     >
-                        <Icon name="ai" />
-                        <span>Triton</span>
-                    </Link>
+                        Home
+                    </NavLink>
+                    <Button
+                        variant="ghost"
+                        className={button}
+                        onClick={() => {
+                            setMessages([]);
+                            setConversation(undefined);
+                            setWork(undefined);
+                            navigate('/chat');
+                            setMobile(false);
+                        }}
+                    >
+                        ＋ New chat
+                    </Button>
+                    <p className="px-3 mt-6 text-xs text-zinc-500">RECENT CONVERSATIONS</p>
+                    {history
+                        .slice(-4)
+                        .reverse()
+                        .map((item) => (
+                            <Button
+                                variant="ghost"
+                                key={item.id}
+                                className={button + ' truncate'}
+                                onClick={() => {
+                                    resume(item);
+                                }}
+                            >
+                                <span className="min-w-0 truncate">{item.data.title}</span>
+                            </Button>
+                        ))}
+                    <Button
+                        variant="ghost"
+                        className={button + ' mt-6'}
+                        aria-expanded={platform}
+                        onClick={() => setPlatform(!platform)}
+                    >
+                        Platform {platform ? '⌄' : '›'}
+                    </Button>
+                    {platform && (
+                        <nav className="ml-3 flex flex-col">
+                            <NavLink
+                                className={({ isActive }) =>
+                                    button + (isActive ? ' bg-selected text-primary' : '')
+                                }
+                                to="/entities"
+                            >
+                                Entity types
+                            </NavLink>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    button + (isActive ? ' bg-selected text-primary' : '')
+                                }
+                                to="/components"
+                            >
+                                Components
+                            </NavLink>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    button + (isActive ? ' bg-selected text-primary' : '')
+                                }
+                                to="/users"
+                            >
+                                Users
+                            </NavLink>
+                        </nav>
+                    )}
+                    <NavLink
+                        className={({ isActive }) =>
+                            button + (isActive ? ' bg-selected text-primary' : '')
+                        }
+                        to="/themes"
+                    >
+                        Themes
+                    </NavLink>
+                    <NavLink
+                        className={({ isActive }) =>
+                            button + (isActive ? ' bg-selected text-primary' : '')
+                        }
+                        to="/activity"
+                    >
+                        Activity
+                    </NavLink>
+                    <NavLink
+                        className={({ isActive }) =>
+                            button + (isActive ? ' bg-selected text-primary' : '')
+                        }
+                        to="/account"
+                    >
+                        Account
+                    </NavLink>
                 </>
             </Sidebar>
-            {tritonSection && (
-                <TritonSidebar
-                    conversations={history}
-                    activeConversationId={conversation?.id}
-                    onNewChat={newChat}
-                    onResume={resume}
-                    className={
-                        'max-h-56 w-full border-b border-line md:fixed md:bottom-0 md:top-14 md:z-10 md:max-h-none md:w-64 md:border-b-0 md:border-r ' +
-                        (collapsed ? 'md:left-0' : 'md:left-20')
-                    }
-                />
-            )}
             <main
                 className={
                     'transition-all ' +
                     (editing ? 'h-[calc(100dvh-3.5rem)] overflow-hidden ' : 'px-4 py-8 md:px-10 ') +
-                    (tritonSection
-                        ? collapsed
-                            ? 'md:ml-64'
-                            : 'md:ml-[21rem]'
-                        : collapsed
-                          ? 'md:ml-0'
-                          : 'md:ml-20')
+                    (collapsed ? 'md:ml-0' : 'md:ml-60')
                 }
             >
                 <div className={editing ? 'h-full min-h-0 flex flex-col' : 'max-w-5xl mx-auto'}>
@@ -357,6 +422,8 @@ function Layout({ user, route, onEvent }: Props) {
                                     prompt={prompt}
                                     setPrompt={setPrompt}
                                     send={send}
+                                    history={history}
+                                    onResume={resume}
                                 />
                             }
                         />
