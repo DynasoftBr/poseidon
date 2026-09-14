@@ -3,10 +3,11 @@ import Records from '@components/portal-records';
 import Button from '@components/ui-button';
 import Switch from '@components/ui-switch';
 import Home from '@components/portal-home';
-import Chat from '@components/portal-chat';
+import TritonPage from '@components/triton-page';
 import ResourceEditorPage from '@components/resource-editor-page';
 import Header from '@components/portal-header';
 import Sidebar from '@components/portal-sidebar';
+import Icon from '@components/ui-icon';
 import { useEffect, useState, useRef } from 'react';
 import {
     MemoryRouter,
@@ -62,6 +63,8 @@ function Layout({ user, route, onEvent }: Props) {
     const navigate = useNavigate();
     const currentRoute = useLocation();
     const editing = ['/components', '/themes'].includes(currentRoute.pathname);
+    const tritonPage = currentRoute.pathname.startsWith('/chat');
+    const workspace = editing || tritonPage;
     const breadcrumb = breadcrumbFor(currentRoute.pathname);
     useEffect(() => {
         void onEvent('navigate', { path: currentRoute.pathname }).catch((reason) =>
@@ -92,6 +95,13 @@ function Layout({ user, route, onEvent }: Props) {
         setConversation(item);
         setWork(undefined);
         navigate('/chat/' + item.id);
+        setMobile(false);
+    }
+    function newChat() {
+        setMessages([]);
+        setConversation(undefined);
+        setWork(undefined);
+        navigate('/chat');
         setMobile(false);
     }
     async function send(stayOnPage = false) {
@@ -271,35 +281,17 @@ function Layout({ user, route, onEvent }: Props) {
                     >
                         Home
                     </NavLink>
-                    <Button
-                        variant="ghost"
-                        className={button}
-                        onClick={() => {
-                            setMessages([]);
-                            setConversation(undefined);
-                            setWork(undefined);
-                            navigate('/chat');
-                            setMobile(false);
-                        }}
+                    <NavLink
+                        className={({ isActive }) =>
+                            button +
+                            ' flex items-center gap-2' +
+                            (isActive ? ' bg-selected text-primary' : '')
+                        }
+                        to="/chat"
+                        onClick={() => setMobile(false)}
                     >
-                        ＋ New chat
-                    </Button>
-                    <p className="px-3 mt-6 text-xs text-zinc-500">RECENT CONVERSATIONS</p>
-                    {history
-                        .slice(-4)
-                        .reverse()
-                        .map((item) => (
-                            <Button
-                                variant="ghost"
-                                key={item.id}
-                                className={button + ' truncate'}
-                                onClick={() => {
-                                    resume(item);
-                                }}
-                            >
-                                <span className="min-w-0 truncate">{item.data.title}</span>
-                            </Button>
-                        ))}
+                        <Icon name="ai" /> Triton
+                    </NavLink>
                     <Button
                         variant="ghost"
                         className={button + ' mt-6'}
@@ -365,12 +357,14 @@ function Layout({ user, route, onEvent }: Props) {
             <main
                 className={
                     'transition-all ' +
-                    (editing ? 'h-[calc(100dvh-3.5rem)] overflow-hidden ' : 'px-4 py-8 md:px-10 ') +
+                    (workspace
+                        ? 'h-[calc(100dvh-3.5rem)] overflow-hidden '
+                        : 'px-4 py-8 md:px-10 ') +
                     (collapsed ? 'md:ml-0' : 'md:ml-60')
                 }
             >
-                <div className={editing ? 'h-full min-h-0 flex flex-col' : 'max-w-5xl mx-auto'}>
-                    {!editing && (
+                <div className={workspace ? 'h-full min-h-0 flex flex-col' : 'max-w-5xl mx-auto'}>
+                    {!workspace && (
                         <div className="text-xs text-zinc-500 mb-8">
                             LOCAL PROTOTYPE · AI SIMULATED
                         </div>
@@ -430,13 +424,17 @@ function Layout({ user, route, onEvent }: Props) {
                         <Route
                             path="/chat/*"
                             element={
-                                <Chat
+                                <TritonPage
+                                    conversations={history}
+                                    activeConversationId={conversation?.id}
                                     messages={messages}
                                     prompt={prompt}
                                     setPrompt={setPrompt}
                                     send={send}
                                     work={work}
                                     setWork={setWork}
+                                    onNewChat={newChat}
+                                    onResume={resume}
                                 />
                             }
                         />
