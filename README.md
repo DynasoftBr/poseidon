@@ -94,4 +94,4 @@ npm run storybook:build --workspace @poseidon/ui-foundation
 npm run e2e --workspace @poseidon/client
 ```
 
-Browser tests currently use installed Google Chrome and expect the local server and Vite shell to be running against a disposable test database; the publishing test edits and restores the Portal draft. Do not run it against a database containing work you want to preserve.
+Browser tests use installed Google Chrome and start their own server, Vite shell and disposable MongoDB replica set. The isolated database is bootstrapped on startup and removed after the run.

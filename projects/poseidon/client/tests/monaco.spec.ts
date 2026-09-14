@@ -111,7 +111,7 @@ test('should keep component source separate when switching after an unsaved edit
     await page.goto('/components');
     const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
     const response = await page.request.get(
-        'http://127.0.0.1:3000/api/v1/entities/ui-component/source-editor',
+        'http://127.0.0.1:3100/api/v1/entities/ui-component/source-editor',
     );
     const original = await response.json();
     await frame.getByRole('button', { name: 'Portal →', exact: true }).click();

@@ -18,7 +18,7 @@ export async function replaceSource(
 }
 export async function portalSource(page: Page): Promise<string> {
     const response = await page.request.get(
-        'http://127.0.0.1:3000/api/v1/entities/ui-component/portal-entry',
+        'http://127.0.0.1:3100/api/v1/entities/ui-component/portal-entry',
     );
     const entity = await response.json();
     return entity.data.source.code as string;

@@ -77,7 +77,11 @@ export function Preview({
             <iframe
                 ref={frame}
                 title="Draft preview"
-                src={'http://renderer.localhost:3001/artifacts/' + artifactId}
+                src={
+                    (import.meta.env.VITE_RENDERER_ORIGIN ?? 'http://renderer.localhost:3001') +
+                    '/artifacts/' +
+                    artifactId
+                }
                 sandbox="allow-scripts allow-forms"
                 referrerPolicy="no-referrer"
             />

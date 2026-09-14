@@ -101,10 +101,14 @@ async function initializeUI({
         const releases = new ReleaseService(entities, artifacts, new ContainerCompiler());
         const portal = await entities.get('app', 'portal');
         if (!portal.data.publishedReleaseId) await releases.publish('portal', 'system');
-        configureUI(app, { entities, releases, artifacts, store, publisher }).listen(
-            3001,
-            '127.0.0.1',
-        );
+        configureUI(
+            app,
+            { entities, releases, artifacts, store, publisher },
+            {
+                rendererOrigin: process.env.POSEIDON_RENDERER_ORIGIN,
+                clientOrigin: process.env.POSEIDON_CLIENT_ORIGIN,
+            },
+        ).listen(Number(process.env.POSEIDON_RENDERER_PORT ?? 3001), '127.0.0.1');
         app.use(errorMiddleware);
     }
 }

@@ -18,8 +18,11 @@ export function configureUI(
         store: EntityStore;
         publisher: EventPublisher;
     },
+    configuration: { rendererOrigin?: string; clientOrigin?: string } = {},
 ): Express {
     const { entities, releases, artifacts } = dependencies;
+    const rendererOrigin = configuration.rendererOrigin ?? 'http://renderer.localhost:3001';
+    const clientOrigin = configuration.clientOrigin ?? 'http://127.0.0.1:5173';
     const sessions = new Map<string, Session>();
     app.get('/api/ui/resolve', async (request, response, next) => {
         try {
@@ -41,7 +44,7 @@ export function configureUI(
                 id,
                 releaseId: release.id,
                 basePath: selected.data.basePath,
-                rendererUrl: `http://renderer.localhost:3001/artifacts/${release.data.artifactId}`,
+                rendererUrl: `${rendererOrigin}/artifacts/${release.data.artifactId}`,
                 props: { user: { name: 'Local user' }, localDevelopment: true },
             });
         } catch (error) {
@@ -49,15 +52,14 @@ export function configureUI(
         }
     });
     app.post('/api/ui/event', eventHandler(sessions, dependencies));
-    return createRenderer(artifacts);
+    return createRenderer(artifacts, clientOrigin);
 }
-function createRenderer(artifacts: ArtifactStore): Express {
+function createRenderer(artifacts: ArtifactStore, clientOrigin: string): Express {
     const renderer = express();
     renderer.get('/artifacts/:id', async (request, response) => {
         try {
             response.set({
-                'Content-Security-Policy':
-                    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src data:; worker-src blob:; form-action 'none'; base-uri 'none'; frame-src 'none'; frame-ancestors http://127.0.0.1:5173 http://localhost:5173",
+                'Content-Security-Policy': `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src data:; worker-src blob:; form-action 'none'; base-uri 'none'; frame-src 'none'; frame-ancestors ${clientOrigin}`,
                 'Referrer-Policy': 'no-referrer',
                 'X-Content-Type-Options': 'nosniff',
                 'Cache-Control': 'public,max-age=31536000,immutable',
