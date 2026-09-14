@@ -1,7 +1,16 @@
 import type { Entity } from '@poseidon/models';
+import { deriveComponentContract } from './component-contract';
 
 function entity(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
     return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
+}
+function component(id: string, name: string, code: string): Entity {
+    return entity(id, 'ui-component', {
+        name,
+        source: { code },
+        ...deriveComponentContract(code),
+        bindings: {},
+    });
 }
 function authoring() {
     const resources: Record<string, string> = {
@@ -67,15 +76,7 @@ export function createPortalSeeds(
 ): Entity[] {
     return [
         ...(sourceEditorSource
-            ? [
-                  entity('source-editor', 'ui-component', {
-                      name: 'SourceEditor',
-                      source: { code: sourceEditorSource },
-                      props: {},
-                      events: {},
-                      bindings: {},
-                  }),
-              ]
+            ? [component('source-editor', 'SourceEditor', sourceEditorSource)]
             : []),
         entity('default-theme', 'theme', {
             name: 'Default',
@@ -84,15 +85,7 @@ export function createPortalSeeds(
             },
         }),
         entry(source),
-        ...Object.entries(additions).map(([id, code]) =>
-            entity(id, 'ui-component', {
-                name: id,
-                source: { code },
-                props: {},
-                events: {},
-                bindings: {},
-            }),
-        ),
+        ...Object.entries(additions).map(([id, code]) => component(id, id, code)),
         entity('portal', 'app', {
             name: 'Poseidon Portal',
             domain: 'localhost',

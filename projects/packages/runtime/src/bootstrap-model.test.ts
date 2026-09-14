@@ -91,6 +91,25 @@ describe('createBootstrapModel', () => {
         expect(store.commit).toHaveBeenCalledWith(createBootstrapEvents(model));
     });
 
+    it('should add new core entity types and properties to an existing store', async () => {
+        const model = createBootstrapModel('system', new Date());
+        const events = createBootstrapEvents(model);
+        const identityEvents = events.filter(
+            (event) =>
+                event.entityId === 'identity' ||
+                (event.entityTypeId === 'entity-property' &&
+                    event.data.entityTypeId === 'identity'),
+        );
+        const store = createStore(
+            events
+                .filter((event) => !identityEvents.includes(event))
+                .map((event) => event.entityId),
+        );
+
+        await expect(ensureBootstrapModel(store, new EventPublisher(), model)).resolves.toBe(true);
+        expect(store.commit).toHaveBeenCalledWith(identityEvents);
+    });
+
     it('should preserve an initialized store', async () => {
         const model = createBootstrapModel('system', new Date());
         const store = createStore(createBootstrapEvents(model).map((event) => event.entityId));

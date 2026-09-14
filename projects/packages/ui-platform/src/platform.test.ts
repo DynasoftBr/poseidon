@@ -173,6 +173,27 @@ describe('UI platform', () => {
         await bootstrapUI(store, publisher, createPortalSeeds('replacement'));
         expect((await service.get('theme', 'default-theme')).data.name).toBe('My theme');
     });
+    it('should derive seeded component props and events from TypeScript', () => {
+        const source = `export default function Switch(props: {
+            label: string;
+            checked: boolean;
+            onChange: (checked: boolean) => void;
+        }) { return null }`;
+        const seeded = createPortalSeeds(
+            'export default function Portal() { return null }',
+            undefined,
+            {
+                'ui-switch': source,
+            },
+        ).find((entity) => entity.id === 'ui-switch');
+        expect(seeded?.data).toMatchObject({
+            props: {
+                label: { type: 'string', required: true },
+                checked: { type: 'boolean', required: true },
+            },
+            events: { onChange: { type: 'boolean' } },
+        });
+    });
     it('should activate only successful releases and restore a prior release', async () => {
         const { service } = await setup();
         const artifacts = { put: vi.fn().mockResolvedValue('asset'), read: vi.fn() };

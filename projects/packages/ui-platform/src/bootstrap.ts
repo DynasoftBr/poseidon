@@ -19,7 +19,6 @@ const definitions: Record<string, Record<string, PropertyType>> = {
         source: 'json',
         props: 'json',
         events: 'json',
-        dependencies: 'array',
         themeId: 'reference',
         bindings: 'json',
         form: 'json',
@@ -47,13 +46,7 @@ export function createUIBootstrap(now: Date): BootstrapModel {
                     name,
                     type,
                     ...referenceDefinition(entityTypeId, name),
-                    required: ![
-                        'themeId',
-                        'form',
-                        'bindings',
-                        'dependencies',
-                        'publishedReleaseId',
-                    ].includes(name),
+                    required: !['themeId', 'form', 'bindings', 'publishedReleaseId'].includes(name),
                 },
             })),
     );

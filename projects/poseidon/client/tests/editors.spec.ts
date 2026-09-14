@@ -89,6 +89,33 @@ test('should toggle the component list and Triton sidebar from the editor header
     await frame.getByRole('button', { name: 'Close Triton' }).first().click();
     await expect(frame.getByRole('complementary', { name: 'Triton' })).toBeHidden();
 });
+
+test('should compose a component visually and generate its source', async ({ page }) => {
+    await page.goto('/components');
+    const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
+    const name = `Visual example ${Date.now()}`;
+    await frame.getByRole('button', { name: 'Create new', exact: true }).click();
+    await frame.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
+    await expect(frame.getByRole('button', { name: 'Visual', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+    await frame.getByRole('button', { name: 'Text', exact: true }).click();
+    await frame.getByRole('textbox', { name: 'text', exact: true }).fill('Hello from visual');
+    await frame.getByRole('button', { name: 'ui-card', exact: true }).click();
+    await frame.getByRole('button', { name: 'ui-switch', exact: true }).click();
+    await frame.getByRole('textbox', { name: /^label/ }).fill('Enabled');
+    await frame.getByRole('checkbox', { name: /^checked/ }).check();
+    await expect(frame.locator('[aria-label="Saved"]')).toBeVisible({ timeout: 10_000 });
+    await frame.getByRole('button', { name: 'Code', exact: true }).click();
+    await expect(frame.locator('.view-lines')).toContainText('Hello from visual');
+    await expect(frame.locator('.view-lines')).toContainText('@poseidon-visual');
+    await expect(frame.locator('.view-lines')).toContainText(
+        "import Card from '@components/ui-card'",
+    );
+    await expect(frame.locator('.view-lines')).toContainText('onChange={() => undefined}');
+});
+
 test('should close the mobile drawer with Escape and restore focus', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 900 });
     await page.goto('/');

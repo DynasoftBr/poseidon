@@ -135,6 +135,10 @@ async function initialComponents(): Promise<Record<string, string>> {
             resolve(__dirname, '../../portal/resource-editor-page.tsx'),
             'utf8',
         ),
+        'visual-editor': await readFile(
+            resolve(__dirname, '../../portal/visual-editor.tsx'),
+            'utf8',
+        ),
         'portal-records': await readFile(resolve(__dirname, '../../portal/records.tsx'), 'utf8'),
         'portal-composer': await readFile(resolve(__dirname, '../../portal/composer.tsx'), 'utf8'),
         'ui-form-field': formField + '\nexport default FormField;',

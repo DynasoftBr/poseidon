@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import SourceEditor from '@components/source-editor';
 import Header from '@components/portal-header';
 import Sidebar from '@components/portal-sidebar';
+import VisualEditor from '@components/visual-editor';
 
 type Item = { id: string; version: number; data: Record<string, unknown> };
 type Conversation = { id: string; data: { title?: string } };
@@ -32,6 +33,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
     const [tritonOpen, setTritonOpen] = useState(true);
     const [problemsOpen, setProblemsOpen] = useState(false);
     const [diagnosticLine, setDiagnosticLine] = useState<number>();
+    const [view, setView] = useState<'visual' | 'code'>('code');
     const savedSignature = useRef('');
     const files = useMemo(
         () => items.map((item) => ({ id: item.id, code: sourceOf(item) })),
@@ -61,6 +63,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
         setCode(nextCode);
         setStatus('');
         setSaveState(undefined);
+        setView('code');
     }
     function create() {
         setSelected(undefined);
@@ -76,6 +79,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
         setCode(nextCode);
         setStatus('');
         setSaveState({ state: 'saving' });
+        if (kind === 'components') setView('visual');
     }
     useEffect(() => {
         if (!editing || signature(name, code) === savedSignature.current) return;
@@ -258,6 +262,32 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                                         {count(selected, 'events')} events
                                     </span>
                                 )}
+                                {kind === 'components' && (
+                                    <div className="flex shrink-0 rounded-md border border-line p-0.5">
+                                        <button
+                                            className={
+                                                'min-h-9 rounded px-3 text-sm ' +
+                                                (view === 'visual'
+                                                    ? 'bg-selected text-primary'
+                                                    : '')
+                                            }
+                                            aria-pressed={view === 'visual'}
+                                            onClick={() => setView('visual')}
+                                        >
+                                            Visual
+                                        </button>
+                                        <button
+                                            className={
+                                                'min-h-9 rounded px-3 text-sm ' +
+                                                (view === 'code' ? 'bg-selected text-primary' : '')
+                                            }
+                                            aria-pressed={view === 'code'}
+                                            onClick={() => setView('code')}
+                                        >
+                                            Code
+                                        </button>
+                                    </div>
+                                )}
                                 <button
                                     className="min-h-11 px-3 shrink-0 text-sm disabled:opacity-50"
                                     disabled={busy || !selected}
@@ -274,7 +304,51 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                                 </button>
                             </div>
                             <div className="flex-1 min-h-0 min-w-0 flex flex-col">
-                                {kind === 'components' ? (
+                                {kind === 'components' && view === 'visual' ? (
+                                    <>
+                                        <VisualEditor
+                                            fileId={selected?.id || 'new-component'}
+                                            componentName={name}
+                                            value={code}
+                                            components={items.map((item) => ({
+                                                id: item.id,
+                                                data: {
+                                                    name: String(item.data.name || item.id),
+                                                    props:
+                                                        item.data.props &&
+                                                        typeof item.data.props === 'object'
+                                                            ? (item.data.props as Record<
+                                                                  string,
+                                                                  {
+                                                                      type?: string;
+                                                                      required?: boolean;
+                                                                  }
+                                                              >)
+                                                            : {},
+                                                    events:
+                                                        item.data.events &&
+                                                        typeof item.data.events === 'object'
+                                                            ? (item.data.events as Record<
+                                                                  string,
+                                                                  {
+                                                                      type?: string;
+                                                                      required?: boolean;
+                                                                  }
+                                                              >)
+                                                            : {},
+                                                },
+                                            }))}
+                                            onChange={(value) => {
+                                                setCode(value);
+                                                setSaveState({ state: 'saving' });
+                                            }}
+                                        />
+                                        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-line px-3 py-2 text-xs">
+                                            {statusContent || <span>No problems reported</span>}
+                                            <SaveIndicator saveState={saveState} />
+                                        </div>
+                                    </>
+                                ) : kind === 'components' ? (
                                     <SourceEditor
                                         fileId={selected?.id || 'new-component'}
                                         value={code}
