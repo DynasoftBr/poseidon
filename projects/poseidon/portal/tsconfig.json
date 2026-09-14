@@ -10,6 +10,7 @@
             "@components/source-editor": ["./source-editor.tsx"],
             "@components/resource-editor-page": ["./resource-editor-page.tsx"],
             "@components/entity-type-editor": ["./entity-type-editor.tsx"],
+            "@components/triton-sidebar": ["./triton-sidebar.tsx"],
             "@components/portal-*": ["./*.tsx"],
             "@components/ui-*": ["./components/*.tsx"],
             "@components/ui-themescope": ["./components/theme-scope.tsx"],

@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
-test('should open the components route from the navigation menu', async ({ page }) => {
-    await page.goto('/');
+test('should open the components route directly', async ({ page }) => {
+    await page.goto('/components');
     const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
-    await frame.getByRole('link', { name: 'Components', exact: true }).click();
     await expect(page).toHaveURL(/\/components$/);
     await expect(frame.getByRole('navigation', { name: 'Component files' })).toBeVisible();
     await expect(

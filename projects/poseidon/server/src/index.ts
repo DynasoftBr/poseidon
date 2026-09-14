@@ -126,6 +126,10 @@ async function initialComponents(): Promise<Record<string, string>> {
         'portal-chat': await readFile(resolve(__dirname, '../../portal/chat.tsx'), 'utf8'),
         'portal-header': await readFile(resolve(__dirname, '../../portal/header.tsx'), 'utf8'),
         'portal-sidebar': await readFile(resolve(__dirname, '../../portal/sidebar.tsx'), 'utf8'),
+        'triton-sidebar': await readFile(
+            resolve(__dirname, '../../portal/triton-sidebar.tsx'),
+            'utf8',
+        ),
         'resource-editor-page': await readFile(
             resolve(__dirname, '../../portal/resource-editor-page.tsx'),
             'utf8',

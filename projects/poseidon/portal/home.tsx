@@ -1,28 +1,16 @@
 import { Link } from 'react-router-dom';
 import Button from '@components/ui-button';
 import Composer from '@components/portal-composer';
-type Item = {
-    id: string;
-    version: number;
-    data: {
-        title?: string;
-        messages?: { role: string; text: string; work?: { title: string; steps: string[] } }[];
-    };
-};
 export default function Home({
     user,
     prompt,
     setPrompt,
     send,
-    history,
-    onResume,
 }: {
     user?: { name: string };
     prompt: string;
     setPrompt: (value: string) => void;
     send: () => Promise<void>;
-    history: Item[];
-    onResume: (item: Item) => void;
 }) {
     const button = 'min-h-11 rounded-lg px-3 py-2 text-left hover:bg-selected';
     return (
@@ -58,28 +46,6 @@ export default function Home({
                     </Link>
                 </section>
             </div>
-            <h2 className="font-semibold mt-10 mb-4">Recent conversations</h2>
-            {history.length ? (
-                history
-                    .slice(-5)
-                    .reverse()
-                    .map((item) => (
-                        <Button
-                            variant="ghost"
-                            key={item.id}
-                            className={
-                                button + ' block w-full border-b border-zinc-500/20 truncate'
-                            }
-                            onClick={() => {
-                                onResume(item);
-                            }}
-                        >
-                            <span className="truncate">{item.data.title} →</span>
-                        </Button>
-                    ))
-            ) : (
-                <p className="text-zinc-500">Your conversations with Triton will appear here.</p>
-            )}
         </>
     );
 }
