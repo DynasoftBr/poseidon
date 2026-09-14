@@ -60,7 +60,7 @@ export function createUIBootstrap(now: Date): BootstrapModel {
             entityTypeId: 'entity-type',
             data: {
                 name,
-                label: name,
+                ...entityTypeMetadata[name],
                 properties: entityProperties
                     .filter((p) => p.data.entityTypeId === name)
                     .map((p) => p.id),
@@ -68,6 +68,42 @@ export function createUIBootstrap(now: Date): BootstrapModel {
         })),
     };
 }
+
+const entityTypeMetadata: Record<
+    string,
+    { label: string; pluralLabel: string; description: string; menuLocation: string }
+> = {
+    app: {
+        label: 'App',
+        pluralLabel: 'Apps',
+        description: 'Defines a routable application and its published release.',
+        menuLocation: 'Platform',
+    },
+    'ui-component': {
+        label: 'UI component',
+        pluralLabel: 'UI components',
+        description: 'Defines an authored user interface component.',
+        menuLocation: 'Platform',
+    },
+    theme: {
+        label: 'Theme',
+        pluralLabel: 'Themes',
+        description: 'Defines visual tokens for an application.',
+        menuLocation: 'Platform',
+    },
+    'app-release': {
+        label: 'App release',
+        pluralLabel: 'App releases',
+        description: 'Captures an immutable published application release.',
+        menuLocation: 'Platform',
+    },
+    conversation: {
+        label: 'Conversation',
+        pluralLabel: 'Conversations',
+        description: 'Stores a conversation and its messages.',
+        menuLocation: 'Platform',
+    },
+};
 
 export async function bootstrapUI(
     store: BootstrapStore,

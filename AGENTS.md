@@ -43,3 +43,5 @@ Poseidon is a self-describing business application runtime. The platform model i
 - Never overwrite stored drafts during bootstrap, mutate an AppRelease, or activate a failed build.
 - The local UI identity requires `POSEIDON_LOCAL_UI=true` and is not production authentication; do not accept actor IDs from browser requests.
 - Run the Storybook build and browser integration tests when changing UI behavior; see README for local setup.
+- After implementing a Portal UI change, restart affected local services when they are already running, apply any required additive seed migration, publish a new release when the active release is stale, and verify that the active release contains the change.
+- Refresh the open Portal when browser control is available so the result is ready for the user to verify; do not leave routine restart, republish, or refresh steps to the user.

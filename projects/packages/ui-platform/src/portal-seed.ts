@@ -17,6 +17,7 @@ function authoring() {
         components: 'ui-component',
         themes: 'theme',
         entities: 'entity-type',
+        identities: 'identity',
         users: 'user',
         properties: 'entity-property',
     };
@@ -44,6 +45,8 @@ function entry(source: string): Entity {
         props: { user: { type: 'object' }, route: { type: 'string' } },
         events: {
             ...editing.events,
+            deleteidentities: { type: 'object' },
+            identityrelations: { type: 'object' },
             publish: { type: 'object' },
             preview: { type: 'object' },
             restore: {
@@ -58,6 +61,8 @@ function entry(source: string): Entity {
         },
         bindings: {
             ...editing.bindings,
+            deleteidentities: { kind: 'delete', entityTypeId: 'identity' },
+            identityrelations: { kind: 'query', entityTypeId: 'relation-link' },
             publish: { kind: 'publish', appId: 'portal' },
             preview: { kind: 'preview', appId: 'portal' },
             restore: { kind: 'restore', appId: 'portal' },

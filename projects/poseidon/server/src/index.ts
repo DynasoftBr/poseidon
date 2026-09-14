@@ -88,19 +88,18 @@ async function initializeUI({
         );
         const source = await readFile(resolve(__dirname, '../../portal/entry.tsx'), 'utf8');
         const componentSources = await initialComponents();
-        await bootstrapUI(
-            store,
-            publisher,
-            createPortalSeeds(
-                source,
-                await readFile(resolve(__dirname, '../../portal/source-editor.tsx'), 'utf8'),
-                componentSources,
-            ),
+        const portalSeeds = createPortalSeeds(
+            source,
+            await readFile(resolve(__dirname, '../../portal/source-editor.tsx'), 'utf8'),
+            componentSources,
         );
+        await bootstrapUI(store, publisher, portalSeeds);
         await migrateLegacyPrimitiveSources(entities, componentSources);
         const releases = new ReleaseService(entities, artifacts, new ContainerCompiler());
         const portal = await entities.get('app', 'portal');
-        if (!portal.data.publishedReleaseId) await releases.publish('portal', 'system');
+        if (!portal.data.publishedReleaseId) {
+            await releases.publish('portal', 'system');
+        }
         configureUI(
             app,
             { entities, releases, artifacts, store, publisher },
@@ -124,6 +123,10 @@ async function initialComponents(): Promise<Record<string, string>> {
         ...(await primitiveSources()),
         'entity-type-editor': await readFile(
             resolve(__dirname, '../../portal/entity-type-editor.tsx'),
+            'utf8',
+        ),
+        'identity-editor': await readFile(
+            resolve(__dirname, '../../portal/identity-editor.tsx'),
             'utf8',
         ),
         'portal-home': await readFile(resolve(__dirname, '../../portal/home.tsx'), 'utf8'),

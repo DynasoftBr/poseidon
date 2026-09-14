@@ -42,6 +42,56 @@ test('should create an entity type with a relationship and declarative action', 
     await frame.getByRole('button', { name: 'Save entity type' }).click();
     await expect(frame.getByRole('status')).toHaveText('Entity type saved.');
 });
+
+test('should allow editing a core entity type', async ({ page }) => {
+    await page.goto('/entities');
+    const frame = page.frameLocator('iframe');
+    await frame.getByRole('button', { name: 'entity-type →', exact: true }).click();
+    await expect(frame.getByRole('textbox', { name: 'Entity name' })).toHaveValue('entity-type');
+    await expect(frame.getByRole('button', { name: 'Add property' })).toBeVisible();
+    await expect(frame.getByRole('textbox', { name: 'Declarative actions' })).toBeEnabled();
+    await expect(frame.getByRole('button', { name: 'Save entity type' })).toBeVisible();
+});
+
+test('should create, update and delete an identity', async ({ page }) => {
+    await page.goto('/identities');
+    const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
+    const suffix = Date.now();
+    const administrator = `Administrator ${suffix}`;
+    const administratorTeam = `${administrator} team`;
+    const readOnly = `Read only ${suffix}`;
+
+    await frame.getByRole('button', { name: 'Create identity' }).click();
+    await frame.getByRole('textbox', { name: 'Identity name' }).fill(administrator);
+    await frame.getByRole('combobox', { name: 'Owner' }).selectOption('system');
+    await frame.getByRole('button', { name: 'Save identity' }).click();
+    await expect(frame.getByRole('status')).toHaveText('Identity saved.');
+
+    await frame.getByRole('textbox', { name: 'Identity name' }).fill(administratorTeam);
+    await frame.getByRole('button', { name: 'Save identity' }).click();
+    await expect(frame.getByRole('status')).toHaveText('Identity saved.');
+
+    await frame.getByRole('button', { name: 'Create identity' }).click();
+    await frame.getByRole('textbox', { name: 'Identity name' }).fill(readOnly);
+    await frame.getByRole('combobox', { name: 'Owner' }).selectOption('system');
+    await frame.getByRole('button', { name: 'Add member' }).click();
+    await frame
+        .getByRole('dialog', { name: 'Add member' })
+        .getByRole('button', { name: administratorTeam })
+        .click();
+    await frame.getByRole('button', { name: 'Save identity' }).click();
+    await expect(frame.getByRole('status')).toHaveText('Identity saved.');
+
+    await frame.getByRole('button', { name: `${administratorTeam} →` }).click();
+    await expect(frame.getByRole('list', { name: 'Member of' })).toContainText(readOnly);
+
+    await frame.getByRole('button', { name: `${readOnly} →` }).click();
+    await frame.getByRole('button', { name: 'Delete identity' }).click();
+    const dialog = frame.getByRole('dialog', { name: 'Delete identity?' });
+    await dialog.getByRole('button', { name: 'Delete identity' }).click();
+    await expect(frame.getByRole('status')).toHaveText('Identity deleted.');
+    await expect(frame.getByRole('button', { name: `${readOnly} →` })).toHaveCount(0);
+});
 test('should preview saved components without replacing the editor session', async ({ page }) => {
     test.setTimeout(60_000);
     await page.goto('/components');

@@ -1,4 +1,5 @@
 import EntityTypeEditor from '@components/entity-type-editor';
+import IdentityEditor from '@components/identity-editor';
 import Records from '@components/portal-records';
 import Button from '@components/ui-button';
 import Switch from '@components/ui-switch';
@@ -326,6 +327,14 @@ function Layout({ user, route, onEvent }: Props) {
                             >
                                 Users
                             </NavLink>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    button + (isActive ? ' bg-selected text-primary' : '')
+                                }
+                                to="/identities"
+                            >
+                                Identities
+                            </NavLink>
                         </nav>
                     )}
                     <NavLink
@@ -379,6 +388,7 @@ function Layout({ user, route, onEvent }: Props) {
                     )}
                     <Routes>
                         <Route path="/users" element={<Records kind="users" onEvent={onEvent} />} />
+                        <Route path="/identities" element={<IdentityEditor onEvent={onEvent} />} />
                         <Route
                             path="/activity"
                             element={<Records kind="releases" onEvent={onEvent} />}
@@ -495,6 +505,7 @@ function breadcrumbFor(pathname: string): string {
             entities: 'Entity types',
             components: 'Components',
             users: 'Users',
+            identities: 'Identities',
             themes: 'Themes',
             activity: 'Activity',
             account: 'Account',

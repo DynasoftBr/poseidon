@@ -9,7 +9,7 @@ import {
     createBootstrapModel,
     type EntityStore,
 } from '@poseidon/runtime';
-import { bootstrapUI } from './bootstrap';
+import { bootstrapUI, createUIBootstrap } from './bootstrap';
 import { createPortalSeeds } from './portal-seed';
 import { FileArtifactStore } from './artifact-store';
 import { ReleaseService } from './release-service';
@@ -79,6 +79,21 @@ async function setup() {
 }
 const compiled = (...componentIds: string[]) => ({ html: '<html/>', componentIds });
 describe('UI platform', () => {
+    it('should describe every seeded UI entity type', () => {
+        const model = createUIBootstrap(new Date());
+
+        for (const entityType of model.entityTypes) {
+            expect(entityType.data).toEqual(
+                expect.objectContaining({
+                    label: expect.any(String),
+                    pluralLabel: expect.any(String),
+                    description: expect.any(String),
+                    menuLocation: 'Platform',
+                }),
+            );
+        }
+    });
+
     it('should derive props and callback events while ignoring supplied metadata', () => {
         const code = `type Props = {
             title: string;

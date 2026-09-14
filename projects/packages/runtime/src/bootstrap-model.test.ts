@@ -16,14 +16,34 @@ describe('createBootstrapModel', () => {
             { id: 'system', entityTypeId: 'user', data: { login: 'system' }, version: 1 },
         ]);
         expect(model.entityTypes).toMatchObject([
-            { id: 'entity-type', createdById: 'system', createdAt: now },
+            {
+                id: 'entity-type',
+                createdById: 'system',
+                createdAt: now,
+                data: {
+                    label: 'Entity type',
+                    pluralLabel: 'Entity types',
+                    description: 'Defines the structure and behaviour of an entity.',
+                    menuLocation: 'Platform',
+                },
+            },
             { id: 'entity-property', createdById: 'system', createdAt: now },
             { id: 'index', createdById: 'system', createdAt: now },
             { id: 'user', createdById: 'system', createdAt: now },
             { id: 'identity', createdById: 'system', createdAt: now },
             { id: 'relation-link', createdById: 'system', createdAt: now },
         ]);
-        expect(model.entityProperties).toHaveLength(35);
+        for (const entityType of model.entityTypes) {
+            expect(entityType.data).toEqual(
+                expect.objectContaining({
+                    label: expect.any(String),
+                    pluralLabel: expect.any(String),
+                    description: expect.any(String),
+                    menuLocation: 'Platform',
+                }),
+            );
+        }
+        expect(model.entityProperties).toHaveLength(38);
         expect(model.entityProperties).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
@@ -37,6 +57,10 @@ describe('createBootstrapModel', () => {
                 expect.objectContaining({
                     id: 'entity-property:default',
                     data: expect.objectContaining({ type: 'json' }),
+                }),
+                expect.objectContaining({
+                    id: 'entity-type:menuLocation',
+                    data: expect.objectContaining({ type: 'string', required: false }),
                 }),
                 expect.objectContaining({
                     id: 'identity:members',

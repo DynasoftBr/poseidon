@@ -85,7 +85,7 @@ function createCoreEntityTypes(
             entityTypeId: 'entity-type',
             data: {
                 name,
-                label: name,
+                ...coreEntityTypeMetadata[name],
                 properties: properties
                     .filter((property) => property.data.entityTypeId === name)
                     .map((property) => property.id),
@@ -101,6 +101,9 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
     return [
         createProperty(['entity-type', 'name', 'string', true], context),
         createProperty(['entity-type', 'label', 'string', true], context),
+        createProperty(['entity-type', 'pluralLabel', 'string', false], context),
+        createProperty(['entity-type', 'description', 'string', false], context),
+        createProperty(['entity-type', 'menuLocation', 'string', false], context),
         createProperty(['entity-type', 'properties', 'array', true], context, {
             itemsType: 'reference',
             relatedEntityTypeId: 'entity-property',
@@ -213,6 +216,48 @@ interface BootstrapContext {
     systemUserId: EntityId;
     now: Date;
 }
+
+const coreEntityTypeMetadata: Record<
+    string,
+    { label: string; pluralLabel: string; description: string; menuLocation: string }
+> = {
+    'entity-type': {
+        label: 'Entity type',
+        pluralLabel: 'Entity types',
+        description: 'Defines the structure and behaviour of an entity.',
+        menuLocation: 'Platform',
+    },
+    'entity-property': {
+        label: 'Entity property',
+        pluralLabel: 'Entity properties',
+        description: 'Defines a property on an entity type.',
+        menuLocation: 'Platform',
+    },
+    index: {
+        label: 'Index',
+        pluralLabel: 'Indexes',
+        description: 'Defines an index over entity properties.',
+        menuLocation: 'Platform',
+    },
+    user: {
+        label: 'User',
+        pluralLabel: 'Users',
+        description: 'Represents a user of the platform.',
+        menuLocation: 'Platform',
+    },
+    identity: {
+        label: 'Identity',
+        pluralLabel: 'Identities',
+        description: 'Represents an identity and its memberships.',
+        menuLocation: 'Platform',
+    },
+    'relation-link': {
+        label: 'Relation link',
+        pluralLabel: 'Relation links',
+        description: 'Records a relationship between entities.',
+        menuLocation: 'Platform',
+    },
+};
 
 function createEvent(entity: Entity): EntityEvent {
     return {
