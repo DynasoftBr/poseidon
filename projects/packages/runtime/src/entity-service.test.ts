@@ -1,4 +1,4 @@
-import type { EntityEvent, Entity } from '@poseidon/model';
+import type { EntityEvent, Entity } from '@poseidon/models';
 import { EventPublisher } from './event-publisher';
 import { createBootstrapModel } from './bootstrap-model';
 import { EntityService, type EntityStore } from './entity-service';
@@ -83,16 +83,37 @@ describe('EntityService', () => {
         ]);
     });
 
-    it('should reject an update with a stale version', async () => {
-        const store = new InMemoryEntityStore([projection('ada', 'person', { name: 'Ada' })]);
+    it.each(['update', 'delete'] as const)(
+        'should reject %s when the transaction reports a version conflict',
+        async (operation) => {
+            const current = {
+                ...projection('patient:ada', 'patient', { name: 'Ada' }),
+                version: 2,
+            };
+            const store = graphStore([current]);
+            store.failCommitWith = { code: 'entity-version-conflict' };
+            const commit = vi.spyOn(store, 'commit');
+            const publisher = new EventPublisher();
+            const listener = vi.fn();
+            publisher.subscribe('entity-updated', listener);
+            publisher.subscribe('entity-deleted', listener);
+            const service = new EntityService(store, publisher);
+            const command = { id: current.id, entityTypeId: 'patient', expectedVersion: 1 };
 
-        await expect(
-            new EntityService(store, new EventPublisher()).update(
-                { id: 'ada', entityTypeId: 'person', data: { name: 'Ada' }, expectedVersion: 2 },
-                'system',
-            ),
-        ).rejects.toMatchObject({ code: 'entity-version-conflict' });
-    });
+            await expect(
+                operation === 'update'
+                    ? service.update({ ...command, data: { name: 'Ada Lovelace' } }, 'system')
+                    : service.delete(command, 'system'),
+            ).rejects.toMatchObject({ code: 'entity-version-conflict' });
+
+            expect(commit).toHaveBeenCalledWith([
+                expect.objectContaining({ entityId: current.id, expectedVersion: 1 }),
+            ]);
+            expect(await store.findProjection(current.id)).toEqual(current);
+            expect(store.events).toEqual([]);
+            expect(listener).not.toHaveBeenCalled();
+        },
+    );
 
     it('should reject a reference to an entity outside its declared target type', async () => {
         const store = new InMemoryEntityStore([
@@ -348,29 +369,36 @@ describe('EntityService', () => {
         ).rejects.toThrow('write failure');
     });
 
-    it('should not commit or publish a no-op root update', async () => {
-        const store = graphStore([
-            projection('appointment:1', 'appointment', { patient: 'patient:ada' }),
-            projection('patient:ada', 'patient', { name: 'Ada' }),
-        ]);
-        const publisher = new EventPublisher();
-        const listener = vi.fn();
-        publisher.subscribe('entity-updated', listener);
+    it.each([1, 2])(
+        'should return the current entity without writes when unchanged with expected version %i',
+        async (expectedVersion) => {
+            const store = graphStore([
+                {
+                    ...projection('appointment:1', 'appointment', { patient: 'patient:ada' }),
+                    version: 2,
+                },
+                projection('patient:ada', 'patient', { name: 'Ada' }),
+            ]);
+            const publisher = new EventPublisher();
+            const listener = vi.fn();
+            publisher.subscribe('entity-updated', listener);
 
-        const result = await new EntityService(store, publisher).update(
-            {
-                id: 'appointment:1',
-                entityTypeId: 'appointment',
-                expectedVersion: 1,
-                data: { patient: 'patient:ada' },
-            },
-            'system',
-        );
+            const result = await new EntityService(store, publisher).update(
+                {
+                    id: 'appointment:1',
+                    entityTypeId: 'appointment',
+                    expectedVersion,
+                    data: { patient: 'patient:ada' },
+                },
+                'system',
+            );
 
-        expect(result.version).toBe(1);
-        expect(store.events).toEqual([]);
-        expect(listener).not.toHaveBeenCalled();
-    });
+            expect(result).toEqual(await store.findProjection('appointment:1'));
+            expect(result.version).toBe(2);
+            expect(store.events).toEqual([]);
+            expect(listener).not.toHaveBeenCalled();
+        },
+    );
 
     it('should reject reference arrays with duplicate configured values', async () => {
         const store = graphStore([

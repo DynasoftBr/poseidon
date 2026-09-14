@@ -1,4 +1,4 @@
-import type { Entity } from '@poseidon/model';
+import type { Entity } from '@poseidon/models';
 import { getCommands, toProperty } from './entity-model-utils';
 
 describe('entity model utilities', () => {

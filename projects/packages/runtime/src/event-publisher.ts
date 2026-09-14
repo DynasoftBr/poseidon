@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { EntityEvent } from '@poseidon/model';
+import type { EntityEvent } from '@poseidon/models';
 
 export type EntityEventListener = (event: EntityEvent) => void;
 

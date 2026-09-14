@@ -13,7 +13,7 @@ import {
     type IndexDefinition,
     type PropertyType,
     type SystemUser,
-} from '@poseidon/model';
+} from '@poseidon/models';
 import type { EventPublisher } from './event-publisher';
 
 export interface BootstrapStore {
@@ -79,20 +79,22 @@ function createCoreEntityTypes(
     context: BootstrapContext,
     properties: EntityProperty[],
 ): EntityType[] {
-    return ['entity-type', 'entity-property', 'index', 'user', 'relation-link'].map((name) => ({
-        id: name,
-        entityTypeId: 'entity-type',
-        data: {
-            name,
-            label: name,
-            properties: properties
-                .filter((property) => property.data.entityTypeId === name)
-                .map((property) => property.id),
-        },
-        version: 1,
-        createdAt: context.now,
-        createdById: context.systemUserId,
-    }));
+    return ['entity-type', 'entity-property', 'index', 'user', 'identity', 'relation-link'].map(
+        (name) => ({
+            id: name,
+            entityTypeId: 'entity-type',
+            data: {
+                name,
+                label: name,
+                properties: properties
+                    .filter((property) => property.data.entityTypeId === name)
+                    .map((property) => property.id),
+            },
+            version: 1,
+            createdAt: context.now,
+            createdById: context.systemUserId,
+        }),
+    );
 }
 
 function createCoreProperties(context: BootstrapContext): EntityProperty[] {
@@ -103,10 +105,6 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
             itemsType: 'reference',
             relatedEntityTypeId: 'entity-property',
             uniqueBy: 'name',
-        }),
-        createProperty(['entity-type', 'abstract', 'boolean', false], context),
-        createProperty(['entity-type', 'superTypeId', 'reference', false], context, {
-            relatedEntityTypeId: 'entity-type',
         }),
         createProperty(['entity-type', 'commands', 'json', false], context),
         createProperty(['entity-property', 'entityTypeId', 'reference', true], context, {
@@ -149,9 +147,34 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
         createProperty(['index', 'propertyIds', 'array', true], context),
         createProperty(['user', 'name', 'string', true], context),
         createProperty(['user', 'login', 'string', true], context),
+        ...createIdentityProperties(context),
         createProperty(['relation-link', 'relationPropertyId', 'string', true], context),
         createProperty(['relation-link', 'thisId', 'string', true], context),
         createProperty(['relation-link', 'thatId', 'string', true], context),
+    ];
+}
+
+function createIdentityProperties(context: BootstrapContext): EntityProperty[] {
+    return [
+        createProperty(['identity', 'name', 'string', true], context),
+        createProperty(['identity', 'owner', 'reference', true], context, {
+            relatedEntityTypeId: 'user',
+            relationKind: 'belongs-to-one',
+        }),
+        createProperty(['identity', 'members', 'array', true], context, {
+            itemsType: 'reference',
+            relatedEntityTypeId: 'identity',
+            relationKind: 'has-many',
+            reversePropertyId: 'identity:memberOf',
+            uniqueItems: true,
+        }),
+        createProperty(['identity', 'memberOf', 'array', true], context, {
+            itemsType: 'reference',
+            relatedEntityTypeId: 'identity',
+            relationKind: 'belongs-to-many',
+            reversePropertyId: 'identity:members',
+            uniqueItems: true,
+        }),
     ];
 }
 

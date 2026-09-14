@@ -2,8 +2,17 @@
     "extends": "./tsconfig.json",
     "exclude": ["node_modules", "dist", "**/__tests__/**", "**/*.test.ts"],
     "references": [
-        { "path": "../../packages/data-access/tsconfig.build.json" },
-        { "path": "../../packages/runtime/tsconfig.build.json" },
-        { "path": "../../packages/service-utils/tsconfig.build.json" }
+        {
+            "path": "../../packages/data-access/tsconfig.build.json"
+        },
+        {
+            "path": "../../packages/runtime/tsconfig.build.json"
+        },
+        {
+            "path": "../../packages/service-utils/tsconfig.build.json"
+        },
+        {
+            "path": "../../packages/ui-platform/tsconfig.build.json"
+        }
     ]
 }

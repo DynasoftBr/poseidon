@@ -1,4 +1,4 @@
-import type { Specification } from '@poseidon/model';
+import type { Specification } from '@poseidon/models';
 
 export function toMongoSpecification(
     specification: Specification,

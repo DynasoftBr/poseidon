@@ -1,0 +1,13 @@
+{
+    "name": "@poseidon/models",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc -b tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+        "typecheck": "tsc -b --emitDeclarationOnly",
+        "lint": "eslint .",
+        "test:coverage": "echo 'No tests — types-only package'"
+    }
+}

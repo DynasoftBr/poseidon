@@ -4,7 +4,7 @@ import {
     type EntityEvent,
     type Entity,
     type QueryEntitiesCommand,
-} from '@poseidon/model';
+} from '@poseidon/models';
 import type { ClientSession, MongoClient } from 'mongodb';
 
 export class MongoEventProjectionStore {

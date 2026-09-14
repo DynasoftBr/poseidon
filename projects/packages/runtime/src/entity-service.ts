@@ -10,7 +10,7 @@ import {
     type EntityProperty,
     type QueryEntitiesCommand,
     type UpdateEntityCommand,
-} from '@poseidon/model';
+} from '@poseidon/models';
 import type { EventPublisher } from './event-publisher';
 import { applyEntityRules } from './entity-rule-engine';
 import { getCommands, toProperty } from './entity-model-utils';
@@ -141,11 +141,7 @@ export class EntityService {
     }
 
     public async update(command: UpdateEntityCommand, actorId: string): Promise<Entity> {
-        const current = await this.requireCurrent(
-            command.entityTypeId,
-            command.id,
-            command.expectedVersion,
-        );
+        const current = await this.requireCurrent(command.entityTypeId, command.id);
         const entityType = await this.requireEntityType(command.entityTypeId);
         const properties = await this.getProperties(entityType);
         const prepared = await this.prepareNestedMutations(
@@ -202,11 +198,7 @@ export class EntityService {
     }
 
     public async delete(command: DeleteEntityCommand, actorId: string): Promise<void> {
-        const current = await this.requireCurrent(
-            command.entityTypeId,
-            command.id,
-            command.expectedVersion,
-        );
+        const current = await this.requireCurrent(command.entityTypeId, command.id);
         const event: EntityEvent = {
             id: `entity-deleted:${command.entityTypeId}:${command.id}:${command.expectedVersion + 1}`,
             type: entityEventTypes.deleted,
@@ -240,17 +232,12 @@ export class EntityService {
         return entityType;
     }
 
-    private async requireCurrent(
-        entityTypeId: string,
-        id: string,
-        expectedVersion: number,
-    ): Promise<Entity> {
+    private async requireCurrent(entityTypeId: string, id: string): Promise<Entity> {
         const current = await this.store.findProjection(id);
 
         if (!current || current.entityTypeId !== entityTypeId || current.deletedAt) {
             throw new EntityTypeNotFoundError(id);
         }
-        if (current.version !== expectedVersion) throw new EntityVersionConflictError(id);
 
         return current;
     }

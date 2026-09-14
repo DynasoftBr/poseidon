@@ -4,7 +4,7 @@ import {
     type EntityData,
     type Specification,
     type ComparisonOperator,
-} from '@poseidon/model';
+} from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 
 const validateShape = new Ajv({ allowUnionTypes: true }).compile({

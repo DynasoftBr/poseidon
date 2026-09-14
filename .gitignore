@@ -35,3 +35,7 @@ dist/**/*
 **/.turbo/**
 **/*.tsbuildinfo
 .env
+
+**/.poseidon-artifacts/**
+**/test-results/**
+**/playwright-report/**

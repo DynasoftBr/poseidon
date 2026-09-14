@@ -7,16 +7,22 @@ Poseidon is a self-describing business application runtime. Its own system entit
 ```text
 projects/
   poseidon/server/             HTTP composition root
+  poseidon/client/             trusted browser shell
+  poseidon/portal/             initial authored component sources
   packages/
     model/                     declarative entity and index types
     data-access/               MongoDB-only persistence implementation
     runtime/                   bootstrap, commands, queries, and projections
     service-utils/             logging and shared service infrastructure
+    ui-platform/               UI bootstrap, releases, artifacts, isolated compilation, forms
+    ui-foundation/             React controls, shared form state, Tailwind tokens, Storybook
 ```
 
-`@poseidon/model` and `@poseidon/runtime` do not know MongoDB or HTTP. The server composes the runtime with the MongoDB implementation from `@poseidon/data-access`.
+`@poseidon/models` and `@poseidon/runtime` do not know MongoDB or HTTP. The server composes the runtime with the MongoDB implementation from `@poseidon/data-access`.
 
 All runtime entities use `Entity<TData>`: `id`, `entityTypeId`, `data`, `version`, and audit metadata. Core types specialize the same envelope with typed data; for example, an EntityProperty has `entityTypeId: 'entity-property'`, while `data.entityTypeId` identifies the type that owns the property. Bootstrap records use this representation directly, and MongoDB only maps `id` to `_id` at the persistence boundary.
+
+EntityTypes are deliberately flat. The earlier `abstract` and `superTypeId` fields were removed because no current behavior required inheritance; shared behavior should remain explicit until a concrete use case justifies inheritance semantics.
 
 ## Bootstrap
 
@@ -39,6 +45,40 @@ Comparison values are JSON scalars (strings, finite numbers, booleans, or null).
 EntityType commands carry specifications and consequences evaluated during create and update operations; the runtime never evaluates code stored in the model.
 
 Relationship properties create `relation-link` entities alongside their owner in the same transaction. When a property declares `reversePropertyId`, Poseidon also creates or removes the inverse link, so both relationship directions remain queryable without duplicating values into entity data. These are ordinary event-sourced projections, not a special persistence path.
+
+## UI execution boundary
+
+The local UI prototype is explicitly enabled with `POSEIDON_LOCAL_UI=true`; production mode rejects this identity. The API binds to loopback and uses the existing server-owned `system` actor. Client-supplied actor IDs are never used. This is not authentication or access-control enforcement, and the generic entity API remains a development API.
+
+`App`, `UIComponent`, `Theme`, `AppRelease`, and `conversation` are ordinary bootstrapped EntityTypes. Repository Portal sources seed missing component records only; changing a seed file does not overwrite a saved draft. The stored records become the source of truth after bootstrap.
+
+A UIComponent contains TSX source (or a managed artifact ID), computed prop and event metadata, an optional theme ID, and declarative bindings. Components import one another using `@components/<id>` and compose with ordinary React props and callbacks. Poseidon derives props and callback events from the TypeScript contract whenever source is saved; clients cannot edit that metadata. The entry receives `onEvent(name, payload)`, which returns a promise, and passes callbacks to descendants as needed. Declarative bindings map bridge requests to server operations. Arbitrary API URLs and server-side JavaScript are not accepted.
+
+The shell resolves an App and holds a release-pinned session. It renders one `allow-scripts allow-forms` iframe on `renderer.localhost`, without `allow-same-origin`. CSP blocks connections, external assets, nested frames, and native form submissions. A source-checked, protocol-versioned window handshake transfers a dedicated MessageChannel; event requests are correlated with promise results and timeouts. The server resolves bindings against the session's published snapshot. This boundary needs further adversarial validation before accepting untrusted authors, including self-navigation/exfiltration behavior; CSP is not a complete network firewall.
+
+React Router lives in the authored tree. Memory routing sends navigation events to the shell, which validates the app base path and synchronizes browser history; browser navigation supplies route props back to the tree. The shell does not own page definitions.
+
+## UI compilation and releases
+
+A release snapshots one revision of each component and theme reached from the App's entry component. Component dependencies are not stored or edited separately: the bundler resolves `@components/<id>` imports from the current component records and reports the IDs it actually loaded. Missing imports and cycles fail the build. Managed source and HTML artifacts use content hashes, never caller-provided filesystem paths. A Docker worker receives only a temporary build directory, with no network, credentials, writable root filesystem, or dependency installation; memory, CPU, process count and execution time are bounded. Its prebuilt image contains the curated React, Router, TypeScript, esbuild and Tailwind toolchain.
+
+The worker checks imports and TypeScript, bundles a shared React runtime, scans component sources using Tailwind's scanner, and scopes theme CSS with `@scope`. Source diagnostics identify component IDs and lines. Authored JavaScript executes in the browser only; business rules remain declarative.
+
+The Portal uses the curated `@poseidon/editor` helper for Monaco. Stored component sources become virtual TSX files; React, Router and Poseidon declarations are bundled with the compiler image. A local TypeScript worker reports syntax, type and import errors while editing. Any existing `@components/<id>` import is available without a second dependency declaration. The component list remains flat. No CDN or package downloads run in the browser: worker code is bundled into the release and runs through blob URLs, with `worker-src blob:` and embedded fonts permitted by the renderer CSP. Network connections remain blocked. Monaco's bundled TypeScript service provides editing feedback; the release compiler remains the authoritative build check.
+
+Publishing stores an AppRelease before switching the App pointer with optimistic concurrency. A failed build leaves the previous release active. Existing sessions retain their snapshot until reload. The authoring screen exposes a flat component list, Monaco source editing, read-only prop/event metadata, diagnostics, publishing, and isolated previews. Source and name changes save automatically after one second of inactivity. Preview has no live queries or mutations.
+
+## Forms
+
+The React form controller shares draft values, dirty/touched state, validation errors and submission state within the iframe. Published form definitions separately declare input validation, derived expressions, and entity mappings. The server evaluates only literals, field references, conditionals, arithmetic, equality and string composition.
+
+Form submissions validate all targets against a staged view, including references to later targets, before calling the existing transactional event store once. Defaults and declarative entity rules run through EntityService. Optimistic conflicts and invalid targets commit nothing. Direct field mappings translate entity validation problems back to form fields; complex derived-field errors currently use a form-level error. Forms are authored through component code and configuration; a visual form designer is not included. Browser tests exercise shared multistep drafts and failed-save recovery.
+
+## Prototype delivery status
+
+Home, simulated persisted Triton chat, responsive navigation, entity/property/relationship/action editing, component and theme authoring, previews, publishing and release restoration exercise real local persistence and compilation. Users and account screens expose local data; activity currently lists releases. Storybook documents controls, interaction states and light/dark tokens. Billing, external messaging, AI execution and real logout are not connected.
+
+Remaining work includes broader accessibility and responsive coverage across every editor and long-content state, a complete design-system catalog, authoring polish, and further adversarial security testing. The current browser suite covers representative viewport sizes, chat/history, routing, publishing, preview, theme scopes, shared forms, mobile keyboard navigation and iframe boundaries; it is not a comprehensive security or accessibility audit. Production authentication, permission enforcement, deployment and artifact distribution remain deferred.
 
 ## Deferred architecture work
 

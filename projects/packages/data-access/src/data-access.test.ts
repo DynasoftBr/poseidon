@@ -1,4 +1,4 @@
-import type { EntityEvent } from '@poseidon/model';
+import type { EntityEvent } from '@poseidon/models';
 import { MongoClient } from 'mongodb';
 import { connectDatabase, disconnectDatabase } from './database';
 import { MongoEventProjectionStore } from './mongo-event-projection-store';

@@ -1,4 +1,4 @@
-import type { EntityProperty } from '@poseidon/model';
+import type { EntityProperty } from '@poseidon/models';
 
 export interface JsonSchema {
     type: 'object';

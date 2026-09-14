@@ -1,4 +1,4 @@
-import type { EntityProperty } from '@poseidon/model';
+import type { EntityProperty } from '@poseidon/models';
 import { validateEntity } from './entity-validator';
 
 describe('validateEntity', () => {

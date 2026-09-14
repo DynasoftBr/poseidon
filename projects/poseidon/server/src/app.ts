@@ -1,6 +1,7 @@
 import express, { type Express } from 'express';
-import type { CreateEntityCommand } from '@poseidon/model';
+import type { CreateEntityCommand } from '@poseidon/models';
 import type { EntityService } from '@poseidon/runtime';
+import { prepareComponentData } from '@poseidon/ui-platform';
 import { errorMiddleware } from './error-middleware';
 
 export interface AppDependencies {
@@ -63,6 +64,7 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
             const projection = await service.create(
                 {
                     ...(request.body as Omit<CreateEntityCommand, 'entityTypeId'>),
+                    data: mutationData(request.params.entityTypeId, {}, request.body.data),
                     entityTypeId: request.params.entityTypeId,
                 },
                 'system',
@@ -76,11 +78,16 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
 
     app.patch('/api/v1/entities/:entityTypeId/:id', async (request, response, next) => {
         try {
+            const current = await service.get(request.params.entityTypeId, request.params.id);
             const projection = await service.update(
                 {
                     entityTypeId: request.params.entityTypeId,
                     id: request.params.id,
-                    data: request.body.data,
+                    data: mutationData(
+                        request.params.entityTypeId,
+                        current.data,
+                        request.body.data,
+                    ),
                     expectedVersion: request.body.expectedVersion,
                 },
                 'system',
@@ -108,6 +115,19 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
             next(error);
         }
     });
+}
+
+function mutationData(
+    entityTypeId: string,
+    current: Record<string, unknown>,
+    supplied: unknown,
+): Record<string, unknown> {
+    if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) {
+        throw new Error('Entity data must be an object.');
+    }
+    return entityTypeId === 'ui-component'
+        ? prepareComponentData(current, supplied as Record<string, unknown>)
+        : (supplied as Record<string, unknown>);
 }
 
 function toOptionalNumber(value: unknown): number | undefined {

@@ -1,4 +1,4 @@
-import type { EntityCommand, EntityProperty } from '@poseidon/model';
+import type { EntityCommand, EntityProperty } from '@poseidon/models';
 import { applyEntityRules } from './entity-rule-engine';
 
 describe('applyEntityRules', () => {

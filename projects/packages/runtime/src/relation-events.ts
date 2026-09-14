@@ -1,4 +1,4 @@
-import { entityEventTypes, type EntityEvent, type EntityProperty } from '@poseidon/model';
+import { entityEventTypes, type EntityEvent, type EntityProperty } from '@poseidon/models';
 
 export function createRelationEvents(
     sourceEvent: EntityEvent,

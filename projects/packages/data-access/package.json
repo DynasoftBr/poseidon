@@ -12,7 +12,7 @@
         "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@poseidon/model": "*",
+        "@poseidon/models": "*",
         "mongodb": "^6.20.0"
     }
 }

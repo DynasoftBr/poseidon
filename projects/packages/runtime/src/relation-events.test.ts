@@ -1,4 +1,4 @@
-import { entityEventTypes, type EntityEvent, type EntityProperty } from '@poseidon/model';
+import { entityEventTypes, type EntityEvent, type EntityProperty } from '@poseidon/models';
 import { createRelationEvents, deleteRelationEvents } from './relation-events';
 
 describe('relation events', () => {

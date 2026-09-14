@@ -20,9 +20,10 @@ describe('createBootstrapModel', () => {
             { id: 'entity-property', createdById: 'system', createdAt: now },
             { id: 'index', createdById: 'system', createdAt: now },
             { id: 'user', createdById: 'system', createdAt: now },
+            { id: 'identity', createdById: 'system', createdAt: now },
             { id: 'relation-link', createdById: 'system', createdAt: now },
         ]);
-        expect(model.entityProperties).toHaveLength(33);
+        expect(model.entityProperties).toHaveLength(35);
         expect(model.entityProperties).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
@@ -36,6 +37,15 @@ describe('createBootstrapModel', () => {
                 expect.objectContaining({
                     id: 'entity-property:default',
                     data: expect.objectContaining({ type: 'json' }),
+                }),
+                expect.objectContaining({
+                    id: 'identity:members',
+                    data: expect.objectContaining({
+                        itemsType: 'reference',
+                        relatedEntityTypeId: 'identity',
+                        relationKind: 'has-many',
+                        reversePropertyId: 'identity:memberOf',
+                    }),
                 }),
             ]),
         );

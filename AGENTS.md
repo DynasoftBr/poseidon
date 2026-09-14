@@ -7,17 +7,22 @@ Poseidon is a self-describing business application runtime. The platform model i
 - Keep changes focused on the requested outcome.
 - Follow the closest existing pattern before adding one.
 - Keep `@poseidon/data-access` as the only package that knows MongoDB or Mongoose.
-- Keep `@poseidon/model` free of persistence and transport concerns.
+- Keep `@poseidon/models` free of persistence and transport concerns.
 - Keep `@poseidon/runtime` free of MongoDB and HTTP concerns.
 - Do not add executable user-defined code to the runtime. Model behaviour must remain declarative.
 
 ## Structure
 
-- `projects/packages/model`: TypeScript interfaces for core Poseidon entity types and the declarative language.
+- `projects/packages/models`: TypeScript interfaces for core Poseidon entity types and the declarative language. Entity types live in `src/entity-types`, one per file.
+- Keep each entity type and its data shape in its own model file; do not group multiple entity types in a shared model file.
 - `projects/packages/data-access`: MongoDB connection and persistence models.
 - `projects/packages/runtime`: validation, mutations, querying, index projection, model revisions, and bootstrap.
 - `projects/packages/service-utils`: shared logging, configuration, and health-check utilities.
 - `projects/poseidon/server`: HTTP composition root.
+- `projects/packages/ui-platform`: UI model bootstrap, releases, managed artifacts, restricted compilation and atomic form mappings.
+- `projects/packages/ui-foundation`: React controls, shared form state, Tailwind tokens and Storybook.
+- `projects/poseidon/client`: trusted shell; keep business screens inside authored UIComponents.
+- `projects/poseidon/portal`: additive seed sources for stored Portal components.
 
 ## TypeScript and testing
 
@@ -30,3 +35,11 @@ Poseidon is a self-describing business application runtime. The platform model i
 ## Git
 
 - Commit messages use `<type>(<scope>): <subject>`.
+
+## UI boundary
+
+- Authored React code is allowed only in UIComponent sources and the isolated browser renderer; never evaluate it in the business runtime or server.
+- Keep component imports explicit and curated; build authored sources in the restricted Docker worker.
+- Never overwrite stored drafts during bootstrap, mutate an AppRelease, or activate a failed build.
+- The local UI identity requires `POSEIDON_LOCAL_UI=true` and is not production authentication; do not accept actor IDs from browser requests.
+- Run the Storybook build and browser integration tests when changing UI behavior; see README for local setup.

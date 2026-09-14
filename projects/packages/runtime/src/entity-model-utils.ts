@@ -1,4 +1,4 @@
-import type { EntityCommand, Entity, EntityProperty } from '@poseidon/model';
+import type { EntityCommand, Entity, EntityProperty } from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 
 export function toProperty(projection: Entity | null, id: string): EntityProperty {

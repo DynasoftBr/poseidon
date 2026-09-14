@@ -7,9 +7,18 @@
         "types": ["node", "vitest/globals"]
     },
     "references": [
-        { "path": "../../packages/data-access" },
-        { "path": "../../packages/runtime" },
-        { "path": "../../packages/service-utils" }
+        {
+            "path": "../../packages/data-access"
+        },
+        {
+            "path": "../../packages/runtime"
+        },
+        {
+            "path": "../../packages/service-utils"
+        },
+        {
+            "path": "../../packages/ui-platform"
+        }
     ],
     "include": ["src/**/*"]
 }

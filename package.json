@@ -15,7 +15,7 @@
         "build:packages": "turbo run build --filter='./projects/packages/*'",
         "build": "turbo run build",
         "lint": "eslint .",
-        "verify": "npm run lint && turbo run typecheck lint test:coverage --output-logs=errors-only",
+        "verify": "npm run lint && tsc -p projects/poseidon/portal/tsconfig.json && turbo run typecheck lint test:coverage --output-logs=errors-only",
         "prepare": "husky"
     },
     "lint-staged": {
@@ -45,6 +45,7 @@
         "turbo": "^2.9.7",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.56.1",
+        "vite": "^7.3.6",
         "vitest": "^4.0.18"
     }
 }

@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import type { EntityProperty } from '@poseidon/model';
+import type { EntityProperty } from '@poseidon/models';
 import type { ValidationProblem } from './poseidon-error';
 import { buildEntitySchema } from './entity-schema';
 

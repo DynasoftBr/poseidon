@@ -1,4 +1,4 @@
-import type { Entity } from '@poseidon/model';
+import type { Entity } from '@poseidon/models';
 import { type EntityService, ValidationError } from '@poseidon/runtime';
 import request from 'supertest';
 import { createApp } from './app';
@@ -59,6 +59,38 @@ describe('createApp', () => {
             .send({ id: 'ada', data: {} });
 
         expect(response).toMatchObject({ status: 422, body: { error: { code: 'validation' } } });
+    });
+
+    it('should reject malformed data and derive UI component contracts', async () => {
+        const services = createServices();
+        const app = createApp(services);
+
+        await expect(
+            request(app).post('/api/v1/entities/person').send({ id: 'ada', data: [] }),
+        ).resolves.toMatchObject({ status: 500 });
+        await request(app)
+            .post('/api/v1/entities/ui-component')
+            .send({
+                id: 'card',
+                data: {
+                    name: 'Card',
+                    source: {
+                        code: 'type Props = { title: string; onOpen(value: string): void }; export default function Card(props: Props) { return null; }',
+                    },
+                    props: { forged: { type: 'string' } },
+                    events: {},
+                },
+            });
+
+        expect(services.entityServiceMock.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    props: { title: { type: 'string', required: true } },
+                    events: { onOpen: { type: 'string' } },
+                }),
+            }),
+            'system',
+        );
     });
 
     it('should return an unexpected error from a query route', async () => {

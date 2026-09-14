@@ -3,7 +3,7 @@ import type {
     EntityCommandOperation,
     EntityProperty,
     RuleConsequence,
-} from '@poseidon/model';
+} from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 import { matchesSpecification, validateSpecification } from './specification';
 

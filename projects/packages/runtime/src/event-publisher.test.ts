@@ -1,4 +1,4 @@
-import { entityEventTypes, type EntityEvent } from '@poseidon/model';
+import { entityEventTypes, type EntityEvent } from '@poseidon/models';
 import { EventPublisher } from './event-publisher';
 
 describe('EventPublisher', () => {

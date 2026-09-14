@@ -1,4 +1,4 @@
-import type { Entity, EntityData, IndexDefinitionData } from '@poseidon/model';
+import type { Entity, EntityData, IndexDefinitionData } from '@poseidon/models';
 import type { MongoClient } from 'mongodb';
 
 /** Realizes declarative Index entities on Poseidon's shared MongoDB projection collection. */

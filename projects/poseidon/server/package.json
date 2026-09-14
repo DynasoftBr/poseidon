@@ -17,6 +17,7 @@
         "@poseidon/runtime": "*",
         "@poseidon/service-utils": "*",
         "dotenv": "^17.2.0",
-        "express": "^5.1.0"
+        "express": "^5.1.0",
+        "@poseidon/ui-platform": "*"
     }
 }

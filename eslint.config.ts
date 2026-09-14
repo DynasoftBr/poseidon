@@ -12,6 +12,8 @@ export default defineConfig([
         '**/node_modules/**',
         '**/dist/**',
         '**/coverage/**',
+        '**/test-results/**',
+        '**/.poseidon-artifacts/**',
         '**/.turbo/**',
         '**/package-lock.json',
         '**/*.tsbuildinfo',
@@ -67,7 +69,7 @@ export default defineConfig([
         },
     },
     {
-        files: ['**/*.test.ts', '**/__tests__/**'],
+        files: ['**/*.test.ts', '**/*.spec.ts', '**/__tests__/**'],
         rules: {
             'max-lines': 'off',
             'max-lines-per-function': 'off',
