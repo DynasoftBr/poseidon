@@ -26,6 +26,8 @@ npm run dev:stack
 
 On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, EntityProperties, and Index definitions. Bootstrap events and their generic entity projections are written in one MongoDB transaction. Existing bootstrap data is never overwritten.
 
+Set `JWT_SECRET` to resolve `Authorization: Bearer` JWTs with a `userId` claim to stored user entities. Requests without a valid token continue with a null user, except when `POSEIDON_LOCAL_UI=true` outside production: a missing token then resolves to the seeded `system` user. Poseidon does not issue tokens or restrict routes yet.
+
 The health check is available at `http://localhost:3000/health`.
 
 ## API smoke flow

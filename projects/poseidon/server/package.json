@@ -16,8 +16,12 @@
         "@poseidon/data-access": "*",
         "@poseidon/runtime": "*",
         "@poseidon/service-utils": "*",
+        "@poseidon/ui-platform": "*",
         "dotenv": "^17.2.0",
         "express": "^5.1.0",
-        "@poseidon/ui-platform": "*"
+        "jsonwebtoken": "^9.0.3"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10"
     }
 }

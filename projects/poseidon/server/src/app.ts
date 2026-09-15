@@ -3,9 +3,11 @@ import type { CreateEntityCommand } from '@poseidon/models';
 import type { EntityService } from '@poseidon/runtime';
 import { prepareComponentData } from '@poseidon/ui-platform';
 import { errorMiddleware } from './error-middleware';
+import type { AuthMiddleware } from './auth-middleware';
 
 export interface AppDependencies {
     entityService?: EntityService;
+    auth?: AuthMiddleware;
 }
 
 export function createApp(dependencies: AppDependencies = {}): Express {
@@ -16,6 +18,8 @@ export function createApp(dependencies: AppDependencies = {}): Express {
     app.get('/health', (_request, response) => {
         response.status(200).json({ status: 'ok' });
     });
+
+    if (dependencies.auth) app.use(dependencies.auth.authenticate);
 
     if (dependencies.entityService) {
         configureEntityRoutes(app, dependencies.entityService);

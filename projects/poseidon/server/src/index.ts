@@ -23,6 +23,7 @@ import {
 } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
 import { createApp } from './app';
+import { createAuthMiddleware } from './auth-middleware';
 
 const logger = getLogger('poseidon-server');
 
@@ -55,7 +56,14 @@ async function start(): Promise<void> {
     await indexManager.reconcile();
     const port = Number(process.env.PORT ?? 3000);
     const entities = new EntityService(store, publisher);
-    const app = createApp({ entityService: entities });
+    const app = createApp({
+        entityService: entities,
+        auth: createAuthMiddleware(
+            entities,
+            process.env.JWT_SECRET,
+            process.env.POSEIDON_LOCAL_UI === 'true' && process.env.NODE_ENV !== 'production',
+        ),
+    });
     await initializeUI({ entities, store, publisher, app });
 
     app.listen(port, '127.0.0.1', () => {

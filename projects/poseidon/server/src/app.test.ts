@@ -2,8 +2,22 @@ import type { Entity } from '@poseidon/models';
 import { type EntityService, ValidationError } from '@poseidon/runtime';
 import request from 'supertest';
 import { createApp } from './app';
+import { createAuthMiddleware } from './auth-middleware';
 
 describe('createApp', () => {
+    it('should allow entity routes with a null user when unauthenticated', async () => {
+        const services = createServices();
+        const app = createApp({
+            ...services,
+            auth: createAuthMiddleware(services.entityService),
+        });
+
+        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
+            status: 200,
+            body: { _id: 'ada' },
+        });
+    });
+
     it('should expose health without optional services', async () => {
         await expect(request(createApp()).get('/health')).resolves.toMatchObject({
             status: 200,
