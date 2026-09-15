@@ -1,25 +1,29 @@
 import type { EntityId } from './entity';
-import type { Specification } from './specification';
+import type { BusinessRule } from './business-rule';
 
-/** A declarative mutation supported by an EntityType. */
-export interface EntityCommand {
+export interface EntityCommandBase {
     id: EntityId;
     name: string;
     label: string;
-    operation: EntityCommandOperation;
+    enabled: boolean;
+    timeoutMs?: number | null;
+    before: EntityCommand[];
+    after: EntityCommand[];
     inputPropertyIds?: EntityId[];
-    rules?: EntityRule[];
+    rules?: BusinessRule[];
 }
 
-export const entityCommandOperations = ['create', 'update', 'delete'] as const;
+export type EntityCommand = EntityCommandBase &
+    (
+        | { operation: 'script'; scriptId: EntityId }
+        | { operation: 'create' | 'update' | 'delete' | 'business-rules'; scriptId?: never }
+    );
+
+export const entityCommandOperations = [
+    'create',
+    'update',
+    'delete',
+    'script',
+    'business-rules',
+] as const;
 export type EntityCommandOperation = (typeof entityCommandOperations)[number];
-
-export interface EntityRule {
-    id: EntityId;
-    specification: Specification;
-    consequence: RuleConsequence;
-}
-
-export type RuleConsequence =
-    | { kind: 'reject'; message: string }
-    | { kind: 'set-value'; propertyId: EntityId; value: unknown };

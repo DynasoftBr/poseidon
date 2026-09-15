@@ -14,6 +14,9 @@ describe('applyEntityRules', () => {
                 name: 'create',
                 label: 'Create order',
                 operation: 'create',
+                enabled: true,
+                before: [],
+                after: [],
                 rules: [
                     {
                         id: 'order:mark-review',
@@ -46,6 +49,9 @@ describe('applyEntityRules', () => {
                 name: 'create',
                 label: 'Create order',
                 operation: 'create',
+                enabled: true,
+                before: [],
+                after: [],
                 rules: [
                     {
                         id: 'order:reject-negative',
@@ -73,6 +79,9 @@ describe('applyEntityRules', () => {
                 name: 'update',
                 label: 'Update order',
                 operation: 'update',
+                enabled: true,
+                before: [],
+                after: [],
                 rules: [
                     {
                         id: 'order:approved',
@@ -145,6 +154,9 @@ describe('applyEntityRules', () => {
                 name: 'create',
                 label: 'Create',
                 operation: 'create',
+                enabled: true,
+                before: [],
+                after: [],
                 rules: [
                     {
                         id: 'invalid',
@@ -179,6 +191,9 @@ describe('applyEntityRules', () => {
                 name: 'create',
                 label: 'Create',
                 operation: 'create',
+                enabled: true,
+                before: [],
+                after: [],
                 rules: [
                     {
                         id: 'missing-status',

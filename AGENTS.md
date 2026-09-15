@@ -27,6 +27,7 @@ Poseidon is a self-describing business application runtime. The platform model i
 ## TypeScript and testing
 
 - Use strict TypeScript. Do not use `any`, `@ts-ignore`, or `@ts-expect-error`.
+- Never disable ESLint rules unless complying with a rule is genuinely impossible. In that exceptional case, disable only the specific line and include a comment explaining why; never use file-wide disables.
 - Use kebab-case for non-React source files and folders.
 - Add behaviour-focused Vitest tests for runtime and data-access changes.
 - Run `npm run verify` from the repository root before declaring a code task complete.

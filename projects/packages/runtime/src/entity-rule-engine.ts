@@ -2,7 +2,7 @@ import type {
     EntityCommand,
     EntityCommandOperation,
     EntityProperty,
-    RuleConsequence,
+    BusinessRuleConsequence,
 } from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 import { matchesSpecification, validateSpecification } from './specification';
@@ -31,7 +31,7 @@ export function applyEntityRules(
 }
 
 function applyConsequence(
-    consequence: RuleConsequence,
+    consequence: BusinessRuleConsequence,
     data: Record<string, unknown>,
     propertyNames: Map<string, string>,
 ): void {
