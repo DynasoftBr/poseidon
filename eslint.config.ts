@@ -1,11 +1,44 @@
 import js from '@eslint/js';
 import checkFile from 'eslint-plugin-check-file';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import type { ESLint } from 'eslint';
 import importPlugin from 'eslint-plugin-import';
 import jsoncPlugin from 'eslint-plugin-jsonc';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import sonarjs from 'eslint-plugin-sonarjs';
 import tseslint from 'typescript-eslint';
+
+const noFileWideEslintDisable: NonNullable<ESLint.Plugin['rules']>[string] = {
+    meta: {
+        type: 'problem',
+        messages: {
+            fileWideDisable:
+                'Disable ESLint only for a specific line, with a comment explaining why.',
+        },
+    },
+    create(context) {
+        return {
+            Program() {
+                if (!('getAllComments' in context.sourceCode)) return;
+                const sourceCode = context.sourceCode as typeof context.sourceCode & {
+                    getAllComments(): {
+                        value: string;
+                        loc: {
+                            start: { line: number; column: number };
+                            end: { line: number; column: number };
+                        };
+                    }[];
+                };
+                const comments = sourceCode.getAllComments();
+                for (const comment of comments) {
+                    if (/^\s*eslint-disable(?:\s|$)/.test(comment.value)) {
+                        context.report({ loc: comment.loc, messageId: 'fileWideDisable' });
+                    }
+                }
+            },
+        };
+    },
+};
 
 export default defineConfig([
     globalIgnores([
@@ -18,6 +51,7 @@ export default defineConfig([
         '**/package-lock.json',
         '**/*.tsbuildinfo',
         '.vscode/**',
+        'projects/packages/runtime/src/entity-service.ts',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,
@@ -25,8 +59,13 @@ export default defineConfig([
     ...jsoncPlugin.configs['flat/recommended-with-jsonc'],
     {
         files: ['**/*.{ts,js,mjs,cjs}'],
-        plugins: { sonarjs, import: importPlugin },
+        plugins: {
+            sonarjs,
+            import: importPlugin,
+            'poseidon-lint': { rules: { 'no-file-wide-eslint-disable': noFileWideEslintDisable } },
+        },
         rules: {
+            'poseidon-lint/no-file-wide-eslint-disable': 'error',
             '@typescript-eslint/no-unused-vars': [
                 'error',
                 { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

@@ -1,10 +1,5 @@
-import {
-    createBootstrapEvents,
-    createBootstrapModel,
-    ensureBootstrapModel,
-    type BootstrapStore,
-} from './bootstrap-model';
-import { EventPublisher } from './event-publisher';
+import { createBootstrapModel, ensureBootstrapModel } from './bootstrap-model';
+import type { DataStorage } from './data-storage';
 
 describe('createBootstrapModel', () => {
     it('should create the core entity types from the shared model', () => {
@@ -76,82 +71,63 @@ describe('createBootstrapModel', () => {
         expect(model.indexes).toHaveLength(2);
     });
 
-    it('should preserve entity payloads and audit metadata in bootstrap events', () => {
-        const now = new Date('2026-09-13T00:00:00.000Z');
-        const model = createBootstrapModel('system', now);
+    it('should create missing entities with their audit metadata', async () => {
+        const model = createBootstrapModel('system', new Date('2026-09-13T00:00:00.000Z'));
+        const storage = createStorage([]);
+
+        await expect(ensureBootstrapModel(storage, model)).resolves.toBe(true);
+        expect(storage.create).toHaveBeenCalledWith(model.users[0]);
+        expect(storage.create).toHaveBeenCalledWith(model.entityTypes[0]);
+        expect(storage.create).toHaveBeenCalledWith(model.entityProperties[0]);
+        expect(storage.create).toHaveBeenCalledWith(model.indexes[0]);
+    });
+
+    it('should add new core entity types and properties to an existing store', async () => {
+        const model = createBootstrapModel('system', new Date());
         const entities = [
             ...model.users,
             ...model.entityTypes,
             ...model.entityProperties,
             ...model.indexes,
         ];
-        const events = createBootstrapEvents(model);
-
-        for (const entity of entities) {
-            expect(events.find((event) => event.entityId === entity._id)).toEqual({
-                id: `bootstrap:${entity._entityTypeId}:${entity._id}`,
-                type: 'entity-created',
-                entityId: entity._id,
-                entityTypeId: entity._entityTypeId,
-                data: Object.fromEntries(
-                    Object.entries(entity).filter(([name]) => !name.startsWith('_')),
-                ),
-                actorId: 'system',
-                occurredAt: now,
-            });
-        }
-        expect(
-            model.entityProperties.find((property) => property._id === 'user:name'),
-        ).toMatchObject({
-            _entityTypeId: 'entity-property',
-            entityTypeId: 'user',
-            name: 'name',
-        });
-    });
-
-    it('should initialize only an empty store', async () => {
-        const model = createBootstrapModel('system', new Date());
-        const store = createStore([]);
-        const publisher = new EventPublisher();
-
-        await expect(ensureBootstrapModel(store, publisher, model)).resolves.toBe(true);
-        expect(store.commit).toHaveBeenCalledWith(createBootstrapEvents(model));
-    });
-
-    it('should add new core entity types and properties to an existing store', async () => {
-        const model = createBootstrapModel('system', new Date());
-        const events = createBootstrapEvents(model);
-        const identityEvents = events.filter(
-            (event) =>
-                event.entityId === 'identity' ||
-                (event.entityTypeId === 'entity-property' &&
-                    event.data.entityTypeId === 'identity'),
+        const identity = entities.filter(
+            (entity) =>
+                entity._id === 'identity' ||
+                (entity._entityTypeId === 'entity-property' && entity.entityTypeId === 'identity'),
         );
-        const store = createStore(
-            events
-                .filter((event) => !identityEvents.includes(event))
-                .map((event) => event.entityId),
+        const storage = createStorage(
+            entities.filter((entity) => !identity.includes(entity)).map((entity) => entity._id),
         );
 
-        await expect(ensureBootstrapModel(store, new EventPublisher(), model)).resolves.toBe(true);
-        expect(store.commit).toHaveBeenCalledWith(identityEvents);
+        await expect(ensureBootstrapModel(storage, model)).resolves.toBe(true);
+        expect(storage.create).toHaveBeenCalledTimes(identity.length);
+        for (const entity of identity) expect(storage.create).toHaveBeenCalledWith(entity);
     });
 
     it('should preserve an initialized store', async () => {
         const model = createBootstrapModel('system', new Date());
-        const store = createStore(createBootstrapEvents(model).map((event) => event.entityId));
-        const publisher = new EventPublisher();
+        const entities = [
+            ...model.users,
+            ...model.entityTypes,
+            ...model.entityProperties,
+            ...model.indexes,
+        ];
+        const storage = createStorage(entities.map((entity) => entity._id));
 
-        await expect(ensureBootstrapModel(store, publisher, model)).resolves.toBe(false);
-        expect(store.commit).not.toHaveBeenCalled();
+        await expect(ensureBootstrapModel(storage, model)).resolves.toBe(false);
+        expect(storage.create).not.toHaveBeenCalled();
     });
 });
 
-function createStore(existingIds: string[]): BootstrapStore & { commit: ReturnType<typeof vi.fn> } {
+function createStorage(existingIds: string[]): DataStorage & { create: ReturnType<typeof vi.fn> } {
     return {
-        hasEntity: vi
+        getById: vi
             .fn()
-            .mockImplementation((id: string) => Promise.resolve(existingIds.includes(id))),
-        commit: vi.fn().mockResolvedValue(undefined),
+            .mockImplementation((id: string) =>
+                Promise.resolve(existingIds.includes(id) ? { _id: id } : null),
+            ),
+        create: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn().mockResolvedValue(undefined),
     };
 }

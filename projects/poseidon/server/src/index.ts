@@ -13,6 +13,7 @@ import 'dotenv/config';
 import {
     connectDatabase,
     MongoEventProjectionStore,
+    MongoDataStorage,
     MongoIndexManager,
 } from '@poseidon/data-access';
 import {
@@ -36,6 +37,7 @@ async function start(): Promise<void> {
 
     const client = await connectDatabase(databaseUri);
     const store = new MongoEventProjectionStore(client);
+    const storage = new MongoDataStorage(client);
     const publisher = new EventPublisher();
     const indexManager = new MongoIndexManager(client);
     publisher.subscribe('entity-created', (event) => {
@@ -49,8 +51,7 @@ async function start(): Promise<void> {
         }
     });
     const initialized = await ensureBootstrapModel(
-        store,
-        publisher,
+        storage,
         createBootstrapModel('system', new Date()),
     );
     await indexManager.reconcile();
@@ -64,7 +65,7 @@ async function start(): Promise<void> {
             process.env.POSEIDON_LOCAL_UI === 'true' && process.env.NODE_ENV !== 'production',
         ),
     });
-    await initializeUI({ entities, store, publisher, app });
+    await initializeUI({ entities, store, storage, publisher, app });
 
     app.listen(port, '127.0.0.1', () => {
         logger.info({ initialized, port }, 'Poseidon server listening');
@@ -79,11 +80,13 @@ void start().catch((error: unknown) => {
 async function initializeUI({
     entities,
     store,
+    storage,
     publisher,
     app,
 }: {
     entities: EntityService;
     store: MongoEventProjectionStore;
+    storage: MongoDataStorage;
     publisher: EventPublisher;
     app: ReturnType<typeof createApp>;
 }): Promise<void> {
@@ -101,7 +104,7 @@ async function initializeUI({
             await readFile(resolve(__dirname, '../../portal/source-editor.tsx'), 'utf8'),
             componentSources,
         );
-        await bootstrapUI(store, publisher, portalSeeds);
+        await bootstrapUI(storage, portalSeeds);
         await migrateLegacyPrimitiveSources(entities, componentSources);
         const releases = new ReleaseService(entities, artifacts, new ContainerCompiler());
         const portal = await entities.get('app', 'portal');

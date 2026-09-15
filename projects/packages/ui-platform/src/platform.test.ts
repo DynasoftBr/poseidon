@@ -9,6 +9,7 @@ import {
     createBootstrapModel,
     createSystemProperties,
     type EntityStore,
+    type DataStorage,
 } from '@poseidon/runtime';
 import { bootstrapUI, createUIBootstrap } from './bootstrap';
 import { createPortalSeeds } from './portal-seed';
@@ -59,6 +60,17 @@ class Store implements EntityStore {
         return Promise.resolve();
     }
 }
+function seedStorage(store: Store): DataStorage {
+    return {
+        getById: (id) => Promise.resolve(store.records.get(id) ?? null),
+        create: (entity) => {
+            store.records.set(entity._id, entity);
+            return Promise.resolve();
+        },
+        update: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+    };
+}
 async function setup() {
     const store = new Store(),
         publisher = new EventPublisher();
@@ -72,8 +84,7 @@ async function setup() {
         store.records.set(entity._id, entity);
     }
     await bootstrapUI(
-        store,
-        publisher,
+        seedStorage(store),
         createPortalSeeds('export default function Portal(){return null}'),
     );
     const service = new EntityService(store, publisher);
@@ -180,7 +191,7 @@ describe('UI platform', () => {
         );
     });
     it('should preserve edited seeds when bootstrap runs again', async () => {
-        const { store, publisher, service } = await setup();
+        const { store, service } = await setup();
         await service.update(
             {
                 entityTypeId: 'theme',
@@ -190,7 +201,7 @@ describe('UI platform', () => {
             },
             'system',
         );
-        await bootstrapUI(store, publisher, createPortalSeeds('replacement'));
+        await bootstrapUI(seedStorage(store), createPortalSeeds('replacement'));
         expect((await service.get('theme', 'default-theme')).name).toBe('My theme');
     });
     it('should derive seeded component props and events from TypeScript', () => {

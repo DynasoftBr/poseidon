@@ -1,11 +1,5 @@
 import type { BootstrapModel, Entity, EntityProperty, PropertyType } from '@poseidon/models';
-import {
-    createBootstrapEvents,
-    createSystemProperties,
-    ensureBootstrapModel,
-    type BootstrapStore,
-    type EventPublisher,
-} from '@poseidon/runtime';
+import { createSystemProperties, ensureBootstrapModel, type DataStorage } from '@poseidon/runtime';
 
 const definitions: Record<string, Record<string, PropertyType>> = {
     app: {
@@ -103,34 +97,11 @@ const entityTypeMetadata: Record<
     },
 };
 
-export async function bootstrapUI(
-    store: BootstrapStore,
-    publisher: EventPublisher,
-    seeds: Entity[],
-): Promise<void> {
-    await ensureBootstrapModel(store, publisher, createUIBootstrap(new Date()));
-    const events = createBootstrapEvents({
-        users: [],
-        entityTypes: [],
-        entityProperties: [],
-        indexes: [],
-    });
+export async function bootstrapUI(storage: DataStorage, seeds: Entity[]): Promise<void> {
+    await ensureBootstrapModel(storage, createUIBootstrap(new Date()));
     for (const entity of seeds) {
-        if (await store.hasEntity(entity._id)) continue;
-        const { _id, _entityTypeId, _version, _createdAt, _createdBy, ...data } = entity;
-        events.push({
-            id: `bootstrap:${_id}`,
-            type: 'entity-created',
-            entityId: _id,
-            entityTypeId: _entityTypeId,
-            data,
-            occurredAt: new Date(_createdAt),
-            actorId: 'system',
-        });
-    }
-    if (events.length) {
-        await store.commit(events);
-        publisher.publish(events);
+        if (await storage.getById(entity._id)) continue;
+        await storage.create(entity);
     }
 }
 

@@ -2,6 +2,7 @@ import type { EntityEvent } from '@poseidon/models';
 import { MongoClient } from 'mongodb';
 import { connectDatabase, disconnectDatabase } from './database';
 import { MongoEventProjectionStore } from './mongo-event-projection-store';
+import { MongoDataStorage } from './mongo-data-storage';
 import { MongoIndexManager } from './mongo-index-manager';
 
 vi.mock('mongodb', () => ({
@@ -31,6 +32,30 @@ describe('database lifecycle', () => {
         expect(first).not.toBe(second);
         expect(second.close).not.toHaveBeenCalled();
         await disconnectDatabase(second);
+    });
+});
+
+describe('MongoDataStorage', () => {
+    it('should write entities directly without creating events', async () => {
+        const fake = createClient();
+        const storage = new MongoDataStorage(fake.client);
+        const entity = projectionDocument('ada', 'person', { name: 'Ada' });
+        fake.entities.findOne.mockResolvedValue(entity);
+        fake.entities.replaceOne.mockResolvedValue({ matchedCount: 1 });
+        fake.entities.deleteOne.mockResolvedValue({ deletedCount: 1 });
+
+        await expect(storage.getById('ada')).resolves.toEqual(entity);
+        await storage.create(entity);
+        await storage.update({ ...entity, _version: 2 });
+        await storage.delete('ada');
+
+        expect(fake.entities.insertOne).toHaveBeenCalledWith(entity);
+        expect(fake.entities.replaceOne).toHaveBeenCalledWith(
+            { _id: 'ada', _version: 1 },
+            { ...entity, _version: 2 },
+        );
+        expect(fake.entities.deleteOne).toHaveBeenCalledWith({ _id: 'ada' });
+        expect(fake.events.bulkWrite).not.toHaveBeenCalled();
     });
 });
 
@@ -196,6 +221,8 @@ function createClient() {
         find: vi.fn(),
         updateOne: vi.fn(),
         insertOne: vi.fn(),
+        replaceOne: vi.fn(),
+        deleteOne: vi.fn(),
         createIndex: vi.fn(),
     };
     const session = {
