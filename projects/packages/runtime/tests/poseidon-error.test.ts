@@ -3,7 +3,7 @@ import {
     EntityTypeNotFoundError,
     ValidationError,
     poseidonErrorCodes,
-} from './poseidon-error';
+} from '../src/poseidon-error';
 
 describe('Poseidon errors', () => {
     it('should retain validation problems', () => {

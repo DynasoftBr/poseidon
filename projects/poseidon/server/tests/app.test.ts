@@ -1,8 +1,8 @@
 import type { Entity } from '@poseidon/models';
 import { type EntityService, ValidationError } from '@poseidon/runtime';
 import request from 'supertest';
-import { createApp } from './app';
-import { createAuthMiddleware } from './auth-middleware';
+import { createApp } from '../src/app';
+import { createAuthMiddleware } from '../src/auth-middleware';
 
 describe('createApp', () => {
     it('should allow entity routes with a null user when unauthenticated', async () => {

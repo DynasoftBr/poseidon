@@ -1,5 +1,5 @@
 import type { Specification } from '@poseidon/models';
-import { toMongoSpecification } from './mongo-specification';
+import { toMongoSpecification } from '../src/mongo-specification';
 
 const names = new Map([['person:name', 'name']]);
 const field = '$name';

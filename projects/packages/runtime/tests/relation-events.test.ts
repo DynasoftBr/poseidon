@@ -1,5 +1,5 @@
 import { entityEventTypes, type EntityEvent, type EntityProperty } from '@poseidon/models';
-import { createRelationEvents, deleteRelationEvents } from './relation-events';
+import { createRelationEvents, deleteRelationEvents } from '../src/relation-events';
 
 describe('relation events', () => {
     const patient = property('appointment:patient', 'patient', 'patient:appointments');

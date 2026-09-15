@@ -1,4 +1,4 @@
-import { submitForm } from './form-submission';
+import { submitForm } from '../src/form-submission';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,12 +11,12 @@ import {
     type EntityStore,
     type DataStorage,
 } from '@poseidon/runtime';
-import { bootstrapUI, createUIBootstrap } from './bootstrap';
-import { createPortalSeeds } from './portal-seed';
-import { FileArtifactStore } from './artifact-store';
-import { ReleaseService } from './release-service';
-import { evaluate, prepareForm, validateValue } from './forms';
-import { deriveComponentContract, prepareComponentData } from './component-contract';
+import { bootstrapUI, createUIBootstrap } from '../src/bootstrap';
+import { createPortalSeeds } from '../src/portal-seed';
+import { FileArtifactStore } from '../src/artifact-store';
+import { ReleaseService } from '../src/release-service';
+import { evaluate, prepareForm, validateValue } from '../src/forms';
+import { deriveComponentContract, prepareComponentData } from '../src/component-contract';
 
 class Store implements EntityStore {
     public records = new Map<string, Entity>();

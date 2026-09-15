@@ -3,10 +3,10 @@ import request from 'supertest';
 import type { AppRelease, Entity, UIBinding } from '@poseidon/models';
 import { EntityService, EventPublisher } from '@poseidon/runtime';
 import { ReleaseService, UIBuildError } from '@poseidon/ui-platform';
-import { configureUI } from './ui-server';
-import { handleBinding } from './ui-bindings';
-import { createApp } from './app';
-import { errorMiddleware } from './error-middleware';
+import { configureUI } from '../src/ui-server';
+import { handleBinding } from '../src/ui-bindings';
+import { createApp } from '../src/app';
+import { errorMiddleware } from '../src/error-middleware';
 
 const metadata = {
     _version: 1,

@@ -1,5 +1,5 @@
 import type { Specification } from '@poseidon/models';
-import { matchesSpecification, validateSpecification } from './specification';
+import { matchesSpecification, validateSpecification } from '../src/specification';
 
 const names = new Map([['person:value', 'value']]);
 

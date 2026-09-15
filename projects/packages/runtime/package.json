@@ -6,7 +6,7 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc -b tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-        "typecheck": "tsc -b --emitDeclarationOnly",
+        "typecheck": "tsc -b --emitDeclarationOnly && tsc -p tests/tsconfig.json",
         "lint": "eslint .",
         "test": "vitest run",
         "test:coverage": "vitest run --coverage"

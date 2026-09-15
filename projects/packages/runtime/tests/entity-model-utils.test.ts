@@ -1,5 +1,5 @@
 import type { Entity } from '@poseidon/models';
-import { getCommands, toProperty } from './entity-model-utils';
+import { getCommands, toProperty } from '../src/entity-model-utils';
 
 describe('entity model utilities', () => {
     it('should expose valid property projections and optional commands', () => {

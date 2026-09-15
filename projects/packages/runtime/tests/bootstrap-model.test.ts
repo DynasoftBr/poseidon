@@ -1,5 +1,5 @@
-import { createBootstrapModel, ensureBootstrapModel } from './bootstrap-model';
-import type { DataStorage } from './data-storage';
+import { createBootstrapModel, ensureBootstrapModel } from '../src/bootstrap-model';
+import type { DataStorage } from '../src/data-storage';
 
 describe('createBootstrapModel', () => {
     it('should create the core entity types from the shared model', () => {

@@ -1,5 +1,5 @@
 import type { EntityProperty, EntityPropertyData } from '@poseidon/models';
-import { validateEntity } from './entity-validator';
+import { validateEntity } from '../src/entity-validator';
 
 describe('validateEntity', () => {
     const properties: EntityProperty[] = [

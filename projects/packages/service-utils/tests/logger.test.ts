@@ -1,4 +1,4 @@
-import { getLogger } from './logger';
+import { getLogger } from '../src/logger';
 
 describe('getLogger', () => {
     it('should create a logger for the supplied component', () => {

@@ -1,5 +1,5 @@
 import type { EntityCommand, EntityProperty } from '@poseidon/models';
-import { applyEntityRules } from './entity-rule-engine';
+import { applyEntityRules } from '../src/entity-rule-engine';
 
 describe('applyEntityRules', () => {
     const properties: EntityProperty[] = [

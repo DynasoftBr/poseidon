@@ -1,7 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import { EntityTypeNotFoundError, ValidationError } from '@poseidon/runtime';
-import { errorMiddleware } from './error-middleware';
+import { errorMiddleware } from '../src/error-middleware';
 
 describe('errorMiddleware', () => {
     it('should return validation problems as an unprocessable entity response', async () => {

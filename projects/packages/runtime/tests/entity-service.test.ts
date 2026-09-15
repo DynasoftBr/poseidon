@@ -1,7 +1,7 @@
 import type { EntityEvent, Entity } from '@poseidon/models';
-import { EventPublisher } from './event-publisher';
-import { createBootstrapModel, createSystemProperties } from './bootstrap-model';
-import { EntityService, type EntityStore } from './entity-service';
+import { EventPublisher } from '../src/event-publisher';
+import { createBootstrapModel, createSystemProperties } from '../src/bootstrap-model';
+import { EntityService, type EntityStore } from '../src/entity-service';
 
 describe('EntityService', () => {
     it('should create every EntityType through its declarative properties', async () => {

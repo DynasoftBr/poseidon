@@ -2,7 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import type { EntityService } from '@poseidon/runtime';
-import { createAuthMiddleware, type AuthenticatedRequest } from './auth-middleware';
+import { createAuthMiddleware, type AuthenticatedRequest } from '../src/auth-middleware';
 
 const secret = 'test-secret';
 

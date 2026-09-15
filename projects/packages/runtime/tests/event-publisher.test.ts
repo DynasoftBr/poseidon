@@ -1,5 +1,5 @@
 import { entityEventTypes, type EntityEvent } from '@poseidon/models';
-import { EventPublisher } from './event-publisher';
+import { EventPublisher } from '../src/event-publisher';
 
 describe('EventPublisher', () => {
     it('should publish committed events to subscribers', () => {
