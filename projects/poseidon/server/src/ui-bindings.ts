@@ -19,10 +19,10 @@ export async function handleBinding(
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
         throw new Error('Invalid component event.');
     }
-    const component = release.data.snapshot.components.find(
-        (record) => record.id === release.data.snapshot.app.data.entryComponentId,
+    const component = release.snapshot.components.find(
+        (record) => record._id === release.snapshot.app.entryComponentId,
     );
-    const binding = component?.data.bindings?.[name];
+    const binding = component?.bindings?.[name];
     if (!binding) {
         throw new Error('Invalid component event.');
     }
@@ -45,9 +45,9 @@ function executeBinding(
         return entities.query({ entityTypeId: binding.entityTypeId });
     }
     if (binding.kind === 'submit-form') {
-        const form = release.data.snapshot.components.find(
-            (record) => record.id === binding.componentId,
-        )?.data.form;
+        const form = release.snapshot.components.find(
+            (record) => record._id === binding.componentId,
+        )?.form;
         if (!form) throw new Error('Published form not found.');
         return submitForm(store, publisher, form, { input: payload, actorId });
     }
@@ -82,7 +82,7 @@ async function mutate(
         expectedVersion: Number(payload.expectedVersion),
     };
     if (binding.kind === 'update') {
-        const data = componentData(binding.entityTypeId, current.data, supplied);
+        const data = componentData(binding.entityTypeId, current, supplied);
         return entities.update({ ...command, data }, actorId);
     }
     return entities.delete(command, actorId);
@@ -101,7 +101,7 @@ function navigation(release: AppRelease, payload: Record<string, JsonValue>): { 
     if (!path.startsWith('/') || path.startsWith('//') || /[\\?#]/.test(path)) {
         throw new Error('Invalid route.');
     }
-    const base = release.data.snapshot.app.data.basePath;
+    const base = release.snapshot.app.basePath;
     const url = new URL((base === '/' ? '' : base) + path, 'http://local');
     if (base !== '/' && url.pathname !== base && !url.pathname.startsWith(`${base}/`)) {
         throw new Error('Route is outside this app.');

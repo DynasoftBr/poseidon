@@ -1,6 +1,7 @@
 import type { BootstrapModel, Entity, EntityProperty, PropertyType } from '@poseidon/models';
 import {
     createBootstrapEvents,
+    createSystemProperties,
     ensureBootstrapModel,
     type BootstrapStore,
     type EventPublisher,
@@ -30,25 +31,26 @@ const definitions: Record<string, Record<string, PropertyType>> = {
         artifactId: 'string',
         diagnostics: 'array',
     },
-    conversation: { title: 'string', userId: 'reference', messages: 'json' },
+    conversation: { title: 'string', messages: 'json' },
 };
 
 export function createUIBootstrap(now: Date): BootstrapModel {
-    const metadata = { version: 1, createdAt: now, createdById: 'system' };
+    const context = { systemUserId: 'system', now };
+    const metadata = { _version: 1, _createdAt: now.toISOString(), _createdBy: 'system' };
     const entityProperties: EntityProperty[] = Object.entries(definitions).flatMap(
-        ([entityTypeId, fields]) =>
-            Object.entries(fields).map(([name, type]) => ({
+        ([entityTypeId, fields]) => [
+            ...createSystemProperties(entityTypeId, context),
+            ...Object.entries(fields).map(([name, type]) => ({
                 ...metadata,
-                id: `${entityTypeId}:${name}`,
-                entityTypeId: 'entity-property',
-                data: {
-                    entityTypeId,
-                    name,
-                    type,
-                    ...referenceDefinition(entityTypeId, name),
-                    required: !['themeId', 'form', 'bindings', 'publishedReleaseId'].includes(name),
-                },
+                _id: `${entityTypeId}:${name}`,
+                _entityTypeId: 'entity-property',
+                entityTypeId,
+                name,
+                type,
+                ...referenceDefinition(entityTypeId, name),
+                required: !['themeId', 'form', 'bindings', 'publishedReleaseId'].includes(name),
             })),
+        ],
     );
     return {
         users: [],
@@ -56,15 +58,11 @@ export function createUIBootstrap(now: Date): BootstrapModel {
         entityProperties,
         entityTypes: Object.keys(definitions).map((name) => ({
             ...metadata,
-            id: name,
-            entityTypeId: 'entity-type',
-            data: {
-                name,
-                ...entityTypeMetadata[name],
-                properties: entityProperties
-                    .filter((p) => p.data.entityTypeId === name)
-                    .map((p) => p.id),
-            },
+            _id: name,
+            _entityTypeId: 'entity-type',
+            name,
+            ...entityTypeMetadata[name],
+            properties: entityProperties.filter((p) => p.entityTypeId === name).map((p) => p._id),
         })),
     };
 }
@@ -118,14 +116,15 @@ export async function bootstrapUI(
         indexes: [],
     });
     for (const entity of seeds) {
-        if (await store.hasEntity(entity.id)) continue;
+        if (await store.hasEntity(entity._id)) continue;
+        const { _id, _entityTypeId, _version, _createdAt, _createdBy, ...data } = entity;
         events.push({
-            id: `bootstrap:${entity.id}`,
+            id: `bootstrap:${_id}`,
             type: 'entity-created',
-            entityId: entity.id,
-            entityTypeId: entity.entityTypeId,
-            data: entity.data,
-            occurredAt: entity.createdAt,
+            entityId: _id,
+            entityTypeId: _entityTypeId,
+            data,
+            occurredAt: new Date(_createdAt),
             actorId: 'system',
         });
     }
@@ -135,14 +134,13 @@ export async function bootstrapUI(
     }
 }
 
-function referenceDefinition(entityTypeId: string, name: string): Partial<EntityProperty['data']> {
+function referenceDefinition(entityTypeId: string, name: string): Partial<EntityProperty> {
     const references: Record<string, string> = {
         'app:entryComponentId': 'ui-component',
         'app:publishedReleaseId': 'app-release',
         'ui-component:themeId': 'theme',
         'ui-component:dependencies': 'ui-component',
         'app-release:appId': 'app',
-        'conversation:userId': 'user',
     };
     const relatedEntityTypeId = references[entityTypeId + ':' + name];
     return relatedEntityTypeId

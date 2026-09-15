@@ -2,7 +2,7 @@ import type { EntityCommand, Entity, EntityProperty } from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 
 export function toProperty(projection: Entity | null, id: string): EntityProperty {
-    if (!projection || projection.entityTypeId !== 'entity-property') {
+    if (!projection || projection._entityTypeId !== 'entity-property') {
         throw new ValidationError([
             { property: 'properties', message: `Property '${id}' was not found.` },
         ]);
@@ -12,7 +12,7 @@ export function toProperty(projection: Entity | null, id: string): EntityPropert
 }
 
 export function getCommands(projection: Entity): EntityCommand[] | undefined {
-    return Array.isArray(projection.data.commands)
-        ? (projection.data.commands as EntityCommand[])
+    return Array.isArray(projection.commands)
+        ? (projection.commands as EntityCommand[])
         : undefined;
 }

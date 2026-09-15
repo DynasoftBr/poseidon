@@ -1,6 +1,6 @@
 import type { Entity } from '../entity';
 
-export type SystemUser = Entity<SystemUserData>;
+export interface SystemUser extends Entity, SystemUserData {}
 
 export type SystemUserData = {
     name: string;

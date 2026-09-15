@@ -15,10 +15,10 @@ export function toMongoSpecification(
         return { $not: [toMongoSpecification(specification.condition, propertyNames)] };
     }
     const name = propertyNames.get(specification.propertyId);
-    if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
+    if (!name || !/^_?[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
         throw new Error(`Invalid specification property '${specification.propertyId}'.`);
     }
-    return comparisonExpression(specification, `$data.${name}`);
+    return comparisonExpression(specification, `$${name}`);
 }
 
 function comparisonExpression(

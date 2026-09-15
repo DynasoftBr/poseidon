@@ -7,6 +7,7 @@ import {
     EntityService,
     EventPublisher,
     createBootstrapModel,
+    createSystemProperties,
     type EntityStore,
 } from '@poseidon/runtime';
 import { bootstrapUI, createUIBootstrap } from './bootstrap';
@@ -29,7 +30,7 @@ class Store implements EntityStore {
     public findByEntityType(command: { entityTypeId: string }) {
         return Promise.resolve(
             [...this.records.values()].filter(
-                (record) => record.entityTypeId === command.entityTypeId,
+                (record) => record._entityTypeId === command.entityTypeId,
             ),
         );
     }
@@ -40,18 +41,19 @@ class Store implements EntityStore {
             const previous = this.records.get(event.entityId);
             if (
                 event.expectedVersion !== undefined &&
-                previous?.version !== event.expectedVersion
+                previous?._version !== event.expectedVersion
             ) {
                 this.commits.pop();
                 return Promise.reject(new Error('Conflict'));
             }
             this.records.set(event.entityId, {
-                id: event.entityId,
-                entityTypeId: event.entityTypeId,
-                data: { ...previous?.data, ...event.data },
-                version: (previous?.version ?? 0) + 1,
-                createdAt: event.occurredAt,
-                createdById: event.actorId,
+                ...previous,
+                ...event.data,
+                _id: event.entityId,
+                _entityTypeId: event.entityTypeId,
+                _version: (previous?._version ?? 0) + 1,
+                _createdAt: previous?._createdAt ?? event.occurredAt.toISOString(),
+                _createdBy: previous?._createdBy ?? event.actorId,
             });
         }
         return Promise.resolve();
@@ -67,7 +69,7 @@ async function setup() {
         ...core.entityProperties,
         ...core.indexes,
     ]) {
-        store.records.set(entity.id, entity);
+        store.records.set(entity._id, entity);
     }
     await bootstrapUI(
         store,
@@ -83,7 +85,7 @@ describe('UI platform', () => {
         const model = createUIBootstrap(new Date());
 
         for (const entityType of model.entityTypes) {
-            expect(entityType.data).toEqual(
+            expect(entityType).toEqual(
                 expect.objectContaining({
                     label: expect.any(String),
                     pluralLabel: expect.any(String),
@@ -92,6 +94,9 @@ describe('UI platform', () => {
                 }),
             );
         }
+        expect(
+            model.entityTypes.find((type) => type._id === 'conversation')?.properties,
+        ).not.toContain('conversation:userId');
     });
 
     it('should derive props and callback events while ignoring supplied metadata', () => {
@@ -186,7 +191,7 @@ describe('UI platform', () => {
             'system',
         );
         await bootstrapUI(store, publisher, createPortalSeeds('replacement'));
-        expect((await service.get('theme', 'default-theme')).data.name).toBe('My theme');
+        expect((await service.get('theme', 'default-theme')).name).toBe('My theme');
     });
     it('should derive seeded component props and events from TypeScript', () => {
         const source = `export default function Switch(props: {
@@ -200,13 +205,30 @@ describe('UI platform', () => {
             {
                 'ui-switch': source,
             },
-        ).find((entity) => entity.id === 'ui-switch');
-        expect(seeded?.data).toMatchObject({
+        ).find((entity) => entity._id === 'ui-switch');
+        expect(seeded).toMatchObject({
             props: {
                 label: { type: 'string', required: true },
                 checked: { type: 'boolean', required: true },
             },
             events: { onChange: { type: 'boolean' } },
+        });
+    });
+    it('should create a conversation with shared authorship metadata', async () => {
+        const { service } = await setup();
+        const conversation = await service.create(
+            {
+                id: 'conversation:test',
+                entityTypeId: 'conversation',
+                data: { title: 'Test', messages: [] },
+            },
+            'system',
+        );
+
+        expect(conversation).toMatchObject({
+            _id: 'conversation:test',
+            _createdBy: 'system',
+            title: 'Test',
         });
     });
     it('should activate only successful releases and restore a prior release', async () => {
@@ -217,12 +239,12 @@ describe('UI platform', () => {
         const first = await releases.publish('portal', 'system');
         compiler.compile.mockRejectedValueOnce(new Error('Invalid source'));
         await expect(releases.publish('portal', 'system')).rejects.toThrow('Invalid source');
-        expect((await service.get('app', 'portal')).data.publishedReleaseId).toBe(first.id);
+        expect((await service.get('app', 'portal')).publishedReleaseId).toBe(first._id);
         const second = await releases.publish('portal', 'system');
-        expect(second.id).not.toBe(first.id);
-        await releases.restore('portal', first.id, 'system');
-        expect((await service.get('app', 'portal')).data.publishedReleaseId).toBe(first.id);
-        expect((await releases.resolve('localhost', '/chat')).id).toBe('portal');
+        expect(second._id).not.toBe(first._id);
+        await releases.restore('portal', first._id, 'system');
+        expect((await service.get('app', 'portal')).publishedReleaseId).toBe(first._id);
+        expect((await releases.resolve('localhost', '/chat'))._id).toBe('portal');
         await expect(releases.resolve('other', '/')).rejects.toThrow('No app');
     });
     it('should match published base paths without activating draft URL changes', async () => {
@@ -246,21 +268,21 @@ describe('UI platform', () => {
             },
             'system',
         );
-        expect((await releases.resolve('localhost', '/nested/page')).id).toBe('portal');
+        expect((await releases.resolve('localhost', '/nested/page'))._id).toBe('portal');
         await releases.publish('nested-app', 'system');
-        expect((await releases.resolve('localhost', '/nested/page')).id).toBe('nested-app');
+        expect((await releases.resolve('localhost', '/nested/page'))._id).toBe('nested-app');
         const current = await service.get('app', 'nested-app');
         await service.update(
             {
-                id: current.id,
+                id: current._id,
                 entityTypeId: 'app',
-                expectedVersion: current.version,
+                expectedVersion: current._version,
                 data: { basePath: '/draft' },
             },
             'system',
         );
-        expect((await releases.resolve('localhost', '/nested/page')).id).toBe('nested-app');
-        expect((await releases.resolve('localhost', '/draft')).id).toBe('portal');
+        expect((await releases.resolve('localhost', '/nested/page'))._id).toBe('nested-app');
+        expect((await releases.resolve('localhost', '/draft'))._id).toBe('portal');
     });
     it('should preview a selected component with inherited or selected themes without changing drafts', async () => {
         const { service } = await setup();
@@ -300,20 +322,18 @@ describe('UI platform', () => {
             props: { name: 'Ada' },
         });
         expect(compiler.compile.mock.calls[0][0]).toMatchObject({
-            app: { data: { entryComponentId: 'preview-component' } },
+            app: { entryComponentId: 'preview-component' },
         });
         expect(
-            compiler.compile.mock.calls[0][0].themes.map((theme: { id: string }) => theme.id),
+            compiler.compile.mock.calls[0][0].themes.map((theme: { _id: string }) => theme._id),
         ).toContain('alternate');
-        expect((await service.get('app', 'portal')).data.entryComponentId).toBe('portal-entry');
-        expect(
-            (await service.get('ui-component', 'preview-component')).data.themeId,
-        ).toBeUndefined();
+        expect((await service.get('app', 'portal')).entryComponentId).toBe('portal-entry');
+        expect((await service.get('ui-component', 'preview-component')).themeId).toBeUndefined();
         await releases.preview('portal', {
             componentId: 'preview-component',
             props: { name: 'Ada' },
         });
-        expect(compiler.compile.mock.calls[1][0].themes[0].id).toBe('default-theme');
+        expect(compiler.compile.mock.calls[1][0].themes[0]._id).toBe('default-theme');
         await releases.preview('portal');
     });
     it('should snapshot only components discovered by the compiler', async () => {
@@ -338,7 +358,7 @@ describe('UI platform', () => {
             'system',
         );
         const release = await releases.publish('portal', 'system');
-        expect(release.data.snapshot.components.map((component) => component.id)).toEqual([
+        expect(release.snapshot.components.map((component) => component._id)).toEqual([
             'portal-entry',
         ]);
     });
@@ -373,7 +393,6 @@ const form: FormDefinition = {
             id: { kind: 'literal', value: 'first' },
             values: {
                 title: { kind: 'field', name: 'title' },
-                userId: { kind: 'literal', value: 'system' },
                 messages: { kind: 'literal', value: [] },
             },
         },
@@ -382,7 +401,6 @@ const form: FormDefinition = {
             id: { kind: 'literal', value: 'second' },
             values: {
                 title: { kind: 'field', name: 'title' },
-                userId: { kind: 'literal', value: 'system' },
                 messages: { kind: 'literal', value: [] },
             },
         },
@@ -391,23 +409,24 @@ const form: FormDefinition = {
 describe('forms', () => {
     it('should resolve a reference to a later target in the same atomic form', async () => {
         const { store, publisher } = await setup();
-        const metadata = { version: 1, createdAt: new Date(), createdById: 'system' };
+        const now = new Date();
+        const metadata = { _version: 1, _createdAt: now.toISOString(), _createdBy: 'system' };
+        const system = createSystemProperties('pair', { systemUserId: 'system', now });
+        system.forEach((property) => store.records.set(property._id, property));
         store.records.set('pair', {
             ...metadata,
-            id: 'pair',
-            entityTypeId: 'entity-type',
-            data: { properties: ['pair:other'] },
+            _id: 'pair',
+            _entityTypeId: 'entity-type',
+            properties: ['pair:other', ...system.map((property) => property._id)],
         });
         store.records.set('pair:other', {
             ...metadata,
-            id: 'pair:other',
-            entityTypeId: 'entity-property',
-            data: {
-                entityTypeId: 'pair',
-                name: 'other',
-                type: 'reference',
-                relatedEntityTypeId: 'pair',
-            },
+            _id: 'pair:other',
+            _entityTypeId: 'entity-property',
+            entityTypeId: 'pair',
+            name: 'other',
+            type: 'reference',
+            relatedEntityTypeId: 'pair',
         });
         const definition: FormDefinition = {
             fields: {},
@@ -431,7 +450,7 @@ describe('forms', () => {
             actorId: 'system',
         });
         expect(result).toHaveLength(2);
-        expect(store.records.get('left')?.data.other).toBe('right');
+        expect(store.records.get('left')?.other).toBe('right');
     });
     it('should calculate hidden required values and commit all targets together', async () => {
         const { store, publisher } = await setup();
@@ -440,7 +459,7 @@ describe('forms', () => {
             input: { name: 'Ada' },
             actorId: 'system',
         });
-        expect(result.map((entity) => entity.data.title)).toEqual(['Hello Ada', 'Hello Ada']);
+        expect(result.map((entity) => entity.title)).toEqual(['Hello Ada', 'Hello Ada']);
         expect(store.commits).toHaveLength(1);
         expect(store.commits[0]).toHaveLength(2);
     });
@@ -455,7 +474,7 @@ describe('forms', () => {
             input: { name: 'Grace' },
             actorId: 'system',
         });
-        expect(result[0].version).toBe(2);
+        expect(result[0]._version).toBe(2);
         store.commits = [];
         await expect(
             submitForm(store, publisher, update, { input: { name: 'Ada' }, actorId: 'system' }),

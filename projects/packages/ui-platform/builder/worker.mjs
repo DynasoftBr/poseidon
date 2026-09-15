@@ -8,15 +8,15 @@ import { compile } from '@tailwindcss/node';
 
 async function run() {
     const snapshot = JSON.parse(await fs.readFile('/build/snapshot.json', 'utf8'));
-    const components = new Map(snapshot.components.map((component) => [component.id, component]));
+    const components = new Map(snapshot.components.map((component) => [component._id, component]));
     const entry = await fs.readFile('/opt/builder/renderer.mjs', 'utf8');
-    const result = await bundle(entry, components, snapshot.app.data.entryComponentId);
+    const result = await bundle(entry, components, snapshot.app.entryComponentId);
     const bundled = new Map(result.componentIds.map((id) => [id, components.get(id)]));
     validateImports(bundled);
     validateTypes(bundled);
     const candidates = new Scanner({}).scanFiles([
         ...[...bundled.values()].map((component) => ({
-            content: component.data.source.code,
+            content: component.source.code,
             extension: 'tsx',
         })),
         {
@@ -26,18 +26,18 @@ async function run() {
     ]);
     const themeIds = new Set(
         [...bundled.values()].flatMap((component) =>
-            component.data.themeId ? [component.data.themeId] : [],
+            component.themeId ? [component.themeId] : [],
         ),
     );
     const themes = snapshot.themes
-        .filter((theme) => themeIds.has(theme.id))
+        .filter((theme) => themeIds.has(theme._id))
         .map((theme) => {
-            if (!/^[a-zA-Z0-9_-]+$/.test(theme.id)) throw new Error('Invalid theme identifier');
-            if (/@import|@theme|@plugin|@config|url\s*\(|<\/style/i.test(theme.data.source.code)) {
+            if (!/^[a-zA-Z0-9_-]+$/.test(theme._id)) throw new Error('Invalid theme identifier');
+            if (/@import|@theme|@plugin|@config|url\s*\(|<\/style/i.test(theme.source.code)) {
                 throw new Error('Theme contains unsupported external content');
             }
-            postcss.parse(theme.data.source.code, { from: theme.id });
-            return `@scope ([data-theme="${theme.id}"]) to ([data-theme]) {${theme.data.source.code}}`;
+            postcss.parse(theme.source.code, { from: theme._id });
+            return `@scope ([data-theme="${theme._id}"]) to ([data-theme]) {${theme.source.code}}`;
         })
         .join('\n');
     const compiler = await compile(
@@ -80,8 +80,8 @@ function validateImports(components) {
     const diagnostics = [];
     for (const component of components.values()) {
         const file = ts.createSourceFile(
-            `${component.id}.tsx`,
-            component.data.source.code,
+            `${component._id}.tsx`,
+            component.source.code,
             ts.ScriptTarget.Latest,
             true,
             ts.ScriptKind.TSX,
@@ -92,7 +92,7 @@ function validateImports(components) {
                 const name = node.moduleSpecifier?.text;
                 if (name && !allowed(name)) {
                     diagnostics.push(
-                        `${component.id}:${file.getLineAndCharacterOfPosition(node.pos).line + 1}: Import not declared: ${name}`,
+                        `${component._id}:${file.getLineAndCharacterOfPosition(node.pos).line + 1}: Import not declared: ${name}`,
                     );
                 }
             }
@@ -101,7 +101,7 @@ function validateImports(components) {
                 (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
                     node.expression.getText(file) === 'require')
             ) {
-                diagnostics.push(`${component.id}: Dynamic imports and require are unavailable.`);
+                diagnostics.push(`${component._id}: Dynamic imports and require are unavailable.`);
             }
             ts.forEachChild(node, visit);
         };
@@ -132,7 +132,7 @@ function validateTypes(components) {
         sourceFiles.has(name)
             ? ts.createSourceFile(
                   name,
-                  sourceFiles.get(name).data.source.code,
+                  sourceFiles.get(name).source.code,
                   languageVersion,
                   true,
                   ts.ScriptKind.TSX,
@@ -143,7 +143,7 @@ function validateTypes(components) {
             const helper = resolveHelper(name);
             if (helper) return helper;
             const record = [...sourceFiles].find(
-                ([, component]) => name === '@components/' + component.id,
+                ([, component]) => name === '@components/' + component._id,
             );
             return record
                 ? { resolvedFileName: record[0], extension: ts.Extension.Tsx }
@@ -159,7 +159,7 @@ function validateTypes(components) {
                     const line = error.file
                         ? error.file.getLineAndCharacterOfPosition(error.start ?? 0).line + 1
                         : 0;
-                    return `${component?.id ?? 'build'}:${line}: ${ts.flattenDiagnosticMessageText(error.messageText, ' ')}`;
+                    return `${component?._id ?? 'build'}:${line}: ${ts.flattenDiagnosticMessageText(error.messageText, ' ')}`;
                 })
                 .join('\n'),
         );
@@ -202,8 +202,8 @@ async function bundle(entry, components, entryComponentId) {
                         if (!component) throw new Error(`Missing component: ${args.path}`);
                         componentIds.add(args.path);
                         return {
-                            contents: component.data.themeId
-                                ? `import React from 'react';import Component from ${JSON.stringify('poseidon-raw:' + args.path)};export * from ${JSON.stringify('poseidon-raw:' + args.path)};export default props=>React.createElement('div',{'data-theme':${JSON.stringify(component.data.themeId)},style:{display:'contents'}},React.createElement(Component,props));`
+                            contents: component.themeId
+                                ? `import React from 'react';import Component from ${JSON.stringify('poseidon-raw:' + args.path)};export * from ${JSON.stringify('poseidon-raw:' + args.path)};export default props=>React.createElement('div',{'data-theme':${JSON.stringify(component.themeId)},style:{display:'contents'}},React.createElement(Component,props));`
                                 : `export {default} from ${JSON.stringify('poseidon-raw:' + args.path)};export * from ${JSON.stringify('poseidon-raw:' + args.path)}`,
                             loader: 'tsx',
                             resolveDir: '/opt/builder',
@@ -213,7 +213,7 @@ async function bundle(entry, components, entryComponentId) {
                         const component = components.get(args.path);
                         if (!component) throw new Error(`Missing component ${args.path}`);
                         return {
-                            contents: component.data.source.code,
+                            contents: component.source.code,
                             loader: 'tsx',
                             resolveDir: '/opt/builder',
                         };

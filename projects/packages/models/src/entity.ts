@@ -1,15 +1,14 @@
 export type EntityId = string;
 export type EntityData = Record<string, unknown>;
 
-export interface Entity<TData extends object = EntityData> {
-    id: EntityId;
-    entityTypeId: EntityId;
-    data: TData;
-    version: number;
-    createdAt: Date;
-    createdById: EntityId;
-    changedAt?: Date;
-    changedById?: EntityId;
-    deletedAt?: Date;
-    deletedById?: EntityId;
+export interface Entity extends EntityData {
+    _id: EntityId;
+    _entityTypeId: EntityId;
+    _version: number;
+    _createdAt: string;
+    _createdBy: EntityId;
+    _changedAt?: string;
+    _changedBy?: EntityId;
+    _deletedAt?: string;
+    _deletedBy?: EntityId;
 }

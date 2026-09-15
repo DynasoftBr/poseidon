@@ -4,8 +4,8 @@ import Header from '@components/portal-header';
 import Sidebar from '@components/portal-sidebar';
 import VisualEditor from '@components/visual-editor';
 
-type Item = { id: string; version: number; data: Record<string, unknown> };
-type Conversation = { id: string; data: { title?: string } };
+type Item = { _id: string; _version: number; [name: string]: unknown };
+type Conversation = { _id: string; title?: string };
 type Props = {
     kind: string;
     onEvent: (name: string, payload: object) => Promise<unknown>;
@@ -36,7 +36,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
     const [view, setView] = useState<'visual' | 'code'>('code');
     const savedSignature = useRef('');
     const files = useMemo(
-        () => items.map((item) => ({ id: item.id, code: sourceOf(item) })),
+        () => items.map((item) => ({ id: item._id, code: sourceOf(item) })),
         [items],
     );
 
@@ -56,7 +56,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
         setSelected(item);
         setEditing(true);
         setFilesOpen(false);
-        const nextName = String(item.data.name || '');
+        const nextName = String(item.name || '');
         const nextCode = sourceOf(item);
         savedSignature.current = signature(nextName, nextCode);
         setName(nextName);
@@ -85,22 +85,22 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
         if (!editing || signature(name, code) === savedSignature.current) return;
         const timer = window.setTimeout(() => void save(), 1000);
         return () => window.clearTimeout(timer);
-    }, [name, code, editing, selected?.id, selected?.version]);
+    }, [name, code, editing, selected?._id, selected?._version]);
     async function save() {
         const savingSignature = signature(name, code);
         setBusy(true);
         setSaveState({ state: 'saving' });
         try {
             const result = (await onEvent((selected ? 'update' : 'create') + kind, {
-                ...(selected ? { id: selected.id, expectedVersion: selected.version } : {}),
+                ...(selected ? { id: selected._id, expectedVersion: selected._version } : {}),
                 data: { name, source: { code } },
             })) as Item;
             savedSignature.current = savingSignature;
             setSelected(result);
             setItems((current) => {
-                const exists = current.some((item) => item.id === result.id);
+                const exists = current.some((item) => item._id === result._id);
                 return exists
-                    ? current.map((item) => (item.id === result.id ? result : item))
+                    ? current.map((item) => (item._id === result._id ? result : item))
                     : [...current, result];
             });
             setSaveState({ state: 'saved' });
@@ -118,8 +118,8 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                 preview ? 'preview' : 'publish',
                 preview
                     ? kind === 'components'
-                        ? { componentId: selected?.id, props: {} }
-                        : { themeId: selected?.id, props: {} }
+                        ? { componentId: selected?._id, props: {} }
+                        : { themeId: selected?._id, props: {} }
                     : {},
             );
             setStatus(
@@ -132,7 +132,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
         }
     }
     function openDiagnostic(id: string, line: number) {
-        const item = items.find((candidate) => candidate.id === id);
+        const item = items.find((candidate) => candidate._id === id);
         if (!item) return;
         choose(item);
         setDiagnosticLine(line);
@@ -143,7 +143,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                 {status}
             </pre>
             {Array.from(status.matchAll(/([a-z0-9-]+):(\d+):/g))
-                .filter((match) => items.some((item) => item.id === match[1]))
+                .filter((match) => items.some((item) => item._id === match[1]))
                 .map((match, index) => (
                     <button
                         key={index}
@@ -219,18 +219,18 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                     <div className="flex-1 min-h-0 overflow-y-auto p-1">
                         {items.map((item) => (
                             <button
-                                key={item.id}
-                                title={String(item.data.name)}
-                                aria-current={item.id === selected?.id ? 'page' : undefined}
+                                key={item._id}
+                                title={String(item.name)}
+                                aria-current={item._id === selected?._id ? 'page' : undefined}
                                 className={
                                     'block w-full min-h-11 px-3 text-sm text-left truncate rounded ' +
-                                    (item.id === selected?.id
+                                    (item._id === selected?._id
                                         ? 'bg-selected text-primary'
                                         : 'hover:bg-selected')
                                 }
                                 onClick={() => choose(item)}
                             >
-                                {String(item.data.name)} →
+                                {String(item.name)} →
                             </button>
                         ))}
                     </div>
@@ -253,7 +253,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                                 />
                                 {selected && (
                                     <span className="text-xs text-muted shrink-0">
-                                        v{selected.version}
+                                        v{selected._version}
                                     </span>
                                 )}
                                 {kind === 'components' && selected && (
@@ -307,36 +307,26 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                                 {kind === 'components' && view === 'visual' ? (
                                     <>
                                         <VisualEditor
-                                            fileId={selected?.id || 'new-component'}
+                                            fileId={selected?._id || 'new-component'}
                                             componentName={name}
                                             value={code}
                                             components={items.map((item) => ({
-                                                id: item.id,
-                                                data: {
-                                                    name: String(item.data.name || item.id),
-                                                    props:
-                                                        item.data.props &&
-                                                        typeof item.data.props === 'object'
-                                                            ? (item.data.props as Record<
-                                                                  string,
-                                                                  {
-                                                                      type?: string;
-                                                                      required?: boolean;
-                                                                  }
-                                                              >)
-                                                            : {},
-                                                    events:
-                                                        item.data.events &&
-                                                        typeof item.data.events === 'object'
-                                                            ? (item.data.events as Record<
-                                                                  string,
-                                                                  {
-                                                                      type?: string;
-                                                                      required?: boolean;
-                                                                  }
-                                                              >)
-                                                            : {},
-                                                },
+                                                id: item._id,
+                                                name: String(item.name || item._id),
+                                                props:
+                                                    item.props && typeof item.props === 'object'
+                                                        ? (item.props as Record<
+                                                              string,
+                                                              { type?: string; required?: boolean }
+                                                          >)
+                                                        : {},
+                                                events:
+                                                    item.events && typeof item.events === 'object'
+                                                        ? (item.events as Record<
+                                                              string,
+                                                              { type?: string; required?: boolean }
+                                                          >)
+                                                        : {},
                                             }))}
                                             onChange={(value) => {
                                                 setCode(value);
@@ -350,7 +340,7 @@ export default function ResourceEditorPage({ kind, onEvent, triton }: Props) {
                                     </>
                                 ) : kind === 'components' ? (
                                     <SourceEditor
-                                        fileId={selected?.id || 'new-component'}
+                                        fileId={selected?._id || 'new-component'}
                                         value={code}
                                         files={files}
                                         onChange={(value) => {
@@ -521,9 +511,9 @@ function TritonPanel({
                                     .slice(-6)
                                     .reverse()
                                     .map((item) => (
-                                        <div key={item.id} className="rounded px-2 py-2 text-sm">
+                                        <div key={item._id} className="rounded px-2 py-2 text-sm">
                                             <span className="mr-2 text-primary">●</span>
-                                            {item.data.title}
+                                            {item.title}
                                         </div>
                                     ))}
                             </div>
@@ -563,11 +553,11 @@ function TritonPanel({
 }
 
 function sourceOf(item: Item): string {
-    const source = item.data.source;
+    const source = item.source;
     return source && typeof source === 'object' && 'code' in source ? String(source.code) : '';
 }
 function count(item: Item, field: 'props' | 'events'): number {
-    const value = item.data[field];
+    const value = item[field];
     return value && typeof value === 'object' && !Array.isArray(value)
         ? Object.keys(value).length
         : 0;

@@ -35,6 +35,7 @@ test('should retain a working release when a draft build fails', async ({ page }
     await replaceSource(page, frame, original + '\nconst broken: number = "invalid";');
     await expect(frame.locator('[aria-label="Saved"]')).toBeVisible({ timeout: 10_000 });
     await frame.getByRole('button', { name: 'Publish Portal', exact: true }).click();
+    await frame.getByRole('button', { name: 'Show problems panel' }).click();
     await expect(frame.getByRole('status')).toContainText('portal-entry:', { timeout: 30_000 });
     await page.goto('/');
     await expect(frame.getByRole('heading', { name: 'Hello, Local user' })).toBeVisible();
@@ -43,5 +44,6 @@ test('should retain a working release when a draft build fails', async ({ page }
     await replaceSource(page, frame, original);
     await expect(frame.locator('[aria-label="Saved"]')).toBeVisible({ timeout: 10_000 });
     await frame.getByRole('button', { name: 'Publish Portal', exact: true }).click();
+    await frame.getByRole('button', { name: 'Show problems panel' }).click();
     await expect(frame.getByRole('status')).toContainText('Release published', { timeout: 30_000 });
 });

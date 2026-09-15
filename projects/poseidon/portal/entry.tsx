@@ -22,9 +22,11 @@ import {
 type Work = { title: string; steps: string[] };
 type Message = { role: string; text: string; work?: Work };
 type RecordItem = {
-    id: string;
-    version: number;
-    data: { name?: string; title?: string; messages?: Message[] };
+    _id: string;
+    _version: number;
+    name?: string;
+    title?: string;
+    messages?: Message[];
 };
 type Props = {
     user?: { name: string };
@@ -52,7 +54,7 @@ function Layout({ user, route, onEvent }: Props) {
     const [conversation, setConversation] = useState<RecordItem>();
     const [saving, setSaving] = useState(false);
     const [work, setWork] = useState<Work>();
-    useEffect(() => setWork(undefined), [conversation?.id]);
+    useEffect(() => setWork(undefined), [conversation?._id]);
     const wasMobile = useRef(false);
     useEffect(() => {
         if (mobile)
@@ -77,10 +79,10 @@ function Layout({ user, route, onEvent }: Props) {
     }, [route]);
     useEffect(() => {
         const id = route?.split('/')[2];
-        const selected = history.find((item) => item.id === id);
+        const selected = history.find((item) => item._id === id);
         if (selected) {
             setConversation(selected);
-            setMessages(selected.data.messages || []);
+            setMessages(selected.messages || []);
         }
     }, [route, history]);
     useEffect(() => {
@@ -92,10 +94,10 @@ function Layout({ user, route, onEvent }: Props) {
             .catch((reason) => setError(String(reason)));
     }, []);
     function resume(item: RecordItem) {
-        setMessages(item.data.messages || []);
+        setMessages(item.messages || []);
         setConversation(item);
         setWork(undefined);
-        navigate('/chat/' + item.id);
+        navigate('/chat/' + item._id);
         setMobile(false);
     }
     function newChat() {
@@ -133,13 +135,16 @@ function Layout({ user, route, onEvent }: Props) {
                 activeConversation ? 'updateConversation' : 'createConversation',
                 {
                     ...(activeConversation
-                        ? { id: activeConversation.id, expectedVersion: activeConversation.version }
+                        ? {
+                              id: activeConversation._id,
+                              expectedVersion: activeConversation._version,
+                          }
                         : {}),
                     data: { title: next[0].text.slice(0, 60), messages: next },
                 },
             );
             setConversation(saved as RecordItem);
-            if (!stayOnPage) navigate('/chat/' + (saved as RecordItem).id);
+            if (!stayOnPage) navigate('/chat/' + (saved as RecordItem)._id);
             setHistory((await onEvent('conversations', {})) as RecordItem[]);
         } catch (reason) {
             setError(String(reason));
@@ -436,7 +441,7 @@ function Layout({ user, route, onEvent }: Props) {
                             element={
                                 <TritonPage
                                     conversations={history}
-                                    activeConversationId={conversation?.id}
+                                    activeConversationId={conversation?._id}
                                     messages={messages}
                                     prompt={prompt}
                                     setPrompt={setPrompt}
@@ -464,10 +469,10 @@ function Layout({ user, route, onEvent }: Props) {
                                             <tbody>
                                                 {entities.map((item) => (
                                                     <tr
-                                                        key={item.id}
+                                                        key={item._id}
                                                         className="border-t border-zinc-500/20"
                                                     >
-                                                        <td className="p-4">{item.data.name}</td>
+                                                        <td className="p-4">{item.name}</td>
                                                         <td className="p-4 text-zinc-500">
                                                             Platform entity
                                                         </td>

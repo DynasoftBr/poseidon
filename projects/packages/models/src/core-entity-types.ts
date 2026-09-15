@@ -12,5 +12,5 @@ export const coreEntityTypeNames = [
 export type CoreEntityTypeName = (typeof coreEntityTypeNames)[number];
 
 export function isCoreEntityType(entityType: EntityType): boolean {
-    return coreEntityTypeNames.some((name) => name === entityType.data.name);
+    return coreEntityTypeNames.some((name) => name === entityType.name);
 }

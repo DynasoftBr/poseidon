@@ -1,6 +1,6 @@
 import type { EntityEvent, Entity } from '@poseidon/models';
 import { EventPublisher } from './event-publisher';
-import { createBootstrapModel } from './bootstrap-model';
+import { createBootstrapModel, createSystemProperties } from './bootstrap-model';
 import { EntityService, type EntityStore } from './entity-service';
 
 describe('EntityService', () => {
@@ -30,8 +30,8 @@ describe('EntityService', () => {
             'system',
         );
 
-        expect(result.data).toMatchObject({ name: 'Ada Lovelace' });
-        expect(result.data.createdAt).toEqual(expect.any(String));
+        expect(result).toMatchObject({ name: 'Ada Lovelace' });
+        expect(result.createdAt).toEqual(expect.any(String));
         expect(store.events).toHaveLength(1);
     });
 
@@ -76,7 +76,7 @@ describe('EntityService', () => {
         );
         await service.delete({ id: 'ada', entityTypeId: 'person', expectedVersion: 2 }, 'system');
 
-        expect(updated).toMatchObject({ data: { name: 'Ada Lovelace' }, version: 2 });
+        expect(updated).toMatchObject({ name: 'Ada Lovelace', _version: 2 });
         expect(store.events.map((event) => event.type)).toEqual([
             'entity-updated',
             'entity-deleted',
@@ -88,7 +88,7 @@ describe('EntityService', () => {
         async (operation) => {
             const current = {
                 ...projection('patient:ada', 'patient', { name: 'Ada' }),
-                version: 2,
+                _version: 2,
             };
             const store = graphStore([current]);
             store.failCommitWith = { code: 'entity-version-conflict' };
@@ -98,7 +98,7 @@ describe('EntityService', () => {
             publisher.subscribe('entity-updated', listener);
             publisher.subscribe('entity-deleted', listener);
             const service = new EntityService(store, publisher);
-            const command = { id: current.id, entityTypeId: 'patient', expectedVersion: 1 };
+            const command = { id: current._id, entityTypeId: 'patient', expectedVersion: 1 };
 
             await expect(
                 operation === 'update'
@@ -107,9 +107,9 @@ describe('EntityService', () => {
             ).rejects.toMatchObject({ code: 'entity-version-conflict' });
 
             expect(commit).toHaveBeenCalledWith([
-                expect.objectContaining({ entityId: current.id, expectedVersion: 1 }),
+                expect.objectContaining({ entityId: current._id, expectedVersion: 1 }),
             ]);
-            expect(await store.findProjection(current.id)).toEqual(current);
+            expect(await store.findProjection(current._id)).toEqual(current);
             expect(store.events).toEqual([]);
             expect(listener).not.toHaveBeenCalled();
         },
@@ -218,7 +218,7 @@ describe('EntityService', () => {
             'system',
         );
 
-        expect(result.data).toEqual({ patient: 'patient:ada' });
+        expect(result.patient).toEqual('patient:ada');
         expect(store.events.map((event) => event.entityId)).toEqual([
             'patient:ada',
             'appointment:1',
@@ -267,7 +267,7 @@ describe('EntityService', () => {
         const service = new EntityService(store, new EventPublisher());
 
         await expect(service.get('appointment', 'appointment:1')).resolves.toMatchObject({
-            id: 'appointment:1',
+            _id: 'appointment:1',
         });
         await expect(service.get('patient', 'appointment:1')).rejects.toMatchObject({
             code: 'entity-not-found',
@@ -299,8 +299,9 @@ describe('EntityService', () => {
         await service.query({ entityTypeId: 'appointment', filter });
         expect(query).toHaveBeenCalledWith(
             { entityTypeId: 'appointment', filter },
-            new Map([['appointment:patient', 'patient']]),
+            expect.any(Map),
         );
+        expect(query.mock.calls[0]?.[1].get('appointment:patient')).toBe('patient');
         query.mockClear();
         await expect(
             service.query({
@@ -375,7 +376,7 @@ describe('EntityService', () => {
             const store = graphStore([
                 {
                     ...projection('appointment:1', 'appointment', { patient: 'patient:ada' }),
-                    version: 2,
+                    _version: 2,
                 },
                 projection('patient:ada', 'patient', { name: 'Ada' }),
             ]);
@@ -394,7 +395,7 @@ describe('EntityService', () => {
             );
 
             expect(result).toEqual(await store.findProjection('appointment:1'));
-            expect(result.version).toBe(2);
+            expect(result._version).toBe(2);
             expect(store.events).toEqual([]);
             expect(listener).not.toHaveBeenCalled();
         },
@@ -459,8 +460,37 @@ describe('EntityService', () => {
             'system',
         );
 
-        expect(entityType.data.properties).toEqual(['product:name']);
-        expect(store.events.map((event) => event.entityId)).toEqual(['product:name', 'product']);
+        expect(entityType.properties).toEqual(
+            expect.arrayContaining(['product:name', 'product:_id', 'product:_createdAt']),
+        );
+        expect(store.events.map((event) => event.entityId)).toEqual(
+            expect.arrayContaining(['product:name', 'product:_id', 'product']),
+        );
+    });
+
+    it('should retain system properties when an EntityType is updated', async () => {
+        const bootstrap = createBootstrapModel('system', new Date());
+        const store = new InMemoryEntityStore([
+            ...bootstrap.users,
+            ...bootstrap.entityTypes,
+            ...bootstrap.entityProperties,
+            ...bootstrap.indexes,
+        ]);
+
+        const result = await new EntityService(store, new EventPublisher()).update(
+            {
+                id: 'user',
+                entityTypeId: 'entity-type',
+                expectedVersion: 1,
+                data: { properties: ['user:name'] },
+            },
+            'system',
+        );
+
+        expect(result.properties).toEqual(
+            expect.arrayContaining(['user:name', 'user:_id', 'user:_createdAt']),
+        );
+        expect(result.properties).not.toContain('user:login');
     });
 
     it('should validate nested EntityProperty metadata from the bootstrap model', async () => {
@@ -524,7 +554,25 @@ class InMemoryEntityStore implements EntityStore {
     private readonly projections = new Map<string, Entity>();
 
     public constructor(projections: Entity[]) {
-        projections.forEach((projection) => this.projections.set(projection.id, projection));
+        projections.forEach((projection) => this.projections.set(projection._id, projection));
+        if (!this.projections.has('system')) {
+            this.projections.set('system', projection('system', 'user', { name: 'System' }));
+        }
+        for (const entityType of projections.filter(
+            (record) => record._entityTypeId === 'entity-type',
+        )) {
+            const existing = Array.isArray(entityType.properties) ? entityType.properties : [];
+            if (existing.includes(`${entityType._id}:_id`)) continue;
+            const system = createSystemProperties(entityType._id, {
+                systemUserId: 'system',
+                now: new Date(),
+            });
+            this.projections.set(entityType._id, {
+                ...entityType,
+                properties: [...existing, ...system.map((property) => property._id)],
+            });
+            system.forEach((property) => this.projections.set(property._id, property));
+        }
     }
 
     public hasEntity(id: string): Promise<boolean> {
@@ -535,10 +583,13 @@ class InMemoryEntityStore implements EntityStore {
         return Promise.resolve(this.projections.get(id) ?? null);
     }
 
-    public findByEntityType(command: { entityTypeId: string }): Promise<Entity[]> {
+    public findByEntityType(
+        command: { entityTypeId: string },
+        _propertyNames: ReadonlyMap<string, string>,
+    ): Promise<Entity[]> {
         return Promise.resolve(
             [...this.projections.values()].filter(
-                (entity) => entity.entityTypeId === command.entityTypeId,
+                (entity) => entity._entityTypeId === command.entityTypeId,
             ),
         );
     }
@@ -550,8 +601,12 @@ class InMemoryEntityStore implements EntityStore {
             const current = this.projections.get(event.entityId);
             this.projections.set(event.entityId, {
                 ...projection(event.entityId, event.entityTypeId, event.data),
-                version: current ? current.version + 1 : 1,
-                ...(event.type === 'entity-deleted' ? { deletedAt: event.occurredAt } : {}),
+                ...current,
+                ...event.data,
+                _version: current ? current._version + 1 : 1,
+                ...(event.type === 'entity-deleted'
+                    ? { _deletedAt: event.occurredAt.toISOString() }
+                    : {}),
             });
         });
         return Promise.resolve();
@@ -560,11 +615,11 @@ class InMemoryEntityStore implements EntityStore {
 
 function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
     return {
-        id,
-        entityTypeId,
-        data,
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        ...data,
+        _id: id,
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }

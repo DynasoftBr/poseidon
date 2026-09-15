@@ -1,5 +1,10 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
-type RecordEntity = { id: string; version: number; data: Record<string, unknown> };
+type RecordEntity = {
+    _id: string;
+    _version: number;
+    source: { code: string };
+    [name: string]: unknown;
+};
 const api = 'http://127.0.0.1:3100';
 async function publish(request: APIRequestContext) {
     const resolved = await request.get(api + '/api/ui/resolve');
@@ -48,7 +53,7 @@ test('should inherit the Default theme and isolate subtree overrides in both mod
             })
         ).ok(),
     ).toBeTruthy();
-    const source = original.data.source as { code: string };
+    const source = original.source;
     const code =
         `import Subtheme from '@components/${componentId}';\n` +
         source.code.replace('<main', '<Subtheme/><main');
@@ -61,7 +66,7 @@ test('should inherit the Default theme and isolate subtree overrides in both mod
             (
                 await request.patch(api + '/api/v1/entities/ui-component/portal-entry', {
                     data: {
-                        expectedVersion: original.version,
+                        expectedVersion: original._version,
                         data: {
                             source: { code },
                         },
@@ -91,7 +96,12 @@ test('should inherit the Default theme and isolate subtree overrides in both mod
             await request.get(api + '/api/v1/entities/ui-component/portal-entry')
         ).json()) as RecordEntity;
         await request.patch(api + '/api/v1/entities/ui-component/portal-entry', {
-            data: { expectedVersion: current.version, data: original.data },
+            data: {
+                expectedVersion: current._version,
+                data: Object.fromEntries(
+                    Object.entries(original).filter(([name]) => !name.startsWith('_')),
+                ),
+            },
         });
         await publish(request);
     }

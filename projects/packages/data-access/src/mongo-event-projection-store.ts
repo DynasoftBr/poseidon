@@ -21,24 +21,7 @@ export class MongoEventProjectionStore {
     }
 
     public async findProjection(id: string): Promise<Entity | null> {
-        const projection = await this.getProjectionCollection().findOne({ _id: id });
-
-        if (!projection) {
-            return null;
-        }
-
-        return {
-            id: projection._id,
-            entityTypeId: projection.entityTypeId,
-            data: projection.data,
-            version: projection.version,
-            createdAt: projection.createdAt,
-            createdById: projection.createdById,
-            changedAt: projection.changedAt,
-            changedById: projection.changedById,
-            deletedAt: projection.deletedAt,
-            deletedById: projection.deletedById,
-        };
+        return await this.getProjectionCollection().findOne({ _id: id });
     }
 
     public async findByEntityType(
@@ -47,8 +30,8 @@ export class MongoEventProjectionStore {
     ): Promise<Entity[]> {
         const documents = await this.getProjectionCollection()
             .find({
-                entityTypeId: command.entityTypeId,
-                deletedAt: { $exists: false },
+                _entityTypeId: command.entityTypeId,
+                _deletedAt: { $exists: false },
                 ...(command.filter === undefined
                     ? {}
                     : { $expr: toMongoSpecification(command.filter, propertyNames) }),
@@ -57,16 +40,7 @@ export class MongoEventProjectionStore {
             .limit(command.limit ?? 100)
             .toArray();
 
-        return documents.map((document) => ({
-            id: document._id,
-            entityTypeId: document.entityTypeId,
-            data: document.data,
-            version: document.version,
-            createdAt: document.createdAt,
-            createdById: document.createdById,
-            changedAt: document.changedAt,
-            changedById: document.changedById,
-        }));
+        return documents;
     }
 
     public async commit(events: EntityEvent[]): Promise<void> {
@@ -103,11 +77,11 @@ export class MongoEventProjectionStore {
                     await this.getEntities().insertOne(
                         {
                             _id: event.entityId,
-                            entityTypeId: event.entityTypeId,
-                            data: event.data,
-                            version: 1,
-                            createdAt: event.occurredAt,
-                            createdById: event.actorId,
+                            _entityTypeId: event.entityTypeId,
+                            ...event.data,
+                            _version: 1,
+                            _createdAt: event.occurredAt.toISOString(),
+                            _createdBy: event.actorId,
                         },
                         { session },
                     );
@@ -123,25 +97,25 @@ export class MongoEventProjectionStore {
             const result = await this.getEntities().updateOne(
                 {
                     _id: event.entityId,
-                    entityTypeId: event.entityTypeId,
-                    version: event.expectedVersion,
-                    deletedAt: { $exists: false },
+                    _entityTypeId: event.entityTypeId,
+                    _version: event.expectedVersion,
+                    _deletedAt: { $exists: false },
                 },
                 event.type === 'entity-updated'
                     ? {
                           $set: {
-                              data: event.data,
-                              changedAt: event.occurredAt,
-                              changedById: event.actorId,
+                              ...event.data,
+                              _changedAt: event.occurredAt.toISOString(),
+                              _changedBy: event.actorId,
+                              _version: (event.expectedVersion ?? 0) + 1,
                           },
-                          $inc: { version: 1 },
                       }
                     : {
                           $set: {
-                              deletedAt: event.occurredAt,
-                              deletedById: event.actorId,
+                              _deletedAt: event.occurredAt.toISOString(),
+                              _deletedBy: event.actorId,
+                              _version: (event.expectedVersion ?? 0) + 1,
                           },
-                          $inc: { version: 1 },
                       },
                 { session },
             );
@@ -157,11 +131,11 @@ export class MongoEventProjectionStore {
     }
 
     private getEntities() {
-        return this.client.db().collection<StoredProjection>('entities');
+        return this.client.db().collection<Entity>('entities');
     }
 
     private getProjectionCollection() {
-        return this.client.db().collection<StoredProjection>('entities');
+        return this.client.db().collection<Entity>('entities');
     }
 }
 
@@ -185,5 +159,3 @@ class ProjectionAlreadyExistsError extends Error {
 function isDuplicateKeyError(error: unknown): error is { code: number } {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
-
-type StoredProjection = Omit<Entity, 'id'> & { _id: string };

@@ -5,11 +5,9 @@ import Sidebar from '@components/portal-sidebar';
 type Schema = { type?: string; required?: boolean };
 type ComponentItem = {
     id: string;
-    data: {
-        name?: string;
-        props?: Record<string, Schema>;
-        events?: Record<string, Schema>;
-    };
+    name?: string;
+    props?: Record<string, Schema>;
+    events?: Record<string, Schema>;
 };
 type Node = {
     id: string;
@@ -51,7 +49,7 @@ export default function VisualEditor({
             ? { text: { type: 'string' } }
             : selected?.componentId === 'container'
               ? { direction: { type: 'string' } }
-              : definition?.data.props || {};
+              : definition?.props || {};
 
     function commit(next: Node[]) {
         setNodes(next);
@@ -106,7 +104,7 @@ export default function VisualEditor({
                         .map((component) => (
                             <PaletteItem
                                 key={component.id}
-                                label={component.data.name || component.id}
+                                label={component.name || component.id}
                                 componentId={component.id}
                                 onAdd={add}
                             />
@@ -344,7 +342,7 @@ function componentAliases(
     const aliases = new Map<string, string>();
     const used = new Set([componentName]);
     for (const id of componentIds) {
-        const storedName = components.find((component) => component.id === id)?.data.name || id;
+        const storedName = components.find((component) => component.id === id)?.name || id;
         const base = identifier(storedName.replace(/^(ui|portal)-/i, ''));
         let alias = base;
         let suffix = 2;
@@ -374,8 +372,7 @@ function renderNodes(
                 .map(([name, value]) => ` ${name}={${JSON.stringify(value)}}`)
                 .join('');
             const events = Object.keys(
-                components.find((component) => component.id === node.componentId)?.data.events ||
-                    {},
+                components.find((component) => component.id === node.componentId)?.events || {},
             )
                 .map((name) => ` ${name}={() => undefined}`)
                 .join('');
@@ -422,7 +419,7 @@ function removeNode(nodes: Node[], id: string): Node[] {
 function componentLabel(id: string, components: ComponentItem[]): string {
     if (id === 'container') return 'Container';
     if (id === 'text') return 'Text';
-    return components.find((component) => component.id === id)?.data.name || id;
+    return components.find((component) => component.id === id)?.name || id;
 }
 
 function identifier(value: string): string {

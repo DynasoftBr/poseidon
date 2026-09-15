@@ -25,12 +25,9 @@ export function createBootstrapModel(systemUserId: EntityId, now: Date): Bootstr
     const context = { systemUserId, now };
     const users: SystemUser[] = [
         {
-            id: systemUserId,
-            entityTypeId: 'user',
-            data: { name: 'System', login: 'system' },
-            version: 1,
-            createdAt: now,
-            createdById: systemUserId,
+            ...systemFields(systemUserId, 'user', context),
+            name: 'System',
+            login: 'system',
         },
     ];
     const entityProperties = createCoreProperties(context);
@@ -81,23 +78,26 @@ function createCoreEntityTypes(
 ): EntityType[] {
     return ['entity-type', 'entity-property', 'index', 'user', 'identity', 'relation-link'].map(
         (name) => ({
-            id: name,
-            entityTypeId: 'entity-type',
-            data: {
-                name,
-                ...coreEntityTypeMetadata[name],
-                properties: properties
-                    .filter((property) => property.data.entityTypeId === name)
-                    .map((property) => property.id),
-            },
-            version: 1,
-            createdAt: context.now,
-            createdById: context.systemUserId,
+            ...systemFields(name, 'entity-type', context),
+            name,
+            ...coreEntityTypeMetadata[name],
+            properties: properties
+                .filter((property) => property.entityTypeId === name)
+                .map((property) => property._id),
         }),
     );
 }
 
 function createCoreProperties(context: BootstrapContext): EntityProperty[] {
+    return [
+        ...Object.keys(coreEntityTypeMetadata).flatMap((entityTypeId) =>
+            createSystemProperties(entityTypeId, context),
+        ),
+        ...createCoreBusinessProperties(context),
+    ];
+}
+
+function createCoreBusinessProperties(context: BootstrapContext): EntityProperty[] {
     return [
         createProperty(['entity-type', 'name', 'string', true], context),
         createProperty(['entity-type', 'label', 'string', true], context),
@@ -157,6 +157,31 @@ function createCoreProperties(context: BootstrapContext): EntityProperty[] {
     ];
 }
 
+export function createSystemProperties(
+    entityTypeId: EntityId,
+    context: BootstrapContext,
+): EntityProperty[] {
+    return [
+        createProperty([entityTypeId, '_id', 'string', true], context),
+        createProperty([entityTypeId, '_entityTypeId', 'reference', true], context, {
+            relatedEntityTypeId: 'entity-type',
+        }),
+        createProperty([entityTypeId, '_version', 'integer', true], context),
+        createProperty([entityTypeId, '_createdAt', 'date-time', true], context),
+        createProperty([entityTypeId, '_createdBy', 'reference', true], context, {
+            relatedEntityTypeId: 'user',
+        }),
+        createProperty([entityTypeId, '_changedAt', 'date-time', false], context),
+        createProperty([entityTypeId, '_changedBy', 'reference', false], context, {
+            relatedEntityTypeId: 'user',
+        }),
+        createProperty([entityTypeId, '_deletedAt', 'date-time', false], context),
+        createProperty([entityTypeId, '_deletedBy', 'reference', false], context, {
+            relatedEntityTypeId: 'user',
+        }),
+    ];
+}
+
 function createIdentityProperties(context: BootstrapContext): EntityProperty[] {
     return [
         createProperty(['identity', 'name', 'string', true], context),
@@ -187,12 +212,12 @@ function createProperty(
     options: Partial<EntityPropertyData> = {},
 ): EntityProperty {
     return {
-        id: `${entityTypeId}:${name}`,
-        entityTypeId: 'entity-property',
-        data: { entityTypeId, name, type, required, ...options },
-        version: 1,
-        createdAt: context.now,
-        createdById: context.systemUserId,
+        ...systemFields(`${entityTypeId}:${name}`, 'entity-property', context),
+        entityTypeId,
+        name,
+        type,
+        required,
+        ...options,
     };
 }
 
@@ -203,12 +228,11 @@ function createIndex(
     context: BootstrapContext,
 ): IndexDefinition {
     return {
-        id: name,
-        entityTypeId: 'index',
-        data: { entityTypeId, name, propertyIds, unique: true },
-        version: 1,
-        createdAt: context.now,
-        createdById: context.systemUserId,
+        ...systemFields(name, 'index', context),
+        entityTypeId,
+        name,
+        propertyIds,
+        unique: true,
     };
 }
 
@@ -260,13 +284,24 @@ const coreEntityTypeMetadata: Record<
 };
 
 function createEvent(entity: Entity): EntityEvent {
+    const { _id, _entityTypeId, _createdAt, _createdBy, _version, ...data } = entity;
     return {
-        id: `bootstrap:${entity.entityTypeId}:${entity.id}`,
+        id: `bootstrap:${_entityTypeId}:${_id}`,
         type: entityEventTypes.created,
-        entityTypeId: entity.entityTypeId,
-        entityId: entity.id,
-        data: entity.data,
-        occurredAt: entity.createdAt,
-        actorId: entity.createdById,
+        entityTypeId: _entityTypeId,
+        entityId: _id,
+        data,
+        occurredAt: new Date(_createdAt),
+        actorId: _createdBy,
+    };
+}
+
+function systemFields(id: EntityId, entityTypeId: EntityId, context: BootstrapContext): Entity {
+    return {
+        _id: id,
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: context.now.toISOString(),
+        _createdBy: context.systemUserId,
     };
 }

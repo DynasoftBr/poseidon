@@ -14,4 +14,4 @@ export interface UIComponentData extends Record<string, unknown> {
     form?: FormDefinition;
 }
 
-export type UIComponent = Entity<UIComponentData>;
+export interface UIComponent extends Entity, UIComponentData {}

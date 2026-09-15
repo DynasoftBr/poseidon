@@ -45,8 +45,8 @@ describe('MongoEventProjectionStore', () => {
         await expect(store.isInitialized()).resolves.toBe(false);
         await expect(store.hasEntity('ada')).resolves.toBe(true);
         await expect(store.findProjection('ada')).resolves.toMatchObject({
-            id: 'ada',
-            data: { name: 'Ada' },
+            _id: 'ada',
+            name: 'Ada',
         });
         fake.entities.findOne.mockResolvedValueOnce(null);
         await expect(store.findProjection('missing')).resolves.toBeNull();
@@ -96,7 +96,7 @@ describe('MongoEventProjectionStore', () => {
         ).rejects.toThrow("Invalid specification property '$unsafe'.");
 
         expect(fake.entities.find).toHaveBeenCalledWith(
-            expect.objectContaining({ entityTypeId: 'person', deletedAt: { $exists: false } }),
+            expect.objectContaining({ _entityTypeId: 'person', _deletedAt: { $exists: false } }),
         );
     });
 
@@ -111,6 +111,10 @@ describe('MongoEventProjectionStore', () => {
         expect(fake.session.withTransaction).toHaveBeenCalledOnce();
         expect(fake.events.bulkWrite).toHaveBeenCalledOnce();
         expect(fake.entities.insertOne).toHaveBeenCalledOnce();
+        expect(fake.entities.insertOne).toHaveBeenCalledWith(
+            expect.objectContaining({ _id: 'ada', name: 'Ada', _version: 1 }),
+            expect.any(Object),
+        );
         expect(fake.entities.updateOne).toHaveBeenCalledTimes(2);
         expect(fake.session.endSession).toHaveBeenCalledOnce();
     });
@@ -164,7 +168,7 @@ describe('MongoIndexManager', () => {
         await new MongoIndexManager(fake.client).reconcile();
 
         expect(fake.entities.createIndex).toHaveBeenCalledWith(
-            { entityTypeId: 1, 'data.name': 1 },
+            { _entityTypeId: 1, name: 1 },
             expect.objectContaining({ name: 'poseidon__person-name', unique: true }),
         );
     });
@@ -219,12 +223,12 @@ function cursor<T>(documents: T[]) {
 
 function projectionDocument(id: string, entityTypeId: string, data: Record<string, unknown>) {
     return {
+        ...data,
         _id: id,
-        entityTypeId,
-        data,
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }
 

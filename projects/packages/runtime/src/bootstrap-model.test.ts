@@ -13,28 +13,26 @@ describe('createBootstrapModel', () => {
         const model = createBootstrapModel('system', now);
 
         expect(model.users).toMatchObject([
-            { id: 'system', entityTypeId: 'user', data: { login: 'system' }, version: 1 },
+            { _id: 'system', _entityTypeId: 'user', login: 'system', _version: 1 },
         ]);
         expect(model.entityTypes).toMatchObject([
             {
-                id: 'entity-type',
-                createdById: 'system',
-                createdAt: now,
-                data: {
-                    label: 'Entity type',
-                    pluralLabel: 'Entity types',
-                    description: 'Defines the structure and behaviour of an entity.',
-                    menuLocation: 'Platform',
-                },
+                _id: 'entity-type',
+                _createdBy: 'system',
+                _createdAt: now.toISOString(),
+                label: 'Entity type',
+                pluralLabel: 'Entity types',
+                description: 'Defines the structure and behaviour of an entity.',
+                menuLocation: 'Platform',
             },
-            { id: 'entity-property', createdById: 'system', createdAt: now },
-            { id: 'index', createdById: 'system', createdAt: now },
-            { id: 'user', createdById: 'system', createdAt: now },
-            { id: 'identity', createdById: 'system', createdAt: now },
-            { id: 'relation-link', createdById: 'system', createdAt: now },
+            { _id: 'entity-property', _createdBy: 'system', _createdAt: now.toISOString() },
+            { _id: 'index', _createdBy: 'system', _createdAt: now.toISOString() },
+            { _id: 'user', _createdBy: 'system', _createdAt: now.toISOString() },
+            { _id: 'identity', _createdBy: 'system', _createdAt: now.toISOString() },
+            { _id: 'relation-link', _createdBy: 'system', _createdAt: now.toISOString() },
         ]);
         for (const entityType of model.entityTypes) {
-            expect(entityType.data).toEqual(
+            expect(entityType).toEqual(
                 expect.objectContaining({
                     label: expect.any(String),
                     pluralLabel: expect.any(String),
@@ -43,33 +41,35 @@ describe('createBootstrapModel', () => {
                 }),
             );
         }
-        expect(model.entityProperties).toHaveLength(38);
+        expect(model.entityProperties).toHaveLength(92);
+        for (const entityType of model.entityTypes) {
+            expect(entityType.properties).toEqual(
+                expect.arrayContaining([`${entityType.name}:_id`, `${entityType.name}:_createdAt`]),
+            );
+        }
         expect(model.entityProperties).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
-                    id: 'entity-type:properties',
-                    data: expect.objectContaining({
-                        itemsType: 'reference',
-                        relatedEntityTypeId: 'entity-property',
-                        uniqueBy: 'name',
-                    }),
+                    _id: 'entity-type:properties',
+                    itemsType: 'reference',
+                    relatedEntityTypeId: 'entity-property',
+                    uniqueBy: 'name',
                 }),
                 expect.objectContaining({
-                    id: 'entity-property:default',
-                    data: expect.objectContaining({ type: 'json' }),
+                    _id: 'entity-property:default',
+                    type: 'json',
                 }),
                 expect.objectContaining({
-                    id: 'entity-type:menuLocation',
-                    data: expect.objectContaining({ type: 'string', required: false }),
+                    _id: 'entity-type:menuLocation',
+                    type: 'string',
+                    required: false,
                 }),
                 expect.objectContaining({
-                    id: 'identity:members',
-                    data: expect.objectContaining({
-                        itemsType: 'reference',
-                        relatedEntityTypeId: 'identity',
-                        relationKind: 'has-many',
-                        reversePropertyId: 'identity:memberOf',
-                    }),
+                    _id: 'identity:members',
+                    itemsType: 'reference',
+                    relatedEntityTypeId: 'identity',
+                    relationKind: 'has-many',
+                    reversePropertyId: 'identity:memberOf',
                 }),
             ]),
         );
@@ -88,21 +88,24 @@ describe('createBootstrapModel', () => {
         const events = createBootstrapEvents(model);
 
         for (const entity of entities) {
-            expect(events.find((event) => event.entityId === entity.id)).toEqual({
-                id: `bootstrap:${entity.entityTypeId}:${entity.id}`,
+            expect(events.find((event) => event.entityId === entity._id)).toEqual({
+                id: `bootstrap:${entity._entityTypeId}:${entity._id}`,
                 type: 'entity-created',
-                entityId: entity.id,
-                entityTypeId: entity.entityTypeId,
-                data: entity.data,
+                entityId: entity._id,
+                entityTypeId: entity._entityTypeId,
+                data: Object.fromEntries(
+                    Object.entries(entity).filter(([name]) => !name.startsWith('_')),
+                ),
                 actorId: 'system',
                 occurredAt: now,
             });
         }
         expect(
-            model.entityProperties.find((property) => property.id === 'user:name'),
+            model.entityProperties.find((property) => property._id === 'user:name'),
         ).toMatchObject({
-            entityTypeId: 'entity-property',
-            data: { entityTypeId: 'user', name: 'name' },
+            _entityTypeId: 'entity-property',
+            entityTypeId: 'user',
+            name: 'name',
         });
     });
 

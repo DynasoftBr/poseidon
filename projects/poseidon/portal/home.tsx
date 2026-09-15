@@ -2,12 +2,10 @@ import { Link } from 'react-router-dom';
 import Button from '@components/ui-button';
 import Composer from '@components/portal-composer';
 type Item = {
-    id: string;
-    version: number;
-    data: {
-        title?: string;
-        messages?: { role: string; text: string; work?: { title: string; steps: string[] } }[];
-    };
+    _id: string;
+    _version: number;
+    title?: string;
+    messages?: { role: string; text: string; work?: { title: string; steps: string[] } }[];
 };
 export default function Home({
     user,
@@ -66,7 +64,7 @@ export default function Home({
                     .map((item) => (
                         <Button
                             variant="ghost"
-                            key={item.id}
+                            key={item._id}
                             className={
                                 button + ' block w-full border-b border-zinc-500/20 truncate'
                             }
@@ -74,7 +72,7 @@ export default function Home({
                                 onResume(item);
                             }}
                         >
-                            <span className="truncate">{item.data.title} →</span>
+                            <span className="truncate">{item.title} →</span>
                         </Button>
                     ))
             ) : (

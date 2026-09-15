@@ -2,7 +2,14 @@ import type { Entity } from '@poseidon/models';
 import { deriveComponentContract } from './component-contract';
 
 function entity(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
-    return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
+    return {
+        ...data,
+        _id: id,
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
+    };
 }
 function component(id: string, name: string, code: string): Entity {
     return entity(id, 'ui-component', {

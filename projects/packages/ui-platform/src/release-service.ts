@@ -30,17 +30,14 @@ export class ReleaseService {
         const published = await Promise.all(
             apps.map(async (record) => {
                 const draft = record as App;
-                if (!draft.data.publishedReleaseId) return undefined;
+                if (!draft.publishedReleaseId) return undefined;
                 const release = (await this.entities.get(
                     'app-release',
-                    draft.data.publishedReleaseId,
+                    draft.publishedReleaseId,
                 )) as AppRelease;
                 return {
-                    ...release.data.snapshot.app,
-                    data: {
-                        ...release.data.snapshot.app.data,
-                        publishedReleaseId: draft.data.publishedReleaseId,
-                    },
+                    ...release.snapshot.app,
+                    publishedReleaseId: draft.publishedReleaseId,
                 };
             }),
         );
@@ -48,37 +45,37 @@ export class ReleaseService {
             .filter((app) => app !== undefined)
             .filter(
                 (app) =>
-                    app.data.domain === domain &&
-                    (path === app.data.basePath ||
-                        path.startsWith(app.data.basePath === '/' ? '/' : `${app.data.basePath}/`)),
+                    app.domain === domain &&
+                    (path === app.basePath ||
+                        path.startsWith(app.basePath === '/' ? '/' : `${app.basePath}/`)),
             );
-        matches.sort((a, b) => b.data.basePath.length - a.data.basePath.length);
+        matches.sort((a, b) => b.basePath.length - a.basePath.length);
         if (!matches[0]) throw new Error('No app matches this URL.');
         return matches[0];
     }
     public async snapshot(appId: string, options: PreviewOptions = {}): Promise<ReleaseSnapshot> {
         const app = structuredClone(asApp(await this.entities.get('app', appId)));
         const inheritedTheme = options.componentId
-            ? ((await this.entities.get('ui-component', app.data.entryComponentId)) as UIComponent)
-                  .data.themeId
+            ? ((await this.entities.get('ui-component', app.entryComponentId)) as UIComponent)
+                  .themeId
             : undefined;
-        app.data.entryComponentId = options.componentId ?? app.data.entryComponentId;
+        app.entryComponentId = options.componentId ?? app.entryComponentId;
         const components = new Map(
             (await this.entities.query({ entityTypeId: 'ui-component' })).map((component) => [
-                component.id,
+                component._id,
                 structuredClone(component) as UIComponent,
             ]),
         );
-        const entry = components.get(app.data.entryComponentId);
-        if (!entry) throw new Error(`Missing component: ${app.data.entryComponentId}`);
-        const themeId = options.themeId ?? entry.data.themeId ?? inheritedTheme;
-        if (themeId) entry.data.themeId = themeId;
+        const entry = components.get(app.entryComponentId);
+        if (!entry) throw new Error(`Missing component: ${app.entryComponentId}`);
+        const themeId = options.themeId ?? entry.themeId ?? inheritedTheme;
+        if (themeId) entry.themeId = themeId;
         const themes = (await this.entities.query({ entityTypeId: 'theme' })).map(
             (theme) => structuredClone(theme) as Theme,
         );
         for (const record of [...components.values(), ...themes]) {
-            if ('fileId' in record.data.source) {
-                record.data.source = { code: await this.artifacts.read(record.data.source.fileId) };
+            if ('fileId' in record.source) {
+                record.source = { code: await this.artifacts.read(record.source.fileId) };
             }
         }
         return { app, components: [...components.values()], themes };
@@ -92,14 +89,14 @@ export class ReleaseService {
         const snapshot = await this.snapshot(appId);
         const result = await this.compiler.compile(snapshot);
         snapshot.components = snapshot.components.filter((component) =>
-            result.componentIds.includes(component.id),
+            result.componentIds.includes(component._id),
         );
         const themeIds = new Set(
             snapshot.components.flatMap((component) =>
-                component.data.themeId ? [component.data.themeId] : [],
+                component.themeId ? [component.themeId] : [],
             ),
         );
-        snapshot.themes = snapshot.themes.filter((theme) => themeIds.has(theme.id));
+        snapshot.themes = snapshot.themes.filter((theme) => themeIds.has(theme._id));
         const artifactId = await this.artifacts.put(result.html);
         const release = (await this.entities.create(
             {
@@ -113,8 +110,8 @@ export class ReleaseService {
             {
                 entityTypeId: 'app',
                 id: appId,
-                expectedVersion: snapshot.app.version,
-                data: { publishedReleaseId: release.id },
+                expectedVersion: snapshot.app._version,
+                data: { publishedReleaseId: release._id },
             },
             actorId,
         );
@@ -122,13 +119,13 @@ export class ReleaseService {
     }
     public async restore(appId: string, releaseId: string, actorId: string): Promise<void> {
         const release = (await this.entities.get('app-release', releaseId)) as AppRelease;
-        if (release.data.appId !== appId) throw new Error('Release belongs to another app.');
+        if (release.appId !== appId) throw new Error('Release belongs to another app.');
         const app = await this.entities.get('app', appId);
         await this.entities.update(
             {
                 entityTypeId: 'app',
                 id: appId,
-                expectedVersion: app.version,
+                expectedVersion: app._version,
                 data: { publishedReleaseId: releaseId },
             },
             actorId,
@@ -136,7 +133,7 @@ export class ReleaseService {
     }
 }
 function asApp(entity: Entity): App {
-    const data = entity.data;
+    const data = entity;
     if (
         typeof data.domain !== 'string' ||
         typeof data.basePath !== 'string' ||

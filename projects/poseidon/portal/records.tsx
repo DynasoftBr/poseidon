@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-type Item = { id: string; version: number; createdAt: string; data: Record<string, unknown> };
+type Item = { _id: string; _version: number; _createdAt: string; [name: string]: unknown };
 export default function Records({
     kind,
     onEvent,
@@ -42,11 +42,7 @@ export default function Records({
                         subscriptions and billing are not connected.
                     </p>
                     <pre className="whitespace-pre-wrap break-words text-sm">
-                        {JSON.stringify(
-                            items.find((item) => item.id === 'system')?.data || {},
-                            null,
-                            2,
-                        )}
+                        {JSON.stringify(items.find((item) => item._id === 'system') || {}, null, 2)}
                     </pre>
                 </div>
             ) : (
@@ -66,17 +62,17 @@ export default function Records({
                         </thead>
                         <tbody>
                             {items.map((item) => (
-                                <tr key={item.id} className="border-t border-line">
+                                <tr key={item._id} className="border-t border-line">
                                     <td className="p-4 break-all">
-                                        {String(item.data.name || item.data.email || item.id)}
+                                        {String(item.name || item.email || item._id)}
                                     </td>
                                     <td className="p-4">
-                                        {item.version}
+                                        {item._version}
                                         {kind === 'releases' && (
                                             <button
                                                 className="block min-h-11 text-primary"
                                                 onClick={() =>
-                                                    void onEvent('restore', { releaseId: item.id })
+                                                    void onEvent('restore', { releaseId: item._id })
                                                         .then(() =>
                                                             setError(
                                                                 'Release restored. Reload to use it.',
@@ -90,7 +86,7 @@ export default function Records({
                                         )}
                                     </td>
                                     <td className="p-4 whitespace-nowrap">
-                                        {new Date(item.createdAt).toLocaleString()}
+                                        {new Date(item._createdAt).toLocaleString()}
                                     </td>
                                 </tr>
                             ))}

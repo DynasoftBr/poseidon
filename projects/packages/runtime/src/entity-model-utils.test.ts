@@ -9,28 +9,29 @@ describe('entity model utilities', () => {
         );
 
         expect(property).toMatchObject({
-            id: 'name',
-            entityTypeId: 'entity-property',
-            data: { name: 'name', type: 'string' },
-            version: 1,
+            _id: 'name',
+            _entityTypeId: 'entity-property',
+            name: 'name',
+            type: 'string',
+            _version: 1,
         });
         expect(getCommands(projection('person', 'entity-type', { commands: [] }))).toEqual([]);
         expect(getCommands(projection('person', 'entity-type', { commands: {} }))).toBeUndefined();
     });
 
-    it('should retain property version and audit metadata without flattening its data', () => {
+    it('should retain property version and audit metadata', () => {
         const stored = {
             ...projection('user:name', 'entity-property', {
                 entityTypeId: 'user',
                 name: 'name',
                 type: 'string',
             }),
-            version: 3,
-            changedAt: new Date('2026-09-13T12:00:00.000Z'),
-            changedById: 'editor',
+            _version: 3,
+            _changedAt: '2026-09-13T12:00:00.000Z',
+            _changedBy: 'editor',
         };
 
-        expect(toProperty(stored, stored.id)).toEqual(stored);
+        expect(toProperty(stored, stored._id)).toEqual(stored);
     });
 
     it('should reject a missing or invalid property projection', () => {
@@ -48,5 +49,12 @@ describe('entity model utilities', () => {
 });
 
 function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
-    return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
+    return {
+        ...data,
+        _id: id,
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
+    };
 }

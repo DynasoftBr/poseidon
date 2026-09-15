@@ -3,7 +3,7 @@ import Dialog from '@components/ui-dialog';
 import Field from '@components/ui-field';
 import { useEffect, useState } from 'react';
 
-type Item = { id: string; version: number; data: Record<string, unknown> };
+type Item = { _id: string; _version: number; [name: string]: unknown };
 
 export default function IdentityEditor({
     onEvent,
@@ -43,17 +43,18 @@ export default function IdentityEditor({
 
     function choose(identity: Item, links = relationLinks) {
         setSelected(identity);
-        setName(String(identity.data.name || ''));
-        setOwner(String(identity.data.owner || ''));
-        setMembers(linkedIds(identity.id, 'identity:members', links));
-        setMemberOf(linkedIds(identity.id, 'identity:memberOf', links));
+        setName(String(identity.name || ''));
+        setOwner(String(identity.owner || ''));
+        setMembers(linkedIds(identity._id, 'identity:members', links));
+        setMemberOf(linkedIds(identity._id, 'identity:memberOf', links));
         setStatus('');
     }
 
     function create() {
-        setSelected({ id: crypto.randomUUID(), version: 0, data: {} });
+        if (busy) return;
+        setSelected({ _id: crypto.randomUUID(), _version: 0 });
         setName('');
-        setOwner(users[0]?.id || '');
+        setOwner(users[0]?._id || '');
         setMembers([]);
         setMemberOf([]);
         setStatus('');
@@ -62,24 +63,25 @@ export default function IdentityEditor({
     async function save() {
         if (!selected) return;
         setBusy(true);
+        setStatus('');
         try {
             const result = (await onEvent(
-                selected.version ? 'updateidentities' : 'createidentities',
+                selected._version ? 'updateidentities' : 'createidentities',
                 {
-                    id: selected.id,
-                    ...(selected.version ? { expectedVersion: selected.version } : {}),
+                    id: selected._id,
+                    ...(selected._version ? { expectedVersion: selected._version } : {}),
                     data: {
                         name,
                         owner,
                         members,
-                        memberOf: selected.version ? ids(selected.data.memberOf) : [],
+                        memberOf: selected._version ? ids(selected.memberOf) : [],
                     },
                 },
             )) as Item;
-            await updateParents(selected.id, memberOf, identities, onEvent);
+            await updateParents(selected._id, memberOf, identities, onEvent);
             const loaded = await load();
             choose(
-                loaded.records.find((identity) => identity.id === result.id) || result,
+                loaded.records.find((identity) => identity._id === result._id) || result,
                 loaded.links,
             );
             setStatus('Identity saved.');
@@ -91,12 +93,12 @@ export default function IdentityEditor({
     }
 
     async function remove() {
-        if (!selected?.version) return;
+        if (!selected?._version) return;
         setBusy(true);
         try {
             await onEvent('deleteidentities', {
-                id: selected.id,
-                expectedVersion: selected.version,
+                id: selected._id,
+                expectedVersion: selected._version,
                 data: {},
             });
             setConfirmingDelete(false);
@@ -111,17 +113,17 @@ export default function IdentityEditor({
     }
 
     const identityNames = new Map(
-        identities.map((identity) => [identity.id, String(identity.data.name || identity.id)]),
+        identities.map((identity) => [identity._id, String(identity.name || identity._id)]),
     );
     const chosenIds = picker === 'members' ? members : memberOf;
     const availableIdentities = identities.filter(
-        (identity) => identity.id !== selected?.id && !chosenIds.includes(identity.id),
+        (identity) => identity._id !== selected?._id && !chosenIds.includes(identity._id),
     );
     return (
         <section>
             <div className="mb-6 flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold">Identities</h1>
-                <Button variant="primary" onClick={create}>
+                <Button variant="primary" disabled={busy} onClick={create}>
                     Create identity
                 </Button>
             </div>
@@ -129,11 +131,11 @@ export default function IdentityEditor({
                 <nav aria-label="Identities" className="flex gap-2 overflow-auto lg:flex-col">
                     {identities.map((identity) => (
                         <button
-                            key={identity.id}
+                            key={identity._id}
                             className="min-h-11 shrink-0 rounded-lg p-3 text-left hover:bg-selected"
                             onClick={() => choose(identity)}
                         >
-                            {String(identity.data.name || identity.id)} →
+                            {String(identity.name || identity._id)} →
                         </button>
                     ))}
                     {!identities.length && <p className="p-3 text-sm text-muted">No identities.</p>}
@@ -165,8 +167,8 @@ export default function IdentityEditor({
                             >
                                 <option value="">Choose an owner</option>
                                 {users.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                        {String(user.data.name || user.data.login || user.id)}
+                                    <option key={user._id} value={user._id}>
+                                        {String(user.name || user.login || user._id)}
                                     </option>
                                 ))}
                             </select>
@@ -191,7 +193,7 @@ export default function IdentityEditor({
                             <Button type="submit" variant="primary" loading={busy}>
                                 Save identity
                             </Button>
-                            {selected.version > 0 && (
+                            {selected._version > 0 && (
                                 <Button
                                     variant="danger"
                                     disabled={busy}
@@ -241,16 +243,16 @@ export default function IdentityEditor({
                 <div className="space-y-2">
                     {availableIdentities.map((identity) => (
                         <button
-                            key={identity.id}
+                            key={identity._id}
                             type="button"
                             className="flex min-h-11 w-full items-center rounded-lg px-3 text-left hover:bg-selected"
                             onClick={() => {
-                                if (picker === 'members') setMembers([...members, identity.id]);
-                                if (picker === 'memberOf') setMemberOf([...memberOf, identity.id]);
+                                if (picker === 'members') setMembers([...members, identity._id]);
+                                if (picker === 'memberOf') setMemberOf([...memberOf, identity._id]);
                                 setPicker(undefined);
                             }}
                         >
-                            {String(identity.data.name || identity.id)}
+                            {String(identity.name || identity._id)}
                         </button>
                     ))}
                     {!availableIdentities.length && (
@@ -316,11 +318,8 @@ function ids(value: unknown): string[] {
 
 function linkedIds(identityId: string, propertyId: string, links: Item[]): string[] {
     return links
-        .filter(
-            (link) =>
-                link.data.relationPropertyId === propertyId && link.data.thisId === identityId,
-        )
-        .map((link) => String(link.data.thatId));
+        .filter((link) => link.relationPropertyId === propertyId && link.thisId === identityId)
+        .map((link) => String(link.thatId));
 }
 
 async function updateParents(
@@ -329,15 +328,17 @@ async function updateParents(
     identities: Item[],
     onEvent: (name: string, payload: object) => Promise<unknown>,
 ) {
-    for (const parent of identities.filter((identity) => identity.id !== identityId)) {
-        const currentMembers = ids(parent.data.members);
-        const shouldContainIdentity = desiredParentIds.includes(parent.id);
+    for (const parent of identities.filter((identity) => identity._id !== identityId)) {
+        const currentMembers = ids(parent.members);
+        const shouldContainIdentity = desiredParentIds.includes(parent._id);
         if (currentMembers.includes(identityId) === shouldContainIdentity) continue;
         await onEvent('updateidentities', {
-            id: parent.id,
-            expectedVersion: parent.version,
+            id: parent._id,
+            expectedVersion: parent._version,
             data: {
-                ...parent.data,
+                name: parent.name,
+                owner: parent.owner,
+                memberOf: ids(parent.memberOf),
                 members: shouldContainIdentity
                     ? [...currentMembers, identityId]
                     : currentMembers.filter((id) => id !== identityId),

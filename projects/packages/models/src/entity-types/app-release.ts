@@ -16,4 +16,4 @@ export interface AppReleaseData extends Record<string, unknown> {
     diagnostics: string[];
 }
 
-export type AppRelease = Entity<AppReleaseData>;
+export interface AppRelease extends Entity, AppReleaseData {}

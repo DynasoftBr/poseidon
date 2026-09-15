@@ -21,8 +21,8 @@ export function createRelationEvents(
 
         events.push(...createLinkEvents(sourceEvent, property, sourceEvent.entityId, thatId));
 
-        const reverseProperty = property.data.reversePropertyId
-            ? reverseProperties.get(property.data.reversePropertyId)
+        const reverseProperty = property.reversePropertyId
+            ? reverseProperties.get(property.reversePropertyId)
             : undefined;
         if (reverseProperty) {
             events.push(
@@ -57,8 +57,8 @@ export function deleteRelationEvents(
         )
         .flatMap(([property, thatId]) => {
             const events = deleteLinkEvents(sourceEvent, property, sourceEvent.entityId, thatId);
-            const reverseProperty = property.data.reversePropertyId
-                ? reverseProperties.get(property.data.reversePropertyId)
+            const reverseProperty = property.reversePropertyId
+                ? reverseProperties.get(property.reversePropertyId)
                 : undefined;
             return reverseProperty
                 ? [
@@ -86,14 +86,14 @@ function createLinkEvents(
     thisId: string,
     thatId: string,
 ): EntityEvent[] {
-    const id = relationLinkId(property.id, thisId, thatId);
+    const id = relationLinkId(property._id, thisId, thatId);
     return [
         {
             id,
             type: entityEventTypes.created,
             entityTypeId: 'relation-link',
             entityId: id,
-            data: { relationPropertyId: property.id, thisId, thatId },
+            data: { relationPropertyId: property._id, thisId, thatId },
             actorId: sourceEvent.actorId,
             occurredAt: sourceEvent.occurredAt,
         },
@@ -106,14 +106,14 @@ function deleteLinkEvents(
     thisId: string,
     thatId: string,
 ): EntityEvent[] {
-    const id = relationLinkId(property.id, thisId, thatId);
+    const id = relationLinkId(property._id, thisId, thatId);
     return [
         {
             id: `entity-deleted:relation-link:${id}:2`,
             type: entityEventTypes.deleted,
             entityTypeId: 'relation-link',
             entityId: id,
-            data: { relationPropertyId: property.id, thisId, thatId },
+            data: { relationPropertyId: property._id, thisId, thatId },
             actorId: sourceEvent.actorId,
             occurredAt: sourceEvent.occurredAt,
             expectedVersion: 1,
@@ -126,9 +126,9 @@ function relationEntries(
     data: Record<string, unknown>,
 ): [EntityProperty, string][] {
     return properties
-        .filter((property) => property.data.relationKind && data[property.data.name] !== undefined)
+        .filter((property) => property.relationKind && data[property.name] !== undefined)
         .flatMap((property) => {
-            const value = data[property.data.name];
+            const value = data[property.name];
             const ids = Array.isArray(value) ? value : [value];
             return ids
                 .filter((id): id is string => typeof id === 'string')

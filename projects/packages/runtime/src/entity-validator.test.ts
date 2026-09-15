@@ -1,4 +1,4 @@
-import type { EntityProperty } from '@poseidon/models';
+import type { EntityProperty, EntityPropertyData } from '@poseidon/models';
 import { validateEntity } from './entity-validator';
 
 describe('validateEntity', () => {
@@ -49,16 +49,16 @@ describe('validateEntity', () => {
 });
 
 function property(
-    input: { id: string } & Pick<EntityProperty['data'], 'name' | 'type'> &
-        Partial<EntityProperty['data']>,
+    input: { id: string } & Pick<EntityPropertyData, 'name' | 'type'> & Partial<EntityPropertyData>,
 ): EntityProperty {
     const { id, ...data } = input;
     return {
-        id,
-        entityTypeId: 'entity-property',
-        data: { ...data, entityTypeId: 'person' },
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        ...data,
+        _id: id,
+        _entityTypeId: 'entity-property',
+        entityTypeId: 'person',
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }

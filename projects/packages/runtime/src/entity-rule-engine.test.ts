@@ -210,11 +210,13 @@ describe('applyEntityRules', () => {
 
 function property(id: string, name: string): EntityProperty {
     return {
-        id,
-        entityTypeId: 'entity-property',
-        data: { entityTypeId: 'order', name, type: 'string' },
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        _id: id,
+        _entityTypeId: 'entity-property',
+        entityTypeId: 'order',
+        name,
+        type: 'string',
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }

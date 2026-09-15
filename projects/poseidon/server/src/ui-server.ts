@@ -30,21 +30,21 @@ export function configureUI(
                 request.hostname === '127.0.0.1' ? 'localhost' : request.hostname,
                 String(request.query.path ?? '/'),
             );
-            if (!selected.data.publishedReleaseId) {
+            if (!selected.publishedReleaseId) {
                 throw new Error('This app has no published release.');
             }
             const release = (await entities.get(
                 'app-release',
-                selected.data.publishedReleaseId,
+                selected.publishedReleaseId,
             )) as AppRelease;
             const id = randomUUID();
             expireSessions(sessions);
             sessions.set(id, { release, expires: Date.now() + 8 * 60 * 60 * 1000 });
             response.json({
                 id,
-                releaseId: release.id,
-                basePath: selected.data.basePath,
-                rendererUrl: `${rendererOrigin}/artifacts/${release.data.artifactId}`,
+                releaseId: release._id,
+                basePath: selected.basePath,
+                rendererUrl: `${rendererOrigin}/artifacts/${release.artifactId}`,
                 props: { user: { name: 'Local user' }, localDevelopment: true },
             });
         } catch (error) {
@@ -88,7 +88,7 @@ function eventHandler(
             if (
                 !session ||
                 session.expires < Date.now() ||
-                session.release.id !== request.body.releaseId
+                session.release._id !== request.body.releaseId
             ) {
                 throw new Error('Session expired. Reload the app.');
             }

@@ -7,6 +7,7 @@ test('should suggest component imports and add an import when completing a compo
     const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
     await frame.getByRole('button', { name: 'Create new', exact: true }).click();
     await expect(frame.getByLabel('Saved', { exact: true })).toBeVisible();
+    await frame.getByRole('button', { name: 'Code', exact: true }).click();
     await replaceSource(page, frame, 'import Button from "@components/ui-b');
     await expect(frame.locator('.view-lines')).toContainText(
         'import Button from "@components/ui-b',
@@ -43,6 +44,7 @@ test('should validate syntax, imports and component props while editing', async 
     const frame = page.frameLocator('iframe[title="Poseidon Portal"]');
     await frame.getByRole('button', { name: 'Create new', exact: true }).click();
     await expect(frame.getByLabel('Saved', { exact: true })).toBeVisible();
+    await frame.getByRole('button', { name: 'Code', exact: true }).click();
     const problems = frame.locator('[aria-label="Code problems"]');
     await replaceSource(
         page,
@@ -138,9 +140,9 @@ test('should keep component source separate when switching after an unsaved edit
             });
         } else await route.continue();
     });
-    await replaceSource(page, frame, original.data.source.code + '\n');
+    await replaceSource(page, frame, original.source.code + '\n');
     const savedCode = (await save).postDataJSON().payload.data.source.code as string;
-    expect(savedCode.trim()).toBe(original.data.source.code.trim());
+    expect(savedCode.trim()).toBe(original.source.code.trim());
     expect(savedCode).not.toContain('Unsaved Portal');
     await expect(frame.locator('[aria-label="Code problems"]')).toHaveText('No problems reported');
 });

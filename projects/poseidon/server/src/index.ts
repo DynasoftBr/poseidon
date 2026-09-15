@@ -64,7 +64,7 @@ async function start(): Promise<void> {
 }
 
 void start().catch((error: unknown) => {
-    logger.fatal({ error }, 'Poseidon server failed to start');
+    logger.fatal(error, 'Poseidon server failed to start');
     process.exitCode = 1;
 });
 
@@ -97,7 +97,7 @@ async function initializeUI({
         await migrateLegacyPrimitiveSources(entities, componentSources);
         const releases = new ReleaseService(entities, artifacts, new ContainerCompiler());
         const portal = await entities.get('app', 'portal');
-        if (!portal.data.publishedReleaseId) {
+        if (!portal.publishedReleaseId) {
             await releases.publish('portal', 'system');
         }
         configureUI(
@@ -190,9 +190,9 @@ async function migrateLegacyPrimitiveSources(
             continue;
         }
         const component = await entities.get('ui-component', id);
-        const current = component.data.source as { code?: string } | undefined;
+        const current = component.source as { code?: string } | undefined;
         if (
-            component.version === 1 &&
+            component._version === 1 &&
             current?.code?.includes('export function Button') &&
             current.code.includes('export function Icon')
         ) {
@@ -200,7 +200,7 @@ async function migrateLegacyPrimitiveSources(
                 {
                     id,
                     entityTypeId: 'ui-component',
-                    expectedVersion: component.version,
+                    expectedVersion: component._version,
                     data: { source: { code } },
                 },
                 'system',

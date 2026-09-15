@@ -56,12 +56,12 @@ class FormStore implements EntityStore {
     ) {
         for (const target of targets) {
             this.prospective.set(target.id, {
-                id: target.id,
-                entityTypeId: target.entityTypeId,
-                data: target.data,
-                version: target.expectedVersion ?? 1,
-                createdAt: new Date(),
-                createdById: actorId,
+                ...target.data,
+                _id: target.id,
+                _entityTypeId: target.entityTypeId,
+                _version: target.expectedVersion ?? 1,
+                _createdAt: new Date().toISOString(),
+                _createdBy: actorId,
             });
         }
     }
@@ -80,13 +80,16 @@ class FormStore implements EntityStore {
         for (const event of events) {
             const prior = await this.findProjection(event.entityId);
             this.staged.set(event.entityId, {
-                id: event.entityId,
-                entityTypeId: event.entityTypeId,
-                data: { ...prior?.data, ...event.data },
-                version: event.type === 'entity-created' ? 1 : (event.expectedVersion ?? 0) + 1,
-                createdAt: prior?.createdAt ?? event.occurredAt,
-                createdById: prior?.createdById ?? event.actorId,
-                ...(event.type === 'entity-deleted' ? { deletedAt: event.occurredAt } : {}),
+                ...prior,
+                ...event.data,
+                _id: event.entityId,
+                _entityTypeId: event.entityTypeId,
+                _version: event.type === 'entity-created' ? 1 : (event.expectedVersion ?? 0) + 1,
+                _createdAt: prior?._createdAt ?? event.occurredAt.toISOString(),
+                _createdBy: prior?._createdBy ?? event.actorId,
+                ...(event.type === 'entity-deleted'
+                    ? { _deletedAt: event.occurredAt.toISOString(), _deletedBy: event.actorId }
+                    : {}),
             });
         }
         this.events.push(...events);

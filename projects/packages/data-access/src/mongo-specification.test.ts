@@ -2,7 +2,7 @@ import type { Specification } from '@poseidon/models';
 import { toMongoSpecification } from './mongo-specification';
 
 const names = new Map([['person:name', 'name']]);
-const field = '$data.name';
+const field = '$name';
 const exists = { $ne: [{ $type: field }, 'missing'] };
 
 function comparison(

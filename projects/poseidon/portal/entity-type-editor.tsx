@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
-type Item = { id: string; version: number; data: Record<string, unknown> };
-type Property = { id: string; version?: number; data: Record<string, unknown> };
+type Item = { _id: string; _version: number; [name: string]: unknown };
+type Property = Item;
+const systemProperties = new Set([
+    '_id',
+    '_entityTypeId',
+    '_version',
+    '_createdAt',
+    '_createdBy',
+    '_changedAt',
+    '_changedBy',
+    '_deletedAt',
+    '_deletedBy',
+]);
+function businessProperties(item: Item): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(item).filter(([name]) => !systemProperties.has(name)));
+}
 const input = 'min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2';
 export default function EntityTypeEditor({
     onEvent,
@@ -25,14 +39,14 @@ export default function EntityTypeEditor({
     }, []);
     function choose(item: Item) {
         setSelected(item);
-        setName(String(item.data.name || ''));
-        const ids = Array.isArray(item.data.properties) ? item.data.properties : [];
-        setFields(properties.filter((field) => ids.includes(field.id)));
-        setActions(JSON.stringify(item.data.commands || [], null, 2));
+        setName(String(item.name || ''));
+        const ids = Array.isArray(item.properties) ? item.properties : [];
+        setFields(properties.filter((field) => ids.includes(field._id)));
+        setActions(JSON.stringify(item.commands || [], null, 2));
         setStatus('');
     }
     function create() {
-        setSelected({ id: crypto.randomUUID(), version: 0, data: {} });
+        setSelected({ _id: crypto.randomUUID(), _version: 0 });
         setName('');
         setFields([]);
         setActions('[]');
@@ -40,9 +54,7 @@ export default function EntityTypeEditor({
     }
     function change(index: number, key: string, value: unknown) {
         setFields((current) =>
-            current.map((field, i) =>
-                i === index ? { ...field, data: { ...field.data, [key]: value } } : field,
-            ),
+            current.map((field, i) => (i === index ? { ...field, [key]: value } : field)),
         );
     }
     async function save() {
@@ -50,19 +62,19 @@ export default function EntityTypeEditor({
         setBusy(true);
         try {
             const data = {
-                ...selected.data,
+                ...businessProperties(selected),
                 name,
-                ...(selected.version ? {} : { label: name }),
+                ...(selected._version ? {} : { label: name }),
                 commands: JSON.parse(actions) as unknown,
                 properties: fields.map((field) => ({
-                    id: field.id,
-                    ...(field.version ? { expectedVersion: field.version } : {}),
-                    data: { ...field.data, entityTypeId: selected.id },
+                    id: field._id,
+                    ...(field._version ? { expectedVersion: field._version } : {}),
+                    data: { ...businessProperties(field), entityTypeId: selected._id },
                 })),
             };
-            const result = (await onEvent(selected.version ? 'updateentities' : 'createentities', {
-                id: selected.id,
-                ...(selected.version ? { expectedVersion: selected.version } : {}),
+            const result = (await onEvent(selected._version ? 'updateentities' : 'createentities', {
+                id: selected._id,
+                ...(selected._version ? { expectedVersion: selected._version } : {}),
                 data,
             })) as Item;
             await load();
@@ -72,8 +84,7 @@ export default function EntityTypeEditor({
             setFields(
                 refreshed.filter(
                     (field) =>
-                        Array.isArray(result.data.properties) &&
-                        result.data.properties.includes(field.id),
+                        Array.isArray(result.properties) && result.properties.includes(field._id),
                 ),
             );
         } catch (reason) {
@@ -94,11 +105,11 @@ export default function EntityTypeEditor({
                 <nav className="flex lg:flex-col overflow-auto gap-2">
                     {types.map((item) => (
                         <button
-                            key={item.id}
+                            key={item._id}
                             className="min-h-11 p-3 text-left rounded-lg hover:bg-selected shrink-0"
                             onClick={() => choose(item)}
                         >
-                            {String(item.data.label || item.data.name)} →
+                            {String(item.label || item.name)} →
                         </button>
                     ))}
                 </nav>
@@ -124,7 +135,7 @@ export default function EntityTypeEditor({
                         <div className="space-y-4">
                             {fields.map((field, index) => (
                                 <fieldset
-                                    key={field.id}
+                                    key={field._id}
                                     className="border border-line rounded-xl p-4"
                                 >
                                     <div className="grid sm:grid-cols-2 gap-3">
@@ -133,7 +144,7 @@ export default function EntityTypeEditor({
                                             <input
                                                 required
                                                 className={input}
-                                                value={String(field.data.name || '')}
+                                                value={String(field.name || '')}
                                                 onChange={(event) =>
                                                     change(index, 'name', event.target.value)
                                                 }
@@ -143,7 +154,7 @@ export default function EntityTypeEditor({
                                             Type
                                             <select
                                                 className={input}
-                                                value={String(field.data.type || 'string')}
+                                                value={String(field.type || 'string')}
                                                 onChange={(event) =>
                                                     change(index, 'type', event.target.value)
                                                 }
@@ -167,23 +178,21 @@ export default function EntityTypeEditor({
                                     <label className="flex min-h-11 items-center gap-2">
                                         <input
                                             type="checkbox"
-                                            checked={Boolean(field.data.required)}
+                                            checked={Boolean(field.required)}
                                             onChange={(event) =>
                                                 change(index, 'required', event.target.checked)
                                             }
                                         />
                                         Required
                                     </label>
-                                    {field.data.type === 'reference' && (
+                                    {field.type === 'reference' && (
                                         <div className="grid sm:grid-cols-2 gap-3">
                                             <label>
                                                 Related entity type
                                                 <select
                                                     required
                                                     className={input}
-                                                    value={String(
-                                                        field.data.relatedEntityTypeId || '',
-                                                    )}
+                                                    value={String(field.relatedEntityTypeId || '')}
                                                     onChange={(event) =>
                                                         change(
                                                             index,
@@ -194,8 +203,8 @@ export default function EntityTypeEditor({
                                                 >
                                                     <option value="">Choose a type</option>
                                                     {types.map((type) => (
-                                                        <option key={type.id} value={type.id}>
-                                                            {String(type.data.name)}
+                                                        <option key={type._id} value={type._id}>
+                                                            {String(type.name)}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -205,7 +214,7 @@ export default function EntityTypeEditor({
                                                 <select
                                                     className={input}
                                                     value={String(
-                                                        field.data.relationKind || 'belongs-to-one',
+                                                        field.relationKind || 'belongs-to-one',
                                                     )}
                                                     onChange={(event) =>
                                                         change(
@@ -228,14 +237,14 @@ export default function EntityTypeEditor({
                                         </div>
                                     )}
                                     <p className="text-xs text-muted break-all mt-2">
-                                        Property ID: {field.id}
+                                        Property ID: {field._id}
                                     </p>
                                     <button
                                         type="button"
                                         className="min-h-11 text-danger"
                                         onClick={() =>
                                             setFields((current) =>
-                                                current.filter((item) => item.id !== field.id),
+                                                current.filter((item) => item._id !== field._id),
                                             )
                                         }
                                     >
@@ -251,8 +260,11 @@ export default function EntityTypeEditor({
                                 setFields((current) => [
                                     ...current,
                                     {
-                                        id: crypto.randomUUID(),
-                                        data: { name: '', type: 'string', required: false },
+                                        _id: crypto.randomUUID(),
+                                        _version: 0,
+                                        name: '',
+                                        type: 'string',
+                                        required: false,
                                     },
                                 ])
                             }

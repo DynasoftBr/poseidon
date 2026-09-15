@@ -21,5 +21,5 @@ export async function portalSource(page: Page): Promise<string> {
         'http://127.0.0.1:3100/api/v1/entities/ui-component/portal-entry',
     );
     const entity = await response.json();
-    return entity.data.source.code as string;
+    return entity.source.code as string;
 }

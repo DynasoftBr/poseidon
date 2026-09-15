@@ -46,7 +46,7 @@ test('should create an entity type with a relationship and declarative action', 
 test('should allow editing a core entity type', async ({ page }) => {
     await page.goto('/entities');
     const frame = page.frameLocator('iframe');
-    await frame.getByRole('button', { name: 'entity-type →', exact: true }).click();
+    await frame.getByRole('button', { name: 'Entity type →', exact: true }).click();
     await expect(frame.getByRole('textbox', { name: 'Entity name' })).toHaveValue('entity-type');
     await expect(frame.getByRole('button', { name: 'Add property' })).toBeVisible();
     await expect(frame.getByRole('textbox', { name: 'Declarative actions' })).toBeEnabled();

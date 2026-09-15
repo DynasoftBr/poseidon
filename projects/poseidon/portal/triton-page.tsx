@@ -6,9 +6,10 @@ import Sidebar from '@components/portal-sidebar';
 type Work = { title: string; steps: string[] };
 type Message = { role: string; text: string; work?: Work };
 type Conversation = {
-    id: string;
-    version: number;
-    data: { title?: string; messages?: Message[] };
+    _id: string;
+    _version: number;
+    title?: string;
+    messages?: Message[];
 };
 
 export default function TritonPage({
@@ -62,17 +63,17 @@ export default function TritonPage({
                             .map((conversation) => (
                                 <Button
                                     variant="ghost"
-                                    key={conversation.id}
+                                    key={conversation._id}
                                     className={
                                         item +
-                                        (conversation.id === activeConversationId
+                                        (conversation._id === activeConversationId
                                             ? ' bg-selected text-primary'
                                             : '')
                                     }
                                     onClick={() => onResume(conversation)}
                                 >
                                     <span className="truncate">
-                                        {conversation.data.title || 'Untitled chat'}
+                                        {conversation.title || 'Untitled chat'}
                                     </span>
                                 </Button>
                             ))

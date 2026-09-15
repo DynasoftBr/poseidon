@@ -8,22 +8,22 @@ export class MongoIndexManager {
     public async reconcile(): Promise<void> {
         const indexes = await this.client
             .db()
-            .collection<StoredProjection>('entities')
-            .find({ entityTypeId: 'index', deletedAt: { $exists: false } })
+            .collection<Entity>('entities')
+            .find({ _entityTypeId: 'index', _deletedAt: { $exists: false } })
             .toArray();
 
-        await Promise.all(indexes.map((index) => this.apply(index.data)));
+        await Promise.all(indexes.map((index) => this.apply(index)));
     }
 
     public async apply(data: EntityData): Promise<void> {
         const definition = parseIndexDefinition(data);
         const properties = await this.client
             .db()
-            .collection<StoredProjection>('entities')
-            .find({ _id: { $in: definition.propertyIds }, entityTypeId: 'entity-property' })
+            .collection<Entity>('entities')
+            .find({ _id: { $in: definition.propertyIds }, _entityTypeId: 'entity-property' })
             .toArray();
         const namesById = new Map(
-            properties.map((property) => [property._id, property.data.name] as const),
+            properties.map((property) => [property._id, property.name] as const),
         );
         const propertyNames = definition.propertyIds.map((id) => namesById.get(id));
 
@@ -36,21 +36,19 @@ export class MongoIndexManager {
             .collection('entities')
             .createIndex(
                 {
-                    entityTypeId: 1,
-                    ...Object.fromEntries(propertyNames.map((name) => [`data.${name}`, 1])),
+                    _entityTypeId: 1,
+                    ...Object.fromEntries(propertyNames.map((name) => [name, 1])),
                 },
                 {
                     name: `poseidon__${definition.name}`,
                     unique: definition.unique,
                     partialFilterExpression: {
-                        entityTypeId: definition.entityTypeId,
+                        _entityTypeId: definition.entityTypeId,
                     },
                 },
             );
     }
 }
-
-type StoredProjection = Omit<Entity, 'id'> & { _id: string };
 
 function parseIndexDefinition(data: EntityData): IndexDefinitionData {
     if (

@@ -21,24 +21,24 @@ describe('createApp', () => {
         });
         await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
             status: 200,
-            body: { id: 'ada' },
+            body: { _id: 'ada' },
         });
         await expect(
             request(app)
                 .post('/api/v1/entities/person')
                 .send({ id: 'ada', data: { name: 'Ada' } }),
-        ).resolves.toMatchObject({ status: 201, body: { id: 'ada' } });
+        ).resolves.toMatchObject({ status: 201, body: { _id: 'ada' } });
         await expect(
             request(app)
                 .patch('/api/v1/entities/person/ada')
                 .send({ expectedVersion: 1, data: { name: 'Ada Byron' } }),
-        ).resolves.toMatchObject({ status: 200, body: { id: 'ada' } });
+        ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
         await expect(
             request(app).delete('/api/v1/entities/person/ada').send({ expectedVersion: 2 }),
         ).resolves.toMatchObject({ status: 204 });
         await expect(
             request(app).post('/api/v1/entities/person/query').send({ limit: 10, offset: 0 }),
-        ).resolves.toMatchObject({ status: 200, body: [{ id: 'ada' }] });
+        ).resolves.toMatchObject({ status: 200, body: [{ _id: 'ada' }] });
 
         expect(services.entityServiceMock.query).toHaveBeenCalledWith({
             entityTypeId: 'person',
@@ -145,11 +145,10 @@ function createServices() {
 
 function projection(id: string): Entity {
     return {
-        id,
-        entityTypeId: 'person',
-        data: {},
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        _id: id,
+        _entityTypeId: 'person',
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }

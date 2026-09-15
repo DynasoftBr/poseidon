@@ -12,14 +12,14 @@ describe('relation events', () => {
                 source,
                 [patient],
                 { patient: 'patient:ada' },
-                { reverseProperties: new Map([[appointments.id, appointments]]) },
+                { reverseProperties: new Map([[appointments._id, appointments]]) },
             ),
         ).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     type: entityEventTypes.created,
                     data: {
-                        relationPropertyId: patient.id,
+                        relationPropertyId: patient._id,
                         thisId: 'appointment:1',
                         thatId: 'patient:ada',
                     },
@@ -27,7 +27,7 @@ describe('relation events', () => {
                 expect.objectContaining({
                     type: entityEventTypes.created,
                     data: {
-                        relationPropertyId: appointments.id,
+                        relationPropertyId: appointments._id,
                         thisId: 'patient:ada',
                         thatId: 'appointment:1',
                     },
@@ -37,7 +37,7 @@ describe('relation events', () => {
     });
 
     it('should preserve retained links and delete removed values with their inverse', () => {
-        const reverseProperties = new Map([[appointments.id, appointments]]);
+        const reverseProperties = new Map([[appointments._id, appointments]]);
         expect(
             createRelationEvents(
                 source,
@@ -59,9 +59,9 @@ describe('relation events', () => {
         expect(deleted).toHaveLength(2);
         expect(deleted.map(({ data }) => data)).toEqual(
             expect.arrayContaining([
-                { relationPropertyId: patient.id, thisId: 'appointment:1', thatId: 'patient:ada' },
+                { relationPropertyId: patient._id, thisId: 'appointment:1', thatId: 'patient:ada' },
                 {
-                    relationPropertyId: appointments.id,
+                    relationPropertyId: appointments._id,
                     thisId: 'patient:ada',
                     thatId: 'appointment:1',
                 },
@@ -76,19 +76,17 @@ describe('relation events', () => {
 
 function property(id: string, name: string, reversePropertyId?: string): EntityProperty {
     return {
-        id,
-        entityTypeId: 'entity-property',
-        data: {
-            entityTypeId: 'appointment',
-            name,
-            type: 'reference',
-            relatedEntityTypeId: 'patient',
-            relationKind: 'has-many',
-            reversePropertyId,
-        },
-        version: 1,
-        createdAt: new Date(),
-        createdById: 'system',
+        _id: id,
+        _entityTypeId: 'entity-property',
+        entityTypeId: 'appointment',
+        name,
+        type: 'reference',
+        relatedEntityTypeId: 'patient',
+        relationKind: 'has-many',
+        reversePropertyId,
+        _version: 1,
+        _createdAt: new Date().toISOString(),
+        _createdBy: 'system',
     };
 }
 

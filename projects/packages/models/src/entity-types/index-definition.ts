@@ -1,6 +1,6 @@
 import type { Entity, EntityId } from '../entity';
 
-export type IndexDefinition = Entity<IndexDefinitionData>;
+export interface IndexDefinition extends Entity, IndexDefinitionData {}
 
 export type IndexDefinitionData = {
     entityTypeId: EntityId;

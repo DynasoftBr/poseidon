@@ -8,7 +8,14 @@ import { handleBinding } from './ui-bindings';
 import { createApp } from './app';
 import { errorMiddleware } from './error-middleware';
 
-const metadata = { version: 1, createdAt: new Date(), createdById: 'system' };
+const metadata = {
+    _version: 1,
+    _createdAt: new Date().toISOString(),
+    _createdBy: 'system',
+};
+function entity(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
+    return { ...metadata, ...data, _id: id, _entityTypeId: entityTypeId };
+}
 function setup(binding: UIBinding = { kind: 'query', entityTypeId: 'user' }) {
     const store = {
         hasEntity: vi.fn().mockResolvedValue(false),
@@ -24,54 +31,44 @@ function setup(binding: UIBinding = { kind: 'query', entityTypeId: 'user' }) {
     const releases = new ReleaseService(entities, artifacts, { compile: vi.fn() });
     const release: AppRelease = {
         ...metadata,
-        id: 'release',
-        entityTypeId: 'app-release',
-        data: {
-            appId: 'app',
-            artifactId: 'artifact',
-            diagnostics: [],
-            snapshot: {
-                app: {
-                    ...metadata,
-                    id: 'app',
-                    entityTypeId: 'app',
-                    data: {
-                        name: 'App',
-                        domain: 'localhost',
-                        basePath: '/',
-                        entryComponentId: 'entry',
-                        publishedReleaseId: 'release',
-                    },
-                },
-                themes: [],
-                components: [
-                    {
-                        ...metadata,
-                        id: 'entry',
-                        entityTypeId: 'ui-component',
-                        data: {
-                            name: 'Entry',
-                            source: { code: '' },
-                            dependencies: [],
-                            props: {},
-                            events: { run: { type: 'object' } },
-                            bindings: { run: binding },
-                        },
-                    },
-                ],
+        _id: 'release',
+        _entityTypeId: 'app-release',
+        appId: 'app',
+        artifactId: 'artifact',
+        diagnostics: [],
+        snapshot: {
+            app: {
+                ...metadata,
+                _id: 'app',
+                _entityTypeId: 'app',
+                name: 'App',
+                domain: 'localhost',
+                basePath: '/',
+                entryComponentId: 'entry',
+                publishedReleaseId: 'release',
             },
+            themes: [],
+            components: [
+                {
+                    ...metadata,
+                    _id: 'entry',
+                    _entityTypeId: 'ui-component',
+                    name: 'Entry',
+                    source: { code: '' },
+                    dependencies: [],
+                    props: {},
+                    events: { run: { type: 'object' } },
+                    bindings: { run: binding },
+                },
+            ],
         },
     };
     const query = vi.spyOn(entities, 'query').mockResolvedValue([]);
     const get = vi.spyOn(entities, 'get').mockResolvedValue(release);
-    const create = vi
-        .spyOn(entities, 'create')
-        .mockResolvedValue({ ...metadata, id: 'record', entityTypeId: 'user', data: {} });
-    const update = vi
-        .spyOn(entities, 'update')
-        .mockResolvedValue({ ...metadata, id: 'record', entityTypeId: 'user', data: {} });
+    const create = vi.spyOn(entities, 'create').mockResolvedValue(entity('record', 'user', {}));
+    const update = vi.spyOn(entities, 'update').mockResolvedValue(entity('record', 'user', {}));
     const remove = vi.spyOn(entities, 'delete').mockResolvedValue(undefined);
-    vi.spyOn(releases, 'resolve').mockResolvedValue(release.data.snapshot.app);
+    vi.spyOn(releases, 'resolve').mockResolvedValue(release.snapshot.app);
     const publish = vi.spyOn(releases, 'publish').mockResolvedValue(release);
     const preview = vi.spyOn(releases, 'preview').mockResolvedValue('preview');
     const restore = vi.spyOn(releases, 'restore').mockResolvedValue(undefined);
@@ -85,7 +82,7 @@ describe('UI bindings', () => {
         await expect(handleBinding(services, release, 'run', null as never)).rejects.toThrow(
             'Invalid',
         );
-        release.data.snapshot.components = [];
+        release.snapshot.components = [];
         await expect(handleBinding(services, release, 'run', {})).rejects.toThrow('Invalid');
     });
     it('should reject unknown persisted binding kinds', async () => {
@@ -95,12 +92,12 @@ describe('UI bindings', () => {
     it('should query the declared type without entity-specific filtering', async () => {
         const { services, release, query } = setup({ kind: 'query', entityTypeId: 'conversation' });
         const rows: Entity[] = [
-            { ...metadata, id: 'mine', entityTypeId: 'conversation', data: { userId: 'system' } },
-            { ...metadata, id: 'other', entityTypeId: 'conversation', data: { userId: 'other' } },
+            entity('mine', 'conversation', { userId: 'system' }),
+            entity('other', 'conversation', { userId: 'other' }),
         ];
         query.mockResolvedValue(rows);
         expect(await handleBinding(services, release, 'run', {})).toEqual(rows);
-        release.data.snapshot.components[0].data.bindings!.run = {
+        release.snapshot.components[0].bindings!.run = {
             kind: 'query',
             entityTypeId: 'user',
         };
@@ -135,7 +132,7 @@ describe('UI bindings', () => {
             expect.objectContaining({ data: { userId: 'attacker' } }),
             'system',
         );
-        context.release.data.snapshot.components[0].data.bindings!.run = {
+        context.release.snapshot.components[0].bindings!.run = {
             kind: 'update',
             entityTypeId: 'conversation',
         };
@@ -153,7 +150,7 @@ describe('UI bindings', () => {
                 'object',
             );
         }
-        release.data.snapshot.components[0].data.bindings!.run = {
+        release.snapshot.components[0].bindings!.run = {
             kind: 'create',
             entityTypeId: 'ui-component',
         };
@@ -172,7 +169,7 @@ describe('UI bindings', () => {
         expect(await handleBinding(services, release, 'run', { path: '/chat' })).toEqual({
             navigate: '/chat',
         });
-        release.data.snapshot.app.data.basePath = '/portal';
+        release.snapshot.app.basePath = '/portal';
         expect(await handleBinding(services, release, 'run', { path: '/chat' })).toEqual({
             navigate: '/portal/chat',
         });
@@ -186,7 +183,7 @@ describe('UI bindings', () => {
     it('should resolve only a published form definition', async () => {
         const { services, release } = setup({ kind: 'submit-form', componentId: 'entry' });
         await expect(handleBinding(services, release, 'run', {})).rejects.toThrow('not found');
-        release.data.snapshot.components[0].data.form = {
+        release.snapshot.components[0].form = {
             fields: {},
             derived: {},
             validations: [],
@@ -226,7 +223,7 @@ describe('UI HTTP boundary', () => {
                     .send({ ...body, sessionId: 'other' })
             ).status,
         ).toBe(500);
-        release.data.snapshot.components[0].data.bindings!.run = {
+        release.snapshot.components[0].bindings!.run = {
             kind: 'restore',
             appId: 'app',
         };
@@ -261,7 +258,7 @@ describe('UI HTTP boundary', () => {
         expect(page.headers['content-security-policy']).toContain("connect-src 'none'");
         services.artifacts.read.mockRejectedValue(new Error('Missing'));
         expect((await request(renderer).get('/artifacts/missing')).status).toBe(404);
-        delete release.data.snapshot.app.data.publishedReleaseId;
+        delete release.snapshot.app.publishedReleaseId;
         expect((await request(app).get('/api/ui/resolve')).status).toBe(500);
     });
     it('should handle releases through the generic entity routes', async () => {

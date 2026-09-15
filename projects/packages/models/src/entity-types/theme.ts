@@ -6,4 +6,4 @@ export interface ThemeData extends Record<string, unknown> {
     source: Source;
 }
 
-export type Theme = Entity<ThemeData>;
+export interface Theme extends Entity, ThemeData {}

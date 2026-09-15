@@ -8,4 +8,4 @@ export interface AppData extends Record<string, unknown> {
     publishedReleaseId?: string;
 }
 
-export type App = Entity<AppData>;
+export interface App extends Entity, AppData {}

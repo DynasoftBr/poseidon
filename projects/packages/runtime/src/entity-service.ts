@@ -16,6 +16,7 @@ import { applyEntityRules } from './entity-rule-engine';
 import { getCommands, toProperty } from './entity-model-utils';
 import { createRelationEvents, deleteRelationEvents } from './relation-events';
 import { validateEntity } from './entity-validator';
+import { createSystemProperties } from './bootstrap-model';
 import {
     EntityAlreadyExistsError,
     EntityNotFoundError,
@@ -44,7 +45,7 @@ export class EntityService {
     public async create(command: CreateEntityCommand, actorId: string): Promise<Entity> {
         const entityType = await this.store.findProjection(command.entityTypeId);
 
-        if (!entityType || entityType.entityTypeId !== 'entity-type') {
+        if (!entityType || entityType._entityTypeId !== 'entity-type') {
             throw new EntityTypeNotFoundError(command.entityTypeId);
         }
         if (await this.store.hasEntity(command.id)) {
@@ -52,11 +53,15 @@ export class EntityService {
         }
 
         const properties = await this.getProperties(entityType);
+        const input =
+            command.entityTypeId === 'entity-type'
+                ? withSystemProperties(command.id, command.data, actorId)
+                : command.data;
         const prepared = await this.prepareNestedMutations(
             command.entityTypeId,
-            command.data,
+            input,
             actorId,
-            new Map([[command.id, { entityTypeId: command.entityTypeId, data: command.data }]]),
+            new Map([[command.id, { entityTypeId: command.entityTypeId, data: input }]]),
             new Set([command.id]),
         );
         const data = applyEntityRules(
@@ -65,10 +70,12 @@ export class EntityService {
             properties,
             applyDefaultsAndConventions(prepared.data, properties),
         );
-        const problems = validateEntity(properties, data);
+        const eventTime = new Date();
+        const candidate = projection(command.id, command.entityTypeId, data, actorId, eventTime);
+        const problems = validateEntity(properties, candidate);
 
         if (problems.length > 0) throw new ValidationError(problems);
-        await this.validateReferences(properties, data, prepared.staged);
+        await this.validateReferences(properties, candidate, prepared.staged);
 
         const event: EntityEvent = {
             id: `entity-created:${command.entityTypeId}:${command.id}`,
@@ -77,7 +84,7 @@ export class EntityService {
             entityId: command.id,
             data,
             actorId,
-            occurredAt: new Date(),
+            occurredAt: eventTime,
         };
 
         const events = [
@@ -90,20 +97,19 @@ export class EntityService {
         await this.commit(events, command.id);
         this.publisher.publish(events);
 
-        return {
-            id: event.entityId,
-            entityTypeId: event.entityTypeId,
-            data: event.data,
-            version: 1,
-            createdAt: event.occurredAt,
-            createdById: event.actorId,
-        };
+        return projection(
+            event.entityId,
+            event.entityTypeId,
+            event.data,
+            event.actorId,
+            event.occurredAt,
+        );
     }
 
     public async get(entityTypeId: string, id: string): Promise<Entity> {
         const projection = await this.store.findProjection(id);
 
-        if (!projection || projection.entityTypeId !== entityTypeId || projection.deletedAt) {
+        if (!projection || projection._entityTypeId !== entityTypeId || projection._deletedAt) {
             throw new EntityNotFoundError(id);
         }
 
@@ -133,9 +139,7 @@ export class EntityService {
         }
 
         const properties = await this.getProperties(entityType);
-        const propertyNames = new Map(
-            properties.map((property) => [property.id, property.data.name]),
-        );
+        const propertyNames = new Map(properties.map((property) => [property._id, property.name]));
         if (command.filter !== undefined) validateSpecification(command.filter, propertyNames);
         return this.store.findByEntityType(command, propertyNames);
     }
@@ -144,25 +148,38 @@ export class EntityService {
         const current = await this.requireCurrent(command.entityTypeId, command.id);
         const entityType = await this.requireEntityType(command.entityTypeId);
         const properties = await this.getProperties(entityType);
+        const input =
+            command.entityTypeId === 'entity-type'
+                ? retainSystemProperties(command.id, current, command.data)
+                : command.data;
         const prepared = await this.prepareNestedMutations(
             command.entityTypeId,
-            command.data,
+            input,
             actorId,
-            new Map([[command.id, { entityTypeId: command.entityTypeId, data: current.data }]]),
+            new Map([
+                [command.id, { entityTypeId: command.entityTypeId, data: entityData(current) }],
+            ]),
             new Set([command.id]),
         );
         const data = applyEntityRules(
             getCommands(entityType),
             'update',
             properties,
-            applyConventions({ ...current.data, ...prepared.data }, properties),
+            applyConventions({ ...entityData(current), ...prepared.data }, properties),
         );
-        const problems = validateEntity(properties, data);
+        const candidate: Entity = {
+            ...current,
+            ...data,
+            _version: current._version + 1,
+            _changedAt: new Date().toISOString(),
+            _changedBy: actorId,
+        };
+        const problems = validateEntity(properties, candidate);
 
         if (problems.length > 0) throw new ValidationError(problems);
-        await this.validateReferences(properties, data, prepared.staged);
+        await this.validateReferences(properties, candidate, prepared.staged);
 
-        if (sameData(current.data, data) && prepared.events.length === 0) {
+        if (sameData(entityData(current), data) && prepared.events.length === 0) {
             return current;
         }
 
@@ -181,7 +198,7 @@ export class EntityService {
             ...prepared.events,
             event,
             ...createRelationEvents(event, properties, data, {
-                previousData: current.data,
+                previousData: entityData(current),
                 reverseProperties: await this.getReverseProperties(properties),
             }),
         ];
@@ -190,10 +207,10 @@ export class EntityService {
 
         return {
             ...current,
-            data,
-            version: current.version + 1,
-            changedAt: event.occurredAt,
-            changedById: actorId,
+            ...data,
+            _version: current._version + 1,
+            _changedAt: event.occurredAt.toISOString(),
+            _changedBy: actorId,
         };
     }
 
@@ -204,7 +221,7 @@ export class EntityService {
             type: entityEventTypes.deleted,
             entityTypeId: command.entityTypeId,
             entityId: command.id,
-            data: current.data,
+            data: entityData(current),
             actorId,
             occurredAt: new Date(),
             expectedVersion: command.expectedVersion,
@@ -214,7 +231,7 @@ export class EntityService {
         const properties = await this.getProperties(entityType);
         const events = [
             event,
-            ...deleteRelationEvents(event, properties, current.data, {
+            ...deleteRelationEvents(event, properties, entityData(current), {
                 reverseProperties: await this.getReverseProperties(properties),
             }),
         ];
@@ -225,7 +242,7 @@ export class EntityService {
     private async requireEntityType(entityTypeId: string): Promise<Entity> {
         const entityType = await this.store.findProjection(entityTypeId);
 
-        if (!entityType || entityType.entityTypeId !== 'entity-type') {
+        if (!entityType || entityType._entityTypeId !== 'entity-type') {
             throw new EntityTypeNotFoundError(entityTypeId);
         }
 
@@ -235,7 +252,7 @@ export class EntityService {
     private async requireCurrent(entityTypeId: string, id: string): Promise<Entity> {
         const current = await this.store.findProjection(id);
 
-        if (!current || current.entityTypeId !== entityTypeId || current.deletedAt) {
+        if (!current || current._entityTypeId !== entityTypeId || current._deletedAt) {
             throw new EntityTypeNotFoundError(id);
         }
 
@@ -243,7 +260,7 @@ export class EntityService {
     }
 
     private async getProperties(entityType: Entity): Promise<EntityProperty[]> {
-        const propertyIds = entityType.data.properties;
+        const propertyIds = entityType.properties;
 
         if (!Array.isArray(propertyIds) || !propertyIds.every((id) => typeof id === 'string')) {
             throw new ValidationError([
@@ -274,7 +291,7 @@ export class EntityService {
         const events: EntityEvent[] = [];
 
         for (const property of properties.filter((candidate) => isReference(candidate))) {
-            const value = data[property.data.name];
+            const value = data[property.name];
             if (value === undefined) continue;
             const values = Array.isArray(value) ? value : [value];
             const ids = await Promise.all(
@@ -283,14 +300,14 @@ export class EntityService {
                     if (definitions.has(reference.id)) {
                         throw new ValidationError([
                             {
-                                property: property.data.name,
+                                property: property.name,
                                 message: `Entity '${reference.id}' is defined more than once.`,
                             },
                         ]);
                     }
                     definitions.add(reference.id);
                     const nested = await this.prepareNestedMutations(
-                        property.data.relatedEntityTypeId ?? '',
+                        property.relatedEntityTypeId ?? '',
                         reference.data,
                         actorId,
                         staged,
@@ -301,13 +318,13 @@ export class EntityService {
                     if (!existing && reference.expectedVersion !== undefined) {
                         throw new ValidationError([
                             {
-                                property: property.data.name,
+                                property: property.name,
                                 message: 'New nested entities cannot specify an expected version.',
                             },
                         ]);
                     }
                     const nestedType = await this.requireEntityType(
-                        property.data.relatedEntityTypeId ?? '',
+                        property.relatedEntityTypeId ?? '',
                     );
                     const nestedProperties = await this.getProperties(nestedType);
                     const nextData = existing
@@ -316,7 +333,7 @@ export class EntityService {
                               'update',
                               nestedProperties,
                               applyConventions(
-                                  { ...existing.data, ...nested.data },
+                                  { ...entityData(existing), ...nested.data },
                                   nestedProperties,
                               ),
                           )
@@ -326,17 +343,25 @@ export class EntityService {
                               nestedProperties,
                               applyDefaultsAndConventions(nested.data, nestedProperties),
                           );
-                    const problems = validateEntity(nestedProperties, nextData);
+                    const candidate = existing
+                        ? { ...existing, ...nextData, _version: existing._version + 1 }
+                        : projection(
+                              reference.id,
+                              property.relatedEntityTypeId ?? '',
+                              nextData,
+                              actorId,
+                          );
+                    const problems = validateEntity(nestedProperties, candidate);
                     if (problems.length > 0) throw new ValidationError(problems);
                     staged.set(reference.id, {
-                        entityTypeId: property.data.relatedEntityTypeId ?? '',
+                        entityTypeId: property.relatedEntityTypeId ?? '',
                         data: nextData,
                     });
-                    await this.validateReferences(nestedProperties, nextData, staged);
+                    await this.validateReferences(nestedProperties, candidate, staged);
                     if (!existing) {
                         const event = createEvent(
                             'entity-created',
-                            property.data.relatedEntityTypeId ?? '',
+                            property.relatedEntityTypeId ?? '',
                             reference.id,
                             nextData,
                             actorId,
@@ -348,25 +373,25 @@ export class EntityService {
                                     await this.getReverseProperties(nestedProperties),
                             }),
                         );
-                    } else if (!sameData(existing.data, nextData)) {
+                    } else if (!sameData(entityData(existing), nextData)) {
                         if (
                             reference.expectedVersion === undefined ||
-                            reference.expectedVersion !== existing.version
+                            reference.expectedVersion !== existing._version
                         ) {
                             throw new EntityVersionConflictError(reference.id);
                         }
                         const event = createEvent(
                             'entity-updated',
-                            property.data.relatedEntityTypeId ?? '',
+                            property.relatedEntityTypeId ?? '',
                             reference.id,
                             nextData,
                             actorId,
-                            existing.version,
+                            existing._version,
                         );
                         events.push(
                             event,
                             ...createRelationEvents(event, nestedProperties, nextData, {
-                                previousData: existing.data,
+                                previousData: entityData(existing),
                                 reverseProperties:
                                     await this.getReverseProperties(nestedProperties),
                             }),
@@ -375,7 +400,7 @@ export class EntityService {
                     return reference.id;
                 }),
             );
-            data[property.data.name] = Array.isArray(value) ? ids : ids[0];
+            data[property.name] = Array.isArray(value) ? ids : ids[0];
         }
 
         return { data, events, staged };
@@ -387,13 +412,13 @@ export class EntityService {
         staged = new Map<string, StagedEntity>(),
     ): Promise<void> {
         const references = properties.filter(
-            (property) => isReference(property) && data[property.data.name] !== undefined,
+            (property) => isReference(property) && data[property.name] !== undefined,
         );
 
         const problems = (
             await Promise.all(
                 references.map(async (property) => {
-                    const value = data[property.data.name];
+                    const value = data[property.name];
                     const ids = Array.isArray(value) ? value : [value];
                     const projections = await Promise.all(
                         ids.map((id) => {
@@ -412,25 +437,25 @@ export class EntityService {
                         projections.some(
                             (projection) =>
                                 !projection ||
-                                projection.entityTypeId !== property.data.relatedEntityTypeId ||
-                                projection.deletedAt,
+                                projection._entityTypeId !== property.relatedEntityTypeId ||
+                                projection._deletedAt,
                         )
                     ) {
                         return {
-                            property: property.data.name,
+                            property: property.name,
                             message: 'Reference does not point to an existing related entity.',
                         };
                     }
                     if (
-                        property.data.uniqueBy &&
+                        property.uniqueBy &&
                         !hasUniqueReferenceValues(
                             projections.filter(isProjection),
-                            property.data.uniqueBy,
+                            property.uniqueBy,
                         )
                     ) {
                         return {
-                            property: property.data.name,
-                            message: `Reference values must be unique by '${property.data.uniqueBy}'.`,
+                            property: property.name,
+                            message: `Reference values must be unique by '${property.uniqueBy}'.`,
                         };
                     }
 
@@ -448,7 +473,7 @@ export class EntityService {
         properties: EntityProperty[],
     ): Promise<Map<string, EntityProperty>> {
         const reversePropertyIds = properties.flatMap((property) =>
-            property.data.reversePropertyId ? [property.data.reversePropertyId] : [],
+            property.reversePropertyId ? [property.reversePropertyId] : [],
         );
         const projections = await Promise.all(
             reversePropertyIds.map((id) => this.store.findProjection(id)),
@@ -489,12 +514,12 @@ function applyDefaultsAndConventions(
     const data = { ...input };
 
     properties.forEach((property) => {
-        if (data[property.data.name] === undefined && property.data.default !== undefined) {
-            data[property.data.name] = resolveDefault(property.data.default);
+        if (data[property.name] === undefined && property.default !== undefined) {
+            data[property.name] = resolveDefault(property.default);
         }
-        const value = data[property.data.name];
-        if (typeof value === 'string' && property.data.convention) {
-            data[property.data.name] = applyConvention(value, property.data.convention);
+        const value = data[property.name];
+        if (typeof value === 'string' && property.convention) {
+            data[property.name] = applyConvention(value, property.convention);
         }
     });
 
@@ -507,14 +532,14 @@ function applyConventions(
 ): Record<string, unknown> {
     return applyDefaultsAndConventions(
         input,
-        properties.filter((property) => property.data.default === undefined),
+        properties.filter((property) => property.default === undefined),
     );
 }
 
 function isReference(property: EntityProperty): boolean {
     return (
-        property.data.type === 'reference' ||
-        (property.data.type === 'array' && property.data.itemsType === 'reference')
+        property.type === 'reference' ||
+        (property.type === 'array' && property.itemsType === 'reference')
     );
 }
 
@@ -559,7 +584,7 @@ function sameData(left: Record<string, unknown>, right: Record<string, unknown>)
 }
 
 function hasUniqueReferenceValues(projections: Entity[], property: string): boolean {
-    const values = projections.map((projection) => JSON.stringify(projection.data[property]));
+    const values = projections.map((projection) => JSON.stringify(projection[property]));
     return new Set(values).size === values.length;
 }
 
@@ -577,15 +602,93 @@ interface PreparedGraph {
     staged: Map<string, StagedEntity>;
 }
 
-function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
-    return { id, entityTypeId, data, version: 1, createdAt: new Date(), createdById: 'system' };
+function projection(
+    id: string,
+    entityTypeId: string,
+    data: Record<string, unknown>,
+    actorId = 'system',
+    occurredAt = new Date(),
+): Entity {
+    return {
+        ...data,
+        _id: id,
+        _entityTypeId: entityTypeId,
+        _version: 1,
+        _createdAt: occurredAt.toISOString(),
+        _createdBy: actorId,
+    };
+}
+
+function entityData(entity: Entity): Record<string, unknown> {
+    const {
+        _id,
+        _entityTypeId,
+        _version,
+        _createdAt,
+        _createdBy,
+        _changedAt,
+        _changedBy,
+        _deletedAt,
+        _deletedBy,
+        ...data
+    } = entity;
+    return data;
+}
+
+function withSystemProperties(
+    entityTypeId: string,
+    input: Record<string, unknown>,
+    actorId: string,
+): Record<string, unknown> {
+    const existing = Array.isArray(input.properties) ? input.properties : [];
+    const ids = new Set(
+        existing.map((value) =>
+            typeof value === 'string'
+                ? value
+                : typeof value === 'object' && value !== null && 'id' in value
+                  ? value.id
+                  : undefined,
+        ),
+    );
+    const system = createSystemProperties(entityTypeId, {
+        systemUserId: actorId,
+        now: new Date(),
+    })
+        .filter((property) => !ids.has(property._id))
+        .map((property) => ({ id: property._id, data: entityData(property) }));
+    return { ...input, properties: [...existing, ...system] };
+}
+
+function retainSystemProperties(
+    entityTypeId: string,
+    current: Entity,
+    input: Record<string, unknown>,
+): Record<string, unknown> {
+    if (!Array.isArray(input.properties)) return input;
+    const declared = new Set(Array.isArray(current.properties) ? current.properties : []);
+    const supplied = new Set(
+        input.properties.map((value) =>
+            typeof value === 'string'
+                ? value
+                : typeof value === 'object' && value !== null && 'id' in value
+                  ? value.id
+                  : undefined,
+        ),
+    );
+    const retained = createSystemProperties(entityTypeId, {
+        systemUserId: current._createdBy,
+        now: new Date(current._createdAt),
+    })
+        .map((property) => property._id)
+        .filter((id) => declared.has(id) && !supplied.has(id));
+    return { ...input, properties: [...input.properties, ...retained] };
 }
 
 function resolveDefault(value: unknown): unknown {
     return value === '[[NOW]]' ? new Date().toISOString() : value;
 }
 
-function applyConvention(value: string, convention: EntityProperty['data']['convention']): string {
+function applyConvention(value: string, convention: EntityProperty['convention']): string {
     if (convention === 'lower-case') return value.toLowerCase();
     if (convention === 'upper-case') return value.toUpperCase();
     if (convention === 'capitalize-first-letter') {

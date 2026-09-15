@@ -15,7 +15,7 @@ export function applyEntityRules(
     input: Record<string, unknown>,
 ): Record<string, unknown> {
     const data = { ...input };
-    const propertyNames = new Map(properties.map((property) => [property.id, property.data.name]));
+    const propertyNames = new Map(properties.map((property) => [property._id, property.name]));
 
     commands
         ?.filter((command) => command.operation === operation)

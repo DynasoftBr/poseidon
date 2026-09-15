@@ -83,11 +83,7 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
                 {
                     entityTypeId: request.params.entityTypeId,
                     id: request.params.id,
-                    data: mutationData(
-                        request.params.entityTypeId,
-                        current.data,
-                        request.body.data,
-                    ),
+                    data: mutationData(request.params.entityTypeId, current, request.body.data),
                     expectedVersion: request.body.expectedVersion,
                 },
                 'system',
