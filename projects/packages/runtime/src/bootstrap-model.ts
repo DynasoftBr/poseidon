@@ -1,5 +1,5 @@
 import type { BootstrapModel, EntityId, SystemUser } from '@poseidon/models';
-import type { DataStorage } from './data-storage';
+import type { DataStorage } from '@poseidon/data-access';
 import { DatabaseSeed } from './bootstrap/database-seed';
 import { createCoreEntityTypes } from './bootstrap/system-entity-types';
 import { systemFields } from './bootstrap/system-fields';

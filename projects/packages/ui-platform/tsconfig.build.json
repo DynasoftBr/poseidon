@@ -3,6 +3,7 @@
     "exclude": ["dist", "**/*.test.ts"],
     "references": [
         { "path": "../models/tsconfig.build.json" },
+        { "path": "../data-access/tsconfig.build.json" },
         { "path": "../runtime/tsconfig.build.json" }
     ]
 }

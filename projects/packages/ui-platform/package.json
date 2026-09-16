@@ -6,12 +6,13 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc -b tsconfig.build.json",
-        "typecheck": "tsc -b --emitDeclarationOnly && tsc -p builder/editor/tsconfig.json",
+        "typecheck": "tsc -b --emitDeclarationOnly && tsc -p tests/tsconfig.json && tsc -p builder/editor/tsconfig.json",
         "lint": "eslint .",
         "test": "vitest run",
         "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
+        "@poseidon/data-access": "*",
         "@poseidon/models": "*",
         "@poseidon/runtime": "*",
         "typescript": "^5.9.3"

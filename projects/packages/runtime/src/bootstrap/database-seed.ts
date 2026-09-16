@@ -1,5 +1,5 @@
 import type { BootstrapModel, Entity } from '@poseidon/models';
-import type { DataStorage } from '../data-storage';
+import type { DataStorage } from '@poseidon/data-access';
 
 export class DatabaseSeed {
     public constructor(private readonly storage: DataStorage) {}

@@ -1,7 +1,8 @@
 import type { Entity } from '@poseidon/models';
 import type { MongoClient } from 'mongodb';
+import type { DataStorage } from './data-storage';
 
-export class MongoDataStorage {
+export class MongoDataStorage implements DataStorage {
     public constructor(private readonly client: MongoClient) {}
 
     public async getById(id: string): Promise<Entity | null> {

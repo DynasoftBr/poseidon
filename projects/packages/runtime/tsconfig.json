@@ -6,6 +6,6 @@
         "rootDir": "./src",
         "types": ["node", "vitest/globals"]
     },
-    "references": [{ "path": "../models" }],
+    "references": [{ "path": "../models" }, { "path": "../data-access" }],
     "include": ["src/**/*"]
 }

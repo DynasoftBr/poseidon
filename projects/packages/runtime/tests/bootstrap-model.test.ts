@@ -1,5 +1,5 @@
 import { createBootstrapModel, ensureBootstrapModel } from '../src/bootstrap-model';
-import type { DataStorage } from '../src/data-storage';
+import type { DataStorage } from '@poseidon/data-access';
 
 describe('createBootstrapModel', () => {
     it('should create the core entity types from the shared model', () => {

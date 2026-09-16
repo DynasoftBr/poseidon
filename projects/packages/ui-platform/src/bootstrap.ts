@@ -1,5 +1,6 @@
 import type { BootstrapModel, Entity, EntityProperty, PropertyType } from '@poseidon/models';
-import { createSystemProperties, ensureBootstrapModel, type DataStorage } from '@poseidon/runtime';
+import { createSystemProperties, ensureBootstrapModel } from '@poseidon/runtime';
+import type { DataStorage } from '@poseidon/data-access';
 
 const definitions: Record<string, Record<string, PropertyType>> = {
     app: {

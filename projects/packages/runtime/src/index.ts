@@ -1,5 +1,4 @@
 export * from './bootstrap-model';
-export * from './data-storage';
 export * from './entity-schema';
 export * from './entity-service';
 export * from './entity-model-utils';

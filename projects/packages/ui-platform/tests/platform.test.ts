@@ -9,8 +9,8 @@ import {
     createBootstrapModel,
     createSystemProperties,
     type EntityStore,
-    type DataStorage,
 } from '@poseidon/runtime';
+import type { DataStorage } from '@poseidon/data-access';
 import { bootstrapUI, createUIBootstrap } from '../src/bootstrap';
 import { createPortalSeeds } from '../src/portal-seed';
 import { FileArtifactStore } from '../src/artifact-store';
