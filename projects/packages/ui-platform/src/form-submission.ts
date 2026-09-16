@@ -65,35 +65,49 @@ class FormStore implements EntityStore {
             });
         }
     }
-    public hasEntity(id: string): Promise<boolean> {
-        return this.staged.has(id) ? Promise.resolve(true) : this.store.hasEntity(id);
+    public hasEntity(entityTypeName: string, id: string): Promise<boolean> {
+        return this.staged.has(id)
+            ? Promise.resolve(true)
+            : this.store.hasEntity(entityTypeName, id);
     }
-    public async findProjection(id: string): Promise<Entity | null> {
+    public async findProjection(entityTypeName: string, id: string): Promise<Entity | null> {
         return (
             this.staged.get(id) ??
-            (await this.store.findProjection(id)) ??
+            (await this.store.findProjection(entityTypeName, id)) ??
             this.prospective.get(id) ??
             null
         );
     }
+    public findEntityTypeByName(name: string): Promise<Entity | null> {
+        return this.store.findEntityTypeByName
+            ? this.store.findEntityTypeByName(name)
+            : this.store.findProjection('entity-type', name);
+    }
     public async commit(events: EntityEvent[]): Promise<void> {
         for (const event of events) {
-            const prior = await this.findProjection(event.entityId);
-            this.staged.set(event.entityId, {
-                ...prior,
-                ...event.data,
-                _id: event.entityId,
-                _entityTypeId: event.entityTypeId,
-                _version: event.type === 'entity-created' ? 1 : (event.expectedVersion ?? 0) + 1,
-                _createdAt: prior?._createdAt ?? event.occurredAt.toISOString(),
-                _createdBy: prior?._createdBy ?? event.actorId,
-                ...(event.type === 'entity-deleted'
-                    ? { _deletedAt: event.occurredAt.toISOString(), _deletedBy: event.actorId }
-                    : {}),
-            });
+            const entityType = await this.findProjection('entity-type', event.entityTypeId);
+            const prior = await this.findProjection(
+                String(entityType?.name ?? event.entityTypeId),
+                event.entityId,
+            );
+            this.staged.set(event.entityId, stagedProjection(event, prior));
         }
         this.events.push(...events);
     }
+}
+function stagedProjection(event: EntityEvent, prior: Entity | null): Entity {
+    return {
+        ...prior,
+        ...event.data,
+        _id: event.entityId,
+        _entityTypeId: event.entityTypeId,
+        _version: event.type === 'entity-created' ? 1 : (event.expectedVersion ?? 0) + 1,
+        _createdAt: prior?._createdAt ?? event.occurredAt.toISOString(),
+        _createdBy: prior?._createdBy ?? event.actorId,
+        ...(event.type === 'entity-deleted'
+            ? { _deletedAt: event.occurredAt.toISOString(), _deletedBy: event.actorId }
+            : {}),
+    };
 }
 export async function submitForm(
     store: EntityStore,

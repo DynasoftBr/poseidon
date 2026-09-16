@@ -36,21 +36,21 @@ function configureEntityRoutes(app: Express, service: EntityService): void {
 }
 
 function configureEntityReadRoutes(app: Express, service: EntityService): void {
-    app.get('/api/v1/entities/:entityTypeId/:id', async (request, response, next) => {
+    app.get('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
         try {
             response
                 .status(200)
-                .json(await service.get(request.params.entityTypeId, request.params.id));
+                .json(await service.get(request.params.entityTypeName, request.params.id));
         } catch (error: unknown) {
             next(error);
         }
     });
 
-    app.post('/api/v1/entities/:entityTypeId/query', async (request, response, next) => {
+    app.post('/api/v1/entities/:entityTypeName/query', async (request, response, next) => {
         try {
             response.status(200).json(
                 await service.query({
-                    entityTypeId: request.params.entityTypeId,
+                    entityTypeId: request.params.entityTypeName,
                     filter: request.body.filter,
                     limit: toOptionalNumber(request.body.limit),
                     offset: toOptionalNumber(request.body.offset),
@@ -63,13 +63,13 @@ function configureEntityReadRoutes(app: Express, service: EntityService): void {
 }
 
 function configureEntityMutationRoutes(app: Express, service: EntityService): void {
-    app.post('/api/v1/entities/:entityTypeId', async (request, response, next) => {
+    app.post('/api/v1/entities/:entityTypeName', async (request, response, next) => {
         try {
             const projection = await service.create(
                 {
                     ...(request.body as Omit<CreateEntityCommand, 'entityTypeId'>),
-                    data: mutationData(request.params.entityTypeId, {}, request.body.data),
-                    entityTypeId: request.params.entityTypeId,
+                    data: mutationData(request.params.entityTypeName, {}, request.body.data),
+                    entityTypeId: request.params.entityTypeName,
                 },
                 'system',
             );
@@ -80,14 +80,14 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
         }
     });
 
-    app.patch('/api/v1/entities/:entityTypeId/:id', async (request, response, next) => {
+    app.patch('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
         try {
-            const current = await service.get(request.params.entityTypeId, request.params.id);
+            const current = await service.get(request.params.entityTypeName, request.params.id);
             const projection = await service.update(
                 {
-                    entityTypeId: request.params.entityTypeId,
+                    entityTypeId: request.params.entityTypeName,
                     id: request.params.id,
-                    data: mutationData(request.params.entityTypeId, current, request.body.data),
+                    data: mutationData(request.params.entityTypeName, current, request.body.data),
                     expectedVersion: request.body.expectedVersion,
                 },
                 'system',
@@ -99,11 +99,11 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
         }
     });
 
-    app.delete('/api/v1/entities/:entityTypeId/:id', async (request, response, next) => {
+    app.delete('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
         try {
             await service.delete(
                 {
-                    entityTypeId: request.params.entityTypeId,
+                    entityTypeId: request.params.entityTypeName,
                     id: request.params.id,
                     expectedVersion: request.body.expectedVersion,
                 },

@@ -99,10 +99,16 @@ const entityTypeMetadata: Record<
 };
 
 export async function bootstrapUI(storage: DataStorage, seeds: Entity[]): Promise<void> {
-    await ensureBootstrapModel(storage, createUIBootstrap(new Date()));
+    const model = createUIBootstrap(new Date());
+    await ensureBootstrapModel(storage, model);
+    const namesById = new Map(model.entityTypes.map((type) => [type._id, type.name]));
     for (const entity of seeds) {
-        if (await storage.getById(entity._id)) continue;
-        await storage.create(entity);
+        const entityTypeName = namesById.get(entity._entityTypeId);
+        if (!entityTypeName) {
+            throw new Error(`UI seed '${entity._id}' has no entity type definition.`);
+        }
+        if (await storage.getById(entityTypeName, entity._id)) continue;
+        await storage.create(entityTypeName, entity);
     }
 }
 

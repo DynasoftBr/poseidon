@@ -2,7 +2,7 @@ import type { MongoClient } from 'mongodb';
 
 export function createClient() {
     const events = { bulkWrite: vi.fn() };
-    const entities = {
+    const collection = () => ({
         findOne: vi.fn(),
         find: vi.fn(),
         updateOne: vi.fn(),
@@ -10,20 +10,49 @@ export function createClient() {
         replaceOne: vi.fn(),
         deleteOne: vi.fn(),
         createIndex: vi.fn(),
-    };
+        drop: vi.fn(),
+    });
+    const entities = collection();
+    const entityTypes = collection();
+    const entityProperties = collection();
+    const indexes = collection();
+    const users = collection();
+    const legacy = collection();
+    const collections = new Map([
+        ['person', entities],
+        ['entity-type', entityTypes],
+        ['entity-property', entityProperties],
+        ['index', indexes],
+        ['user', users],
+        ['entities', legacy],
+    ]);
     const session = {
         withTransaction: vi.fn((callback: () => Promise<void>) => callback()),
         endSession: vi.fn(),
     };
     const database = {
-        collection: vi.fn((name: string) => (name === 'events' ? events : entities)),
+        collection: vi.fn((name: string) =>
+            name === 'events' ? events : (collections.get(name) ?? collection()),
+        ),
+        listCollections: vi.fn(),
     };
     const client = {
         db: vi.fn().mockReturnValue(database),
         startSession: vi.fn().mockReturnValue(session),
     };
 
-    return { client: client as unknown as MongoClient, entities, events, session };
+    return {
+        client: client as unknown as MongoClient,
+        entities,
+        entityTypes,
+        entityProperties,
+        indexes,
+        users,
+        legacy,
+        events,
+        session,
+        database,
+    };
 }
 
 export function cursor<T>(documents: T[]) {
@@ -31,6 +60,9 @@ export function cursor<T>(documents: T[]) {
         skip: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         toArray: vi.fn().mockResolvedValue(documents),
+        async *[Symbol.asyncIterator]() {
+            for (const document of documents) yield document;
+        },
     };
 }
 

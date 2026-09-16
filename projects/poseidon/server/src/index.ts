@@ -15,6 +15,7 @@ import {
     MongoEventProjectionStore,
     MongoDataStorage,
     MongoIndexManager,
+    MongoCollectionMigration,
 } from '@poseidon/data-access';
 import {
     createBootstrapModel,
@@ -36,6 +37,7 @@ async function start(): Promise<void> {
     }
 
     const client = await connectDatabase(databaseUri);
+    await new MongoCollectionMigration(client).migrate();
     const store = new MongoEventProjectionStore(client);
     const storage = new MongoDataStorage(client);
     const publisher = new EventPublisher();

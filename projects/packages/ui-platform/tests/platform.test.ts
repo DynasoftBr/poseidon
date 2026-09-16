@@ -22,13 +22,20 @@ class Store implements EntityStore {
     public records = new Map<string, Entity>();
     public commits: EntityEvent[][] = [];
     public fail = false;
-    public hasEntity(id: string) {
-        return Promise.resolve(this.records.has(id));
+    public hasEntity(entityTypeName: string, id: string) {
+        return Promise.resolve(this.findRecord(entityTypeName, id) !== null);
     }
-    public findProjection(id: string) {
-        return Promise.resolve(this.records.get(id) ?? null);
+    public findProjection(entityTypeName: string, id: string) {
+        return Promise.resolve(this.findRecord(entityTypeName, id));
     }
-    public findByEntityType(command: { entityTypeId: string }) {
+    public findEntityTypeByName(name: string) {
+        return Promise.resolve(
+            [...this.records.values()].find(
+                (record) => record._entityTypeId === 'entity-type' && record.name === name,
+            ) ?? null,
+        );
+    }
+    public findByEntityType(_entityTypeName: string, command: { entityTypeId: string }) {
         return Promise.resolve(
             [...this.records.values()].filter(
                 (record) => record._entityTypeId === command.entityTypeId,
@@ -59,11 +66,20 @@ class Store implements EntityStore {
         }
         return Promise.resolve();
     }
+    private findRecord(entityTypeName: string, id: string): Entity | null {
+        const record = this.records.get(id);
+        if (!record) return null;
+        const type = [...this.records.values()].find(
+            (candidate) =>
+                candidate._entityTypeId === 'entity-type' && candidate.name === entityTypeName,
+        );
+        return record._entityTypeId === (type?._id ?? entityTypeName) ? record : null;
+    }
 }
 function seedStorage(store: Store): DataStorage {
     return {
-        getById: (id) => Promise.resolve(store.records.get(id) ?? null),
-        create: (entity) => {
+        getById: (entityTypeName, id) => store.findProjection(entityTypeName, id),
+        create: (_entityTypeName, entity) => {
             store.records.set(entity._id, entity);
             return Promise.resolve();
         },
@@ -428,6 +444,7 @@ describe('forms', () => {
             ...metadata,
             _id: 'pair',
             _entityTypeId: 'entity-type',
+            name: 'pair',
             properties: ['pair:other', ...system.map((property) => property._id)],
         });
         store.records.set('pair:other', {
@@ -523,7 +540,7 @@ describe('forms', () => {
             submitForm(store, publisher, invalid, { input: { name: 'Ada' }, actorId: 'system' }),
         ).rejects.toThrow();
         expect(store.commits).toHaveLength(0);
-        expect(await store.hasEntity('first')).toBe(false);
+        expect(await store.hasEntity('conversation', 'first')).toBe(false);
     });
     it('should publish nothing when the transaction conflicts', async () => {
         const { store, publisher } = await setup();

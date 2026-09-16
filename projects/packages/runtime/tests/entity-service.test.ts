@@ -109,7 +109,7 @@ describe('EntityService', () => {
             expect(commit).toHaveBeenCalledWith([
                 expect.objectContaining({ entityId: current._id, expectedVersion: 1 }),
             ]);
-            expect(await store.findProjection(current._id)).toEqual(current);
+            expect(await store.findProjection('patient', current._id)).toEqual(current);
             expect(store.events).toEqual([]);
             expect(listener).not.toHaveBeenCalled();
         },
@@ -117,6 +117,7 @@ describe('EntityService', () => {
 
     it('should reject a reference to an entity outside its declared target type', async () => {
         const store = new InMemoryEntityStore([
+            projection('patient', 'entity-type', { properties: [] }),
             projection('appointment', 'entity-type', { properties: ['appointment:patient'] }),
             projection('appointment:patient', 'entity-property', {
                 entityTypeId: 'appointment',
@@ -141,6 +142,7 @@ describe('EntityService', () => {
 
     it('should materialize a relation-link event for a declared relation', async () => {
         const store = new InMemoryEntityStore([
+            projection('patient', 'entity-type', { properties: ['patient:appointments'] }),
             projection('appointment', 'entity-type', { properties: ['appointment:patient'] }),
             projection('appointment:patient', 'entity-property', {
                 entityTypeId: 'appointment',
@@ -298,10 +300,11 @@ describe('EntityService', () => {
         } as const;
         await service.query({ entityTypeId: 'appointment', filter });
         expect(query).toHaveBeenCalledWith(
+            'appointment',
             { entityTypeId: 'appointment', filter },
             expect.any(Map),
         );
-        expect(query.mock.calls[0]?.[1].get('appointment:patient')).toBe('patient');
+        expect(query.mock.calls[0]?.[2].get('appointment:patient')).toBe('patient');
         query.mockClear();
         await expect(
             service.query({
@@ -394,7 +397,7 @@ describe('EntityService', () => {
                 'system',
             );
 
-            expect(result).toEqual(await store.findProjection('appointment:1'));
+            expect(result).toEqual(await store.findProjection('appointment', 'appointment:1'));
             expect(result._version).toBe(2);
             expect(store.events).toEqual([]);
             expect(listener).not.toHaveBeenCalled();
@@ -467,6 +470,20 @@ describe('EntityService', () => {
             expect.arrayContaining(['product:name', 'product:_id', 'product']),
         );
     });
+
+    it.each(['events', 'Bad Name'])(
+        'should reject an entity type name that cannot identify its collection',
+        async (name) => {
+            const store = graphStore([]);
+            await expect(
+                new EntityService(store, new EventPublisher()).create(
+                    { id: 'custom', entityTypeId: 'entity-type', data: { name, label: 'Custom' } },
+                    'system',
+                ),
+            ).rejects.toMatchObject({ code: 'validation' });
+            expect(store.events).toEqual([]);
+        },
+    );
 
     it('should retain system properties when an EntityType is updated', async () => {
         const bootstrap = createBootstrapModel('system', new Date());
@@ -555,10 +572,18 @@ class InMemoryEntityStore implements EntityStore {
 
     public constructor(projections: Entity[]) {
         projections.forEach((projection) => this.projections.set(projection._id, projection));
+        for (const name of ['entity-type', 'entity-property', 'user', 'relation-link']) {
+            if (!this.projections.has(name)) {
+                this.projections.set(
+                    name,
+                    projection(name, 'entity-type', { name, properties: [] }),
+                );
+            }
+        }
         if (!this.projections.has('system')) {
             this.projections.set('system', projection('system', 'user', { name: 'System' }));
         }
-        for (const entityType of projections.filter(
+        for (const entityType of [...this.projections.values()].filter(
             (record) => record._entityTypeId === 'entity-type',
         )) {
             const existing = Array.isArray(entityType.properties) ? entityType.properties : [];
@@ -575,15 +600,24 @@ class InMemoryEntityStore implements EntityStore {
         }
     }
 
-    public hasEntity(id: string): Promise<boolean> {
-        return Promise.resolve(this.projections.has(id));
+    public hasEntity(entityTypeName: string, id: string): Promise<boolean> {
+        return Promise.resolve(this.matchesType(entityTypeName, id) !== null);
     }
 
-    public findProjection(id: string): Promise<Entity | null> {
-        return Promise.resolve(this.projections.get(id) ?? null);
+    public findProjection(entityTypeName: string, id: string): Promise<Entity | null> {
+        return Promise.resolve(this.matchesType(entityTypeName, id));
+    }
+
+    public findEntityTypeByName(name: string): Promise<Entity | null> {
+        return Promise.resolve(
+            [...this.projections.values()].find(
+                (entity) => entity._entityTypeId === 'entity-type' && entity.name === name,
+            ) ?? null,
+        );
     }
 
     public findByEntityType(
+        _entityTypeName: string,
         command: { entityTypeId: string },
         _propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]> {
@@ -611,11 +645,22 @@ class InMemoryEntityStore implements EntityStore {
         });
         return Promise.resolve();
     }
+
+    private matchesType(entityTypeName: string, id: string): Entity | null {
+        const entity = this.projections.get(id);
+        if (!entity) return null;
+        const type = [...this.projections.values()].find(
+            (candidate) =>
+                candidate._entityTypeId === 'entity-type' && candidate.name === entityTypeName,
+        );
+        return entity._entityTypeId === (type?._id ?? entityTypeName) ? entity : null;
+    }
 }
 
 function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
     return {
         ...data,
+        ...(entityTypeId === 'entity-type' && data.name === undefined ? { name: id } : {}),
         _id: id,
         _entityTypeId: entityTypeId,
         _version: 1,

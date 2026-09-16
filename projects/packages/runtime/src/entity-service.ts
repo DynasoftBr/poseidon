@@ -26,10 +26,12 @@ import {
 } from './poseidon-error';
 
 export interface EntityStore {
-    hasEntity(id: string): Promise<boolean>;
-    findProjection(id: string): Promise<Entity | null>;
+    hasEntity(entityTypeName: string, id: string): Promise<boolean>;
+    findProjection(entityTypeName: string, id: string): Promise<Entity | null>;
+    findEntityTypeByName?(name: string): Promise<Entity | null>;
     commit(events: EntityEvent[]): Promise<void>;
     findByEntityType?(
+        entityTypeName: string,
         command: QueryEntitiesCommand,
         propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]>;
@@ -43,20 +45,22 @@ export class EntityService {
     ) {}
 
     public async create(command: CreateEntityCommand, actorId: string): Promise<Entity> {
-        const entityType = await this.store.findProjection(command.entityTypeId);
+        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
 
         if (!entityType || entityType._entityTypeId !== 'entity-type') {
             throw new EntityTypeNotFoundError(command.entityTypeId);
         }
-        if (await this.store.hasEntity(command.id)) {
+        if (await this.store.hasEntity(command.entityTypeId, command.id)) {
             throw new EntityAlreadyExistsError(command.id);
         }
+        command = { ...command, entityTypeId: entityType._id };
 
         const properties = await this.getProperties(entityType);
         const input =
             command.entityTypeId === 'entity-type'
                 ? withSystemProperties(command.id, command.data, actorId)
                 : command.data;
+        if (command.entityTypeId === 'entity-type') validateEntityTypeName(input.name);
         const prepared = await this.prepareNestedMutations(
             command.entityTypeId,
             input,
@@ -107,9 +111,10 @@ export class EntityService {
     }
 
     public async get(entityTypeId: string, id: string): Promise<Entity> {
-        const projection = await this.store.findProjection(id);
+        const entityType = await this.requireEntityTypeByName(entityTypeId);
+        const projection = await this.store.findProjection(entityTypeId, id);
 
-        if (!projection || projection._entityTypeId !== entityTypeId || projection._deletedAt) {
+        if (!projection || projection._entityTypeId !== entityType._id || projection._deletedAt) {
             throw new EntityNotFoundError(id);
         }
 
@@ -117,7 +122,9 @@ export class EntityService {
     }
 
     public async query(command: QueryEntitiesCommand): Promise<Entity[]> {
-        const entityType = await this.requireEntityType(command.entityTypeId);
+        const entityTypeName = command.entityTypeId;
+        const entityType = await this.requireEntityTypeByName(entityTypeName);
+        command = { ...command, entityTypeId: entityType._id };
         if (!this.store.findByEntityType) {
             throw new Error('Entity queries are not configured.');
         }
@@ -141,12 +148,22 @@ export class EntityService {
         const properties = await this.getProperties(entityType);
         const propertyNames = new Map(properties.map((property) => [property._id, property.name]));
         if (command.filter !== undefined) validateSpecification(command.filter, propertyNames);
-        return this.store.findByEntityType(command, propertyNames);
+        return this.store.findByEntityType(entityTypeName, command, propertyNames);
     }
 
     public async update(command: UpdateEntityCommand, actorId: string): Promise<Entity> {
+        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
+        command = { ...command, entityTypeId: entityType._id };
         const current = await this.requireCurrent(command.entityTypeId, command.id);
-        const entityType = await this.requireEntityType(command.entityTypeId);
+        if (
+            command.entityTypeId === 'entity-type' &&
+            command.data.name !== undefined &&
+            command.data.name !== current.name
+        ) {
+            throw new ValidationError([
+                { property: 'name', message: 'Entity type names cannot be changed.' },
+            ]);
+        }
         const properties = await this.getProperties(entityType);
         const input =
             command.entityTypeId === 'entity-type'
@@ -215,6 +232,8 @@ export class EntityService {
     }
 
     public async delete(command: DeleteEntityCommand, actorId: string): Promise<void> {
+        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
+        command = { ...command, entityTypeId: entityType._id };
         const current = await this.requireCurrent(command.entityTypeId, command.id);
         const event: EntityEvent = {
             id: `entity-deleted:${command.entityTypeId}:${command.id}:${command.expectedVersion + 1}`,
@@ -227,7 +246,6 @@ export class EntityService {
             expectedVersion: command.expectedVersion,
         };
 
-        const entityType = await this.requireEntityType(command.entityTypeId);
         const properties = await this.getProperties(entityType);
         const events = [
             event,
@@ -240,7 +258,7 @@ export class EntityService {
     }
 
     private async requireEntityType(entityTypeId: string): Promise<Entity> {
-        const entityType = await this.store.findProjection(entityTypeId);
+        const entityType = await this.store.findProjection('entity-type', entityTypeId);
 
         if (!entityType || entityType._entityTypeId !== 'entity-type') {
             throw new EntityTypeNotFoundError(entityTypeId);
@@ -249,8 +267,19 @@ export class EntityService {
         return entityType;
     }
 
+    private async requireEntityTypeByName(name: string): Promise<Entity> {
+        const entityType = this.store.findEntityTypeByName
+            ? await this.store.findEntityTypeByName(name)
+            : await this.store.findProjection('entity-type', name);
+        if (!entityType || entityType._entityTypeId !== 'entity-type' || entityType.name !== name) {
+            throw new EntityTypeNotFoundError(name);
+        }
+        return entityType;
+    }
+
     private async requireCurrent(entityTypeId: string, id: string): Promise<Entity> {
-        const current = await this.store.findProjection(id);
+        const entityType = await this.requireEntityType(entityTypeId);
+        const current = await this.store.findProjection(String(entityType.name), id);
 
         if (!current || current._entityTypeId !== entityTypeId || current._deletedAt) {
             throw new EntityTypeNotFoundError(id);
@@ -272,7 +301,7 @@ export class EntityService {
         }
 
         const projections = await Promise.all(
-            propertyIds.map((id) => this.store.findProjection(id)),
+            propertyIds.map((id) => this.store.findProjection('entity-property', id)),
         );
 
         return projections.map((projection, index) => toProperty(projection, propertyIds[index]));
@@ -314,7 +343,13 @@ export class EntityService {
                         definitions,
                     );
                     events.push(...nested.events);
-                    const existing = await this.store.findProjection(reference.id);
+                    const nestedType = await this.requireEntityType(
+                        property.relatedEntityTypeId ?? '',
+                    );
+                    const existing = await this.store.findProjection(
+                        String(nestedType.name),
+                        reference.id,
+                    );
                     if (!existing && reference.expectedVersion !== undefined) {
                         throw new ValidationError([
                             {
@@ -323,9 +358,6 @@ export class EntityService {
                             },
                         ]);
                     }
-                    const nestedType = await this.requireEntityType(
-                        property.relatedEntityTypeId ?? '',
-                    );
                     const nestedProperties = await this.getProperties(nestedType);
                     const nextData = existing
                         ? applyEntityRules(
@@ -418,6 +450,9 @@ export class EntityService {
         const problems = (
             await Promise.all(
                 references.map(async (property) => {
+                    const relatedType = await this.requireEntityType(
+                        property.relatedEntityTypeId ?? '',
+                    );
                     const value = data[property.name];
                     const ids = Array.isArray(value) ? value : [value];
                     const projections = await Promise.all(
@@ -429,7 +464,7 @@ export class EntityService {
                                       stagedEntity.entityTypeId,
                                       stagedEntity.data,
                                   )
-                                : this.store.findProjection(String(id));
+                                : this.store.findProjection(String(relatedType.name), String(id));
                         }),
                     );
 
@@ -476,7 +511,7 @@ export class EntityService {
             property.reversePropertyId ? [property.reversePropertyId] : [],
         );
         const projections = await Promise.all(
-            reversePropertyIds.map((id) => this.store.findProjection(id)),
+            reversePropertyIds.map((id) => this.store.findProjection('entity-property', id)),
         );
 
         return new Map(
@@ -657,6 +692,22 @@ function withSystemProperties(
         .filter((property) => !ids.has(property._id))
         .map((property) => ({ id: property._id, data: entityData(property) }));
     return { ...input, properties: [...existing, ...system] };
+}
+
+function validateEntityTypeName(name: unknown): void {
+    if (
+        typeof name !== 'string' ||
+        !/^[A-Za-z][A-Za-z0-9-]*$/.test(name) ||
+        name.toLowerCase() === 'entities' ||
+        name.toLowerCase() === 'events'
+    ) {
+        throw new ValidationError([
+            {
+                property: 'name',
+                message: 'Entity type name must be a valid, unused collection name.',
+            },
+        ]);
+    }
 }
 
 function retainSystemProperties(

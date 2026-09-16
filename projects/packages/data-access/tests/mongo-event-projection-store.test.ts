@@ -5,21 +5,32 @@ import { createClient, cursor, projectionDocument } from './mongo-test-helpers';
 describe('MongoEventProjectionStore', () => {
     it('should read projections and construct filtered queries', async () => {
         const fake = createClient();
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
         const store = new MongoEventProjectionStore(fake.client);
         const document = projectionDocument('ada', 'person', { name: 'Ada' });
-        fake.entities.findOne.mockResolvedValueOnce(null).mockResolvedValue(document);
+        fake.users.findOne.mockResolvedValueOnce(null);
+        fake.entities.findOne.mockResolvedValue(document);
         fake.entities.find.mockReturnValue(cursor([document]));
 
         await expect(store.isInitialized()).resolves.toBe(false);
-        await expect(store.hasEntity('ada')).resolves.toBe(true);
-        await expect(store.findProjection('ada')).resolves.toMatchObject({
+        await expect(store.hasEntity('person', 'ada')).resolves.toBe(true);
+        await expect(store.findProjection('person', 'ada')).resolves.toMatchObject({
             _id: 'ada',
             name: 'Ada',
         });
         fake.entities.findOne.mockResolvedValueOnce(null);
-        await expect(store.findProjection('missing')).resolves.toBeNull();
+        await expect(store.findProjection('person', 'missing')).resolves.toBeNull();
+        fake.entityTypes.findOne.mockResolvedValueOnce(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
+        await expect(store.findEntityTypeByName('person')).resolves.toMatchObject({
+            name: 'person',
+        });
         await expect(
             store.findByEntityType(
+                'person',
                 {
                     entityTypeId: 'person',
                     filter: {
@@ -50,6 +61,7 @@ describe('MongoEventProjectionStore', () => {
         ).resolves.toHaveLength(1);
         await expect(
             store.findByEntityType(
+                'person',
                 {
                     entityTypeId: 'person',
                     filter: {
@@ -72,6 +84,9 @@ describe('MongoEventProjectionStore', () => {
         const fake = createClient();
         fake.entities.insertOne.mockResolvedValue({});
         fake.entities.updateOne.mockResolvedValue({ matchedCount: 1 });
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
         const store = new MongoEventProjectionStore(fake.client);
 
         await store.commit([createdEvent(), updatedEvent(), deletedEvent()]);
@@ -90,6 +105,9 @@ describe('MongoEventProjectionStore', () => {
     it('should surface a projection version conflict', async () => {
         const fake = createClient();
         fake.entities.updateOne.mockResolvedValue({ matchedCount: 0 });
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
 
         await expect(
             new MongoEventProjectionStore(fake.client).commit([updatedEvent()]),
@@ -99,6 +117,9 @@ describe('MongoEventProjectionStore', () => {
     it('should reject a concurrent create without writing a projection', async () => {
         const fake = createClient();
         fake.entities.insertOne.mockRejectedValue({ code: 11000 });
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
 
         await expect(
             new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
@@ -108,10 +129,22 @@ describe('MongoEventProjectionStore', () => {
     it('should retain unexpected projection write failures', async () => {
         const fake = createClient();
         fake.entities.insertOne.mockRejectedValue(new Error('Database unavailable.'));
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person' }),
+        );
 
         await expect(
             new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
         ).rejects.toThrow('Database unavailable.');
+    });
+
+    it('should reject an event whose entity type no longer exists', async () => {
+        const fake = createClient();
+
+        await expect(
+            new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
+        ).rejects.toThrow("Entity type 'person' does not exist.");
+        expect(fake.entities.insertOne).not.toHaveBeenCalled();
     });
 });
 

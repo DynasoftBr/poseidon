@@ -76,10 +76,10 @@ describe('createBootstrapModel', () => {
         const storage = createStorage([]);
 
         await expect(ensureBootstrapModel(storage, model)).resolves.toBe(true);
-        expect(storage.create).toHaveBeenCalledWith(model.users[0]);
-        expect(storage.create).toHaveBeenCalledWith(model.entityTypes[0]);
-        expect(storage.create).toHaveBeenCalledWith(model.entityProperties[0]);
-        expect(storage.create).toHaveBeenCalledWith(model.indexes[0]);
+        expect(storage.create).toHaveBeenCalledWith('user', model.users[0]);
+        expect(storage.create).toHaveBeenCalledWith('entity-type', model.entityTypes[0]);
+        expect(storage.create).toHaveBeenCalledWith('entity-property', model.entityProperties[0]);
+        expect(storage.create).toHaveBeenCalledWith('index', model.indexes[0]);
     });
 
     it('should add new core entity types and properties to an existing store', async () => {
@@ -101,7 +101,9 @@ describe('createBootstrapModel', () => {
 
         await expect(ensureBootstrapModel(storage, model)).resolves.toBe(true);
         expect(storage.create).toHaveBeenCalledTimes(identity.length);
-        for (const entity of identity) expect(storage.create).toHaveBeenCalledWith(entity);
+        for (const entity of identity) {
+            expect(storage.create).toHaveBeenCalledWith(entity._entityTypeId, entity);
+        }
     });
 
     it('should preserve an initialized store', async () => {
@@ -117,13 +119,58 @@ describe('createBootstrapModel', () => {
         await expect(ensureBootstrapModel(storage, model)).resolves.toBe(false);
         expect(storage.create).not.toHaveBeenCalled();
     });
+
+    it('should use an entity type name when its ID differs from the collection name', async () => {
+        const model = createBootstrapModel('system', new Date());
+        const userType = model.entityTypes.find((type) => type.name === 'user');
+        if (!userType) throw new Error('User type is missing from the bootstrap model.');
+        userType._id = 'user-type-id';
+        model.users[0]._entityTypeId = userType._id;
+        const storage = createStorage([]);
+
+        await ensureBootstrapModel(storage, model);
+
+        expect(storage.getById).toHaveBeenCalledWith('user', 'system');
+        expect(storage.create).toHaveBeenCalledWith('user', model.users[0]);
+    });
+
+    it('should resolve an additive seed type from the stored entity type definition', async () => {
+        const model = createBootstrapModel('system', new Date());
+        model.entityTypes = model.entityTypes.filter((type) => type._id !== 'entity-type');
+        const storage = createStorage([]);
+        storage.getById = vi
+            .fn()
+            .mockImplementation((name: string, id: string) =>
+                Promise.resolve(
+                    name === 'entity-type' && id === 'entity-type'
+                        ? { _id: id, name: 'entity-type' }
+                        : null,
+                ),
+            );
+
+        await ensureBootstrapModel(storage, model);
+
+        expect(storage.getById).toHaveBeenCalledWith('entity-type', 'entity-type');
+        expect(storage.create).toHaveBeenCalledWith('entity-type', model.entityTypes[0]);
+    });
+
+    it('should reject an additive seed before writing when its type definition is missing', async () => {
+        const model = createBootstrapModel('system', new Date());
+        model.entityTypes = model.entityTypes.filter((type) => type._id !== 'entity-type');
+        const storage = createStorage([]);
+
+        await expect(ensureBootstrapModel(storage, model)).rejects.toThrow(
+            "Seed entity type 'entity-type' has no definition.",
+        );
+        expect(storage.create).not.toHaveBeenCalled();
+    });
 });
 
 function createStorage(existingIds: string[]): DataStorage & { create: ReturnType<typeof vi.fn> } {
     return {
         getById: vi
             .fn()
-            .mockImplementation((id: string) =>
+            .mockImplementation((_entityTypeName: string, id: string) =>
                 Promise.resolve(existingIds.includes(id) ? { _id: id } : null),
             ),
         create: vi.fn().mockResolvedValue(undefined),

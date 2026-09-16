@@ -1,8 +1,8 @@
 import type { Entity } from '@poseidon/models';
 
 export interface DataStorage {
-    getById(id: string): Promise<Entity | null>;
-    create(entity: Entity): Promise<void>;
-    update(entity: Entity): Promise<void>;
-    delete(id: string): Promise<void>;
+    getById(entityTypeName: string, id: string): Promise<Entity | null>;
+    create(entityTypeName: string, entity: Entity): Promise<void>;
+    update(entityTypeName: string, entity: Entity): Promise<void>;
+    delete(entityTypeName: string, id: string): Promise<void>;
 }

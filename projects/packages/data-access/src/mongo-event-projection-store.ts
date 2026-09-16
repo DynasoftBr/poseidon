@@ -11,24 +11,32 @@ export class MongoEventProjectionStore {
     public constructor(private readonly client: MongoClient) {}
 
     public async isInitialized(): Promise<boolean> {
-        const systemUser = await this.getEntities().findOne({ _id: 'system' });
+        const systemUser = await this.getEntities('user').findOne({ _id: 'system' });
 
         return systemUser !== null;
     }
 
-    public async hasEntity(id: string): Promise<boolean> {
-        return (await this.getEntities().findOne({ _id: id })) !== null;
+    public async hasEntity(entityTypeName: string, id: string): Promise<boolean> {
+        return (await this.getEntities(entityTypeName).findOne({ _id: id })) !== null;
     }
 
-    public async findProjection(id: string): Promise<Entity | null> {
-        return await this.getProjectionCollection().findOne({ _id: id });
+    public async findProjection(entityTypeName: string, id: string): Promise<Entity | null> {
+        return await this.getEntities(entityTypeName).findOne({ _id: id });
+    }
+
+    public async findEntityTypeByName(name: string): Promise<Entity | null> {
+        return await this.getEntities('entity-type').findOne({
+            name,
+            _deletedAt: { $exists: false },
+        });
     }
 
     public async findByEntityType(
+        entityTypeName: string,
         command: QueryEntitiesCommand,
         propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]> {
-        const documents = await this.getProjectionCollection()
+        const documents = await this.getEntities(entityTypeName)
             .find({
                 _entityTypeId: command.entityTypeId,
                 _deletedAt: { $exists: false },
@@ -72,9 +80,10 @@ export class MongoEventProjectionStore {
 
     private async writeProjections(events: EntityEvent[], session: ClientSession): Promise<void> {
         for (const event of events) {
+            const entityTypeName = await this.resolveEntityTypeName(event.entityTypeId, session);
             if (event.type === 'entity-created') {
                 try {
-                    await this.getEntities().insertOne(
+                    await this.getEntities(entityTypeName).insertOne(
                         {
                             _id: event.entityId,
                             _entityTypeId: event.entityTypeId,
@@ -94,7 +103,7 @@ export class MongoEventProjectionStore {
                 continue;
             }
 
-            const result = await this.getEntities().updateOne(
+            const result = await this.getEntities(entityTypeName).updateOne(
                 {
                     _id: event.entityId,
                     _entityTypeId: event.entityTypeId,
@@ -130,12 +139,23 @@ export class MongoEventProjectionStore {
         return this.client.db().collection<{ _id: string }>('events');
     }
 
-    private getEntities() {
-        return this.client.db().collection<Entity>('entities');
+    private async resolveEntityTypeName(
+        entityTypeId: string,
+        session: ClientSession,
+    ): Promise<string> {
+        if (entityTypeId === 'entity-type') return 'entity-type';
+        const entityType = await this.getEntities('entity-type').findOne(
+            { _id: entityTypeId },
+            { session },
+        );
+        if (typeof entityType?.name !== 'string') {
+            throw new Error(`Entity type '${entityTypeId}' does not exist.`);
+        }
+        return entityType.name;
     }
 
-    private getProjectionCollection() {
-        return this.client.db().collection<Entity>('entities');
+    private getEntities(entityTypeName: string) {
+        return this.client.db().collection<Entity>(entityTypeName);
     }
 }
 
