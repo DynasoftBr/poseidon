@@ -26,7 +26,6 @@ function authoring() {
         entities: 'entity-type',
         identities: 'identity',
         users: 'user',
-        properties: 'entity-property',
     };
     return {
         events: Object.fromEntries(

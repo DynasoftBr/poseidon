@@ -52,8 +52,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     }
 }
 
-function start(command: string, args: string[], environment: NodeJS.ProcessEnv = {}): ChildProcess {
-    return spawn(command, args, {
+function start(action: string, args: string[], environment: NodeJS.ProcessEnv = {}): ChildProcess {
+    return spawn(action, args, {
         cwd: repositoryRoot,
         detached: true,
         env: { ...process.env, ...environment },

@@ -27,20 +27,45 @@ test('should create an entity type with a relationship and declarative action', 
     await page.goto('/entities');
     const frame = page.frameLocator('iframe');
     await frame.getByRole('button', { name: 'Create new', exact: true }).click();
-    await frame.getByRole('textbox', { name: 'Entity name' }).fill('Example ' + Date.now());
+    await frame.getByRole('textbox', { name: 'Entity name' }).fill('Example-' + Date.now());
     await frame.getByRole('button', { name: 'Add property' }).click();
     await frame.getByRole('textbox', { name: 'Property name' }).fill('owner');
     await frame.getByRole('combobox', { name: 'Type', exact: true }).selectOption('reference');
     await frame.getByRole('combobox', { name: 'Related entity type' }).selectOption('user');
-    await frame
-        .getByRole('textbox', { name: 'Declarative actions' })
-        .fill(
-            JSON.stringify([
-                { id: 'create', name: 'create', label: 'Create', operation: 'create', rules: [] },
-            ]),
-        );
+    await frame.getByRole('textbox', { name: 'Declarative actions' }).fill(
+        JSON.stringify([
+            {
+                id: 'create',
+                name: 'create',
+                label: 'Create',
+                operation: 'create',
+                before: [],
+                after: [],
+            },
+        ]),
+    );
     await frame.getByRole('button', { name: 'Save entity type' }).click();
     await expect(frame.getByRole('status')).toHaveText('Entity type saved.');
+});
+
+test('should save a structure with embedded properties', async ({ page }) => {
+    await page.goto('/entities');
+    const frame = page.frameLocator('iframe');
+    await frame.getByRole('button', { name: 'Create new', exact: true }).click();
+    const name = 'Address-' + Date.now();
+    await frame.getByRole('textbox', { name: 'Entity name' }).fill(name);
+    await frame.getByRole('checkbox', { name: 'Structure (embedded in another entity)' }).check();
+    await frame.getByRole('button', { name: 'Add property' }).click();
+    await frame.getByRole('textbox', { name: 'Property name' }).fill('city');
+    await frame.getByRole('button', { name: 'Save entity type' }).click();
+    await expect(frame.getByRole('status')).toHaveText('Entity type saved.');
+    await page.reload();
+    await frame.getByRole('button', { name: name + ' →', exact: true }).click();
+    await expect(
+        frame.getByRole('checkbox', { name: 'Structure (embedded in another entity)' }),
+    ).toBeChecked();
+    await expect(frame.getByRole('textbox', { name: 'Property name' })).toHaveCount(1);
+    await expect(frame.getByRole('textbox', { name: 'Property name' })).toHaveValue('city');
 });
 
 test('should allow editing a core entity type', async ({ page }) => {

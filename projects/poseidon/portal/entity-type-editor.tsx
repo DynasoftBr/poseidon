@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 type Item = { _id: string; _version: number; [name: string]: unknown };
-type Property = Item;
+type Property = { _id: string; [name: string]: unknown };
 const systemProperties = new Set([
     '_id',
     '_entityTypeId',
@@ -22,17 +22,15 @@ export default function EntityTypeEditor({
     onEvent: (name: string, payload: object) => Promise<unknown>;
 }) {
     const [types, setTypes] = useState<Item[]>([]),
-        [properties, setProperties] = useState<Item[]>([]),
         [selected, setSelected] = useState<Item>(),
         [name, setName] = useState(''),
+        [structure, setStructure] = useState(false),
         [fields, setFields] = useState<Property[]>([]),
         [actions, setActions] = useState('[]'),
         [status, setStatus] = useState(''),
         [busy, setBusy] = useState(false);
     async function load() {
-        const values = await Promise.all([onEvent('entities', {}), onEvent('properties', {})]);
-        setTypes(values[0] as Item[]);
-        setProperties(values[1] as Item[]);
+        setTypes((await onEvent('entities', {})) as Item[]);
     }
     useEffect(() => {
         void load().catch((reason) => setStatus(String(reason)));
@@ -40,14 +38,15 @@ export default function EntityTypeEditor({
     function choose(item: Item) {
         setSelected(item);
         setName(String(item.name || ''));
-        const ids = Array.isArray(item.properties) ? item.properties : [];
-        setFields(properties.filter((field) => ids.includes(field._id)));
-        setActions(JSON.stringify(item.commands || [], null, 2));
+        setStructure(item.structure === true);
+        setFields((item.properties || []) as Property[]);
+        setActions(JSON.stringify(item.actions || [], null, 2));
         setStatus('');
     }
     function create() {
         setSelected({ _id: crypto.randomUUID(), _version: 0 });
         setName('');
+        setStructure(false);
         setFields([]);
         setActions('[]');
         setStatus('');
@@ -65,12 +64,9 @@ export default function EntityTypeEditor({
                 ...businessProperties(selected),
                 name,
                 ...(selected._version ? {} : { label: name }),
-                commands: JSON.parse(actions) as unknown,
-                properties: fields.map((field) => ({
-                    id: field._id,
-                    ...(field._version ? { expectedVersion: field._version } : {}),
-                    data: { ...businessProperties(field), entityTypeId: selected._id },
-                })),
+                structure,
+                actions: JSON.parse(actions) as unknown,
+                properties: fields.map((field) => ({ ...field, entityTypeId: selected._id })),
             };
             const result = (await onEvent(selected._version ? 'updateentities' : 'createentities', {
                 id: selected._id,
@@ -80,13 +76,7 @@ export default function EntityTypeEditor({
             await load();
             setSelected(result);
             setStatus('Entity type saved.');
-            const refreshed = (await onEvent('properties', {})) as Item[];
-            setFields(
-                refreshed.filter(
-                    (field) =>
-                        Array.isArray(result.properties) && result.properties.includes(field._id),
-                ),
-            );
+            setFields((result.properties || []) as Property[]);
         } catch (reason) {
             setStatus(String(reason));
         } finally {
@@ -130,6 +120,14 @@ export default function EntityTypeEditor({
                                 value={name}
                                 onChange={(event) => setName(event.target.value)}
                             />
+                        </label>
+                        <label className="flex min-h-11 items-center gap-2 mb-4">
+                            <input
+                                type="checkbox"
+                                checked={structure}
+                                onChange={(event) => setStructure(event.target.checked)}
+                            />
+                            Structure (embedded in another entity)
                         </label>
                         <h2 className="font-semibold mb-3">Properties and relationships</h2>
                         <div className="space-y-4">
@@ -261,7 +259,6 @@ export default function EntityTypeEditor({
                                     ...current,
                                     {
                                         _id: crypto.randomUUID(),
-                                        _version: 0,
                                         name: '',
                                         type: 'string',
                                         required: false,
