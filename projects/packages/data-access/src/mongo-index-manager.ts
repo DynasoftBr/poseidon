@@ -1,4 +1,4 @@
-import type { Entity, EntityData, IndexDefinitionData } from '@poseidon/models';
+import type { Entity, EntityData, EntityType, IndexDefinitionData } from '@poseidon/models';
 import type { MongoClient } from 'mongodb';
 
 /** Realizes declarative indexes on the corresponding entity type collection. */
@@ -17,26 +17,22 @@ export class MongoIndexManager {
 
     public async apply(data: EntityData): Promise<void> {
         const definition = parseIndexDefinition(data);
-        const properties = await this.client
-            .db()
-            .collection<Entity>('entity-property')
-            .find({ _id: { $in: definition.propertyIds } })
-            .toArray();
-        const namesById = new Map(
-            properties.map((property) => [property._id, property.name] as const),
-        );
-        const propertyNames = definition.propertyIds.map((id) => namesById.get(id));
-
-        if (propertyNames.some((name) => typeof name !== 'string')) {
-            throw new Error(`Index '${definition.name}' references a missing property.`);
-        }
-
         const entityType = await this.client
             .db()
-            .collection<Entity>('entity-type')
+            .collection<EntityType>('entity-type')
             .findOne({ _id: definition.entityTypeId });
         if (typeof entityType?.name !== 'string') {
             throw new Error(`Index '${definition.name}' references a missing entity type.`);
+        }
+        if (entityType.structure) {
+            throw new Error(`Structure '${entityType.name}' cannot have collection indexes.`);
+        }
+        const namesById = new Map(
+            entityType.properties.map((property) => [property._id, property.name]),
+        );
+        const propertyNames = definition.propertyIds.map((id) => namesById.get(id));
+        if (propertyNames.some((name) => typeof name !== 'string')) {
+            throw new Error(`Index '${definition.name}' references a missing property.`);
         }
 
         await this.client

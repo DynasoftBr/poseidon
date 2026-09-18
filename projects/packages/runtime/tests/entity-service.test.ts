@@ -1,9 +1,83 @@
-import type { EntityEvent, Entity } from '@poseidon/models';
+import type { EntityEvent, Entity, EntityProperty } from '@poseidon/models';
 import { EventPublisher } from '../src/event-publisher';
 import { createBootstrapModel, createSystemProperties } from '../src/bootstrap-model';
 import { EntityService, type EntityStore } from '../src/entity-service';
 
 describe('EntityService', () => {
+    it('should persist structures only inside their owning entity', async () => {
+        const bootstrap = createBootstrapModel('system', new Date());
+        const store = new InMemoryEntityStore([...bootstrap.users, ...bootstrap.entityTypes]);
+        const service = new EntityService(store, new EventPublisher());
+        const address = await service.create(
+            {
+                id: 'address',
+                entityTypeId: 'entity-type',
+                data: {
+                    name: 'address',
+                    label: 'Address',
+                    structure: true,
+                    properties: [
+                        {
+                            _id: 'address:city',
+                            entityTypeId: 'address',
+                            name: 'city',
+                            type: 'string',
+                            required: true,
+                        },
+                    ],
+                },
+            },
+            'system',
+        );
+        expect(address.properties).toHaveLength(1);
+        await service.create(
+            {
+                id: 'customer',
+                entityTypeId: 'entity-type',
+                data: {
+                    name: 'customer',
+                    label: 'Customer',
+                    properties: [
+                        {
+                            _id: 'customer:addresses',
+                            entityTypeId: 'customer',
+                            name: 'addresses',
+                            type: 'array',
+                            itemsType: 'object',
+                            relatedEntityTypeId: 'address',
+                        },
+                    ],
+                },
+            },
+            'system',
+        );
+        const customer = await service.create(
+            { id: 'ada', entityTypeId: 'customer', data: { addresses: [{ city: 'London' }] } },
+            'system',
+        );
+        expect(customer.addresses).toEqual([{ city: 'London' }]);
+        expect(store.events.map((event) => event.entityTypeId)).toEqual([
+            'entity-type',
+            'entity-type',
+            'customer',
+        ]);
+        await expect(
+            service.create(
+                { id: 'invalid', entityTypeId: 'customer', data: { addresses: [{ city: 42 }] } },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'validation' });
+        await expect(
+            service.create(
+                { id: 'standalone', entityTypeId: 'address', data: { city: 'London' } },
+                'system',
+            ),
+        ).rejects.toMatchObject({ code: 'validation' });
+        await expect(service.query({ entityTypeId: 'entity-property' })).rejects.toMatchObject({
+            code: 'validation',
+        });
+    });
+
     it('should create every EntityType through its declarative properties', async () => {
         const store = new InMemoryEntityStore([
             projection('person', 'entity-type', {
@@ -98,12 +172,12 @@ describe('EntityService', () => {
             publisher.subscribe('entity-updated', listener);
             publisher.subscribe('entity-deleted', listener);
             const service = new EntityService(store, publisher);
-            const command = { id: current._id, entityTypeId: 'patient', expectedVersion: 1 };
+            const action = { id: current._id, entityTypeId: 'patient', expectedVersion: 1 };
 
             await expect(
                 operation === 'update'
-                    ? service.update({ ...command, data: { name: 'Ada Lovelace' } }, 'system')
-                    : service.delete(command, 'system'),
+                    ? service.update({ ...action, data: { name: 'Ada Lovelace' } }, 'system')
+                    : service.delete(action, 'system'),
             ).rejects.toMatchObject({ code: 'entity-version-conflict' });
 
             expect(commit).toHaveBeenCalledWith([
@@ -436,7 +510,6 @@ describe('EntityService', () => {
         const store = new InMemoryEntityStore([
             ...bootstrap.users,
             ...bootstrap.entityTypes,
-            ...bootstrap.entityProperties,
             ...bootstrap.indexes,
         ]);
 
@@ -449,13 +522,11 @@ describe('EntityService', () => {
                     label: 'Product',
                     properties: [
                         {
-                            id: 'product:name',
-                            data: {
-                                entityTypeId: 'product',
-                                name: 'name',
-                                type: 'string',
-                                required: true,
-                            },
+                            _id: 'product:name',
+                            entityTypeId: 'product',
+                            name: 'name',
+                            type: 'string',
+                            required: true,
                         },
                     ],
                 },
@@ -464,11 +535,13 @@ describe('EntityService', () => {
         );
 
         expect(entityType.properties).toEqual(
-            expect.arrayContaining(['product:name', 'product:_id', 'product:_createdAt']),
+            expect.arrayContaining(
+                ['product:name', 'product:_id', 'product:_createdAt'].map((_id) =>
+                    expect.objectContaining({ _id }),
+                ),
+            ),
         );
-        expect(store.events.map((event) => event.entityId)).toEqual(
-            expect.arrayContaining(['product:name', 'product:_id', 'product']),
-        );
+        expect(store.events.map((event) => event.entityId)).toEqual(['product']);
     });
 
     it.each(['events', 'Bad Name'])(
@@ -490,7 +563,6 @@ describe('EntityService', () => {
         const store = new InMemoryEntityStore([
             ...bootstrap.users,
             ...bootstrap.entityTypes,
-            ...bootstrap.entityProperties,
             ...bootstrap.indexes,
         ]);
 
@@ -499,15 +571,25 @@ describe('EntityService', () => {
                 id: 'user',
                 entityTypeId: 'entity-type',
                 expectedVersion: 1,
-                data: { properties: ['user:name'] },
+                data: {
+                    properties: bootstrap.entityProperties.filter(
+                        (property) => property._id === 'user:name',
+                    ),
+                },
             },
             'system',
         );
 
         expect(result.properties).toEqual(
-            expect.arrayContaining(['user:name', 'user:_id', 'user:_createdAt']),
+            expect.arrayContaining(
+                ['user:name', 'user:_id', 'user:_createdAt'].map((_id) =>
+                    expect.objectContaining({ _id }),
+                ),
+            ),
         );
-        expect(result.properties).not.toContain('user:login');
+        expect(result.properties).not.toContainEqual(
+            expect.objectContaining({ _id: 'user:login' }),
+        );
     });
 
     it('should validate nested EntityProperty metadata from the bootstrap model', async () => {
@@ -515,7 +597,6 @@ describe('EntityService', () => {
         const store = new InMemoryEntityStore([
             ...bootstrap.users,
             ...bootstrap.entityTypes,
-            ...bootstrap.entityProperties,
             ...bootstrap.indexes,
         ]);
 
@@ -529,12 +610,10 @@ describe('EntityService', () => {
                         label: 'Invalid',
                         properties: [
                             {
-                                id: 'invalid:value',
-                                data: {
-                                    entityTypeId: 'invalid',
-                                    name: 'value',
-                                    type: 'not-a-property-type',
-                                },
+                                _id: 'invalid:value',
+                                entityTypeId: 'invalid',
+                                name: 'value',
+                                type: 'not-a-property-type',
                             },
                         ],
                     },
@@ -571,7 +650,9 @@ class InMemoryEntityStore implements EntityStore {
     private readonly projections = new Map<string, Entity>();
 
     public constructor(projections: Entity[]) {
-        projections.forEach((projection) => this.projections.set(projection._id, projection));
+        projections
+            .filter((record) => record._entityTypeId !== 'entity-property')
+            .forEach((projection) => this.projections.set(projection._id, projection));
         for (const name of ['entity-type', 'entity-property', 'user', 'relation-link']) {
             if (!this.projections.has(name)) {
                 this.projections.set(
@@ -586,17 +667,22 @@ class InMemoryEntityStore implements EntityStore {
         for (const entityType of [...this.projections.values()].filter(
             (record) => record._entityTypeId === 'entity-type',
         )) {
+            if (entityType.structure) continue;
             const existing = Array.isArray(entityType.properties) ? entityType.properties : [];
-            if (existing.includes(`${entityType._id}:_id`)) continue;
+            const embedded = existing.map((property: string | EntityProperty) =>
+                typeof property === 'string'
+                    ? projections.find((record) => record._id === property)
+                    : property,
+            );
+            const ids = new Set(embedded.map((property) => property?._id));
             const system = createSystemProperties(entityType._id, {
                 systemUserId: 'system',
                 now: new Date(),
             });
             this.projections.set(entityType._id, {
                 ...entityType,
-                properties: [...existing, ...system.map((property) => property._id)],
+                properties: [...embedded, ...system.filter((property) => !ids.has(property._id))],
             });
-            system.forEach((property) => this.projections.set(property._id, property));
         }
     }
 
@@ -618,12 +704,12 @@ class InMemoryEntityStore implements EntityStore {
 
     public findByEntityType(
         _entityTypeName: string,
-        command: { entityTypeId: string },
+        action: { entityTypeId: string },
         _propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]> {
         return Promise.resolve(
             [...this.projections.values()].filter(
-                (entity) => entity._entityTypeId === command.entityTypeId,
+                (entity) => entity._entityTypeId === action.entityTypeId,
             ),
         );
     }

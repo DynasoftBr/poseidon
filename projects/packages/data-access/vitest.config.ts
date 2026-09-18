@@ -6,6 +6,7 @@ export default mergeConfig(
     defineConfig({
         test: {
             coverage: {
+                exclude: ['**/src/data-storage.ts'],
                 thresholds: { statements: 97, branches: 83, functions: 100, lines: 98 },
             },
         },

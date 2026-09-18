@@ -55,10 +55,6 @@ function property(
     return {
         ...data,
         _id: id,
-        _entityTypeId: 'entity-property',
         entityTypeId: 'person',
-        _version: 1,
-        _createdAt: new Date().toISOString(),
-        _createdBy: 'system',
     };
 }

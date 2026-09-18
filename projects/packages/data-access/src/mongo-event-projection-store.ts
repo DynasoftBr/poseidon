@@ -1,9 +1,9 @@
-import { toMongoSpecification } from './mongo-specification';
+import { findEntities } from './mongo-entity-query';
 import {
     entityMutationErrorCodes,
     type EntityEvent,
     type Entity,
-    type QueryEntitiesCommand,
+    type QueryEntitiesAction,
 } from '@poseidon/models';
 import type { ClientSession, MongoClient } from 'mongodb';
 
@@ -33,22 +33,10 @@ export class MongoEventProjectionStore {
 
     public async findByEntityType(
         entityTypeName: string,
-        command: QueryEntitiesCommand,
-        propertyNames: ReadonlyMap<string, string>,
+        action: QueryEntitiesAction,
+        _propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]> {
-        const documents = await this.getEntities(entityTypeName)
-            .find({
-                _entityTypeId: command.entityTypeId,
-                _deletedAt: { $exists: false },
-                ...(command.filter === undefined
-                    ? {}
-                    : { $expr: toMongoSpecification(command.filter, propertyNames) }),
-            })
-            .skip(command.offset ?? 0)
-            .limit(command.limit ?? 100)
-            .toArray();
-
-        return documents;
+        return await findEntities(this.client, entityTypeName, action);
     }
 
     public async commit(events: EntityEvent[]): Promise<void> {
@@ -150,6 +138,9 @@ export class MongoEventProjectionStore {
         );
         if (typeof entityType?.name !== 'string') {
             throw new Error(`Entity type '${entityTypeId}' does not exist.`);
+        }
+        if (entityType.structure === true) {
+            throw new Error(`Structure '${entityType.name}' cannot be persisted independently.`);
         }
         return entityType.name;
     }

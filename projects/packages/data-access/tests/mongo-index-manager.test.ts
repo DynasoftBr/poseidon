@@ -2,6 +2,18 @@ import { MongoIndexManager } from '../src/mongo-index-manager';
 import { createClient, cursor, projectionDocument } from './mongo-test-helpers';
 
 describe('MongoIndexManager', () => {
+    it('should reject a collection index on a structure', async () => {
+        const fake = createClient();
+        fake.entityTypes.findOne.mockResolvedValue({ name: 'address', structure: true });
+        await expect(
+            new MongoIndexManager(fake.client).apply({
+                entityTypeId: 'address',
+                name: 'city',
+                propertyIds: ['address:city'],
+            }),
+        ).rejects.toThrow("Structure 'address' cannot have collection indexes.");
+        expect(fake.database.collection).not.toHaveBeenCalledWith('address');
+    });
     it('should reconcile index entities into MongoDB indexes', async () => {
         const fake = createClient();
         fake.indexes.find.mockReturnValue(
@@ -14,11 +26,11 @@ describe('MongoIndexManager', () => {
                 }),
             ]),
         );
-        fake.entityProperties.find.mockReturnValue(
-            cursor([projectionDocument('person:name', 'entity-property', { name: 'name' })]),
-        );
         fake.entityTypes.findOne.mockResolvedValue(
-            projectionDocument('person', 'entity-type', { name: 'person' }),
+            projectionDocument('person', 'entity-type', {
+                name: 'person',
+                properties: [{ _id: 'person:name', name: 'name' }],
+            }),
         );
 
         await new MongoIndexManager(fake.client).reconcile();
@@ -31,7 +43,9 @@ describe('MongoIndexManager', () => {
 
     it('should reject invalid or incomplete index definitions', async () => {
         const fake = createClient();
-        fake.entityProperties.find.mockReturnValue(cursor([]));
+        fake.entityTypes.findOne.mockResolvedValue(
+            projectionDocument('person', 'entity-type', { name: 'person', properties: [] }),
+        );
         const manager = new MongoIndexManager(fake.client);
 
         await expect(manager.apply({})).rejects.toThrow('Index entity has an invalid definition.');
@@ -46,9 +60,6 @@ describe('MongoIndexManager', () => {
 
     it('should reject an index targeting a missing entity type', async () => {
         const fake = createClient();
-        fake.entityProperties.find.mockReturnValue(
-            cursor([projectionDocument('person:name', 'entity-property', { name: 'name' })]),
-        );
 
         await expect(
             new MongoIndexManager(fake.client).apply({

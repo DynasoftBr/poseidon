@@ -1,4 +1,4 @@
-import type { EntityCommand, EntityProperty } from '@poseidon/models';
+import type { APIAction, EntityProperty } from '@poseidon/models';
 import { applyEntityRules } from '../src/entity-rule-engine';
 
 describe('applyEntityRules', () => {
@@ -8,7 +8,7 @@ describe('applyEntityRules', () => {
     ];
 
     it('should apply a declarative consequence when its specification matches', () => {
-        const commands: EntityCommand[] = [
+        const actions: APIAction[] = [
             {
                 id: 'order:create',
                 name: 'create',
@@ -36,14 +36,14 @@ describe('applyEntityRules', () => {
             },
         ];
 
-        expect(applyEntityRules(commands, 'create', properties, { total: 1200 })).toEqual({
+        expect(applyEntityRules(actions, 'create', properties, { total: 1200 })).toEqual({
             total: 1200,
             status: 'review',
         });
     });
 
     it('should reject a mutation when a declarative rule requires it', () => {
-        const commands: EntityCommand[] = [
+        const actions: APIAction[] = [
             {
                 id: 'order:create',
                 name: 'create',
@@ -67,13 +67,13 @@ describe('applyEntityRules', () => {
             },
         ];
 
-        expect(() => applyEntityRules(commands, 'create', properties, { total: -1 })).toThrow(
+        expect(() => applyEntityRules(actions, 'create', properties, { total: -1 })).toThrow(
             'The entity is invalid.',
         );
     });
 
     it('should evaluate compound specifications and supported comparisons', () => {
-        const commands: EntityCommand[] = [
+        const actions: APIAction[] = [
             {
                 id: 'order:update',
                 name: 'update',
@@ -137,18 +137,18 @@ describe('applyEntityRules', () => {
         ];
 
         expect(
-            applyEntityRules(commands, 'update', properties, { total: 11, status: 'vip' }),
+            applyEntityRules(actions, 'update', properties, { total: 11, status: 'vip' }),
         ).toEqual({
             total: 99,
             status: 'approved',
         });
-        expect(applyEntityRules(commands, 'create', properties, { total: 11 })).toEqual({
+        expect(applyEntityRules(actions, 'create', properties, { total: 11 })).toEqual({
             total: 11,
         });
     });
 
     it('should reject a rule that writes to an unknown property', () => {
-        const commands: EntityCommand[] = [
+        const actions: APIAction[] = [
             {
                 id: 'order:create',
                 name: 'create',
@@ -172,11 +172,11 @@ describe('applyEntityRules', () => {
             },
         ];
 
-        expect(() => applyEntityRules(commands, 'create', properties, { total: 1 })).toThrowError(
+        expect(() => applyEntityRules(actions, 'create', properties, { total: 1 })).toThrowError(
             expect.objectContaining({
                 problems: [
                     {
-                        property: 'commands',
+                        property: 'actions',
                         message: "Rule references missing property 'missing'.",
                     },
                 ],
@@ -185,7 +185,7 @@ describe('applyEntityRules', () => {
     });
 
     it('should distinguish absent properties from falsey values', () => {
-        const commands: EntityCommand[] = [
+        const actions: APIAction[] = [
             {
                 id: 'order:create',
                 name: 'create',
@@ -213,12 +213,12 @@ describe('applyEntityRules', () => {
             },
         ];
 
-        expect(applyEntityRules(commands, 'create', properties, { total: 1 })).toEqual({
+        expect(applyEntityRules(actions, 'create', properties, { total: 1 })).toEqual({
             total: 1,
             status: false,
         });
         expect(
-            applyEntityRules(commands, 'create', properties, { total: 1, status: false }),
+            applyEntityRules(actions, 'create', properties, { total: 1, status: false }),
         ).toEqual({ total: 1, status: false });
     });
 });
@@ -226,12 +226,8 @@ describe('applyEntityRules', () => {
 function property(id: string, name: string): EntityProperty {
     return {
         _id: id,
-        _entityTypeId: 'entity-property',
         entityTypeId: 'order',
         name,
         type: 'string',
-        _version: 1,
-        _createdAt: new Date().toISOString(),
-        _createdBy: 'system',
     };
 }

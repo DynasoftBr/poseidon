@@ -5,6 +5,7 @@ import { createCoreEntityTypes } from './bootstrap/system-entity-types';
 import { systemFields } from './bootstrap/system-fields';
 import { createCoreIndexes } from './bootstrap/system-indexes';
 import { createCoreProperties } from './bootstrap/system-properties';
+import { system } from './system';
 
 export { DatabaseSeed };
 export { createSystemProperties } from './bootstrap/system-properties';
@@ -21,6 +22,10 @@ export function createBootstrapModel(systemUserId: EntityId, now: Date): Bootstr
         entityTypes: createCoreEntityTypes(context, entityProperties),
         entityProperties,
         indexes: createCoreIndexes(context),
+        scripts: Object.values(system.entityTypes.entityType.actions).map((action) => ({
+            ...systemFields(action.id, 'script', context),
+            code: null,
+        })),
     };
 }
 

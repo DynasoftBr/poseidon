@@ -35,10 +35,10 @@ class Store implements EntityStore {
             ) ?? null,
         );
     }
-    public findByEntityType(_entityTypeName: string, command: { entityTypeId: string }) {
+    public findByEntityType(_entityTypeName: string, action: { entityTypeId: string }) {
         return Promise.resolve(
             [...this.records.values()].filter(
-                (record) => record._entityTypeId === command.entityTypeId,
+                (record) => record._entityTypeId === action.entityTypeId,
             ),
         );
     }
@@ -78,25 +78,24 @@ class Store implements EntityStore {
 }
 function seedStorage(store: Store): DataStorage {
     return {
-        getById: (entityTypeName, id) => store.findProjection(entityTypeName, id),
+        get: (entityTypeName, id) => store.findProjection(entityTypeName, id),
+        query: () => Promise.resolve([]),
         create: (_entityTypeName, entity) => {
             store.records.set(entity._id, entity);
             return Promise.resolve();
         },
         update: () => Promise.resolve(),
         delete: () => Promise.resolve(),
+        beginTransaction: () => Promise.resolve(),
+        commitTransaction: () => Promise.resolve(),
+        abortTransaction: () => Promise.resolve(),
     };
 }
 async function setup() {
     const store = new Store(),
         publisher = new EventPublisher();
     const core = createBootstrapModel('system', new Date());
-    for (const entity of [
-        ...core.users,
-        ...core.entityTypes,
-        ...core.entityProperties,
-        ...core.indexes,
-    ]) {
+    for (const entity of [...core.users, ...core.entityTypes, ...core.indexes]) {
         store.records.set(entity._id, entity);
     }
     await bootstrapUI(
@@ -439,22 +438,21 @@ describe('forms', () => {
         const now = new Date();
         const metadata = { _version: 1, _createdAt: now.toISOString(), _createdBy: 'system' };
         const system = createSystemProperties('pair', { systemUserId: 'system', now });
-        system.forEach((property) => store.records.set(property._id, property));
         store.records.set('pair', {
             ...metadata,
             _id: 'pair',
             _entityTypeId: 'entity-type',
             name: 'pair',
-            properties: ['pair:other', ...system.map((property) => property._id)],
-        });
-        store.records.set('pair:other', {
-            ...metadata,
-            _id: 'pair:other',
-            _entityTypeId: 'entity-property',
-            entityTypeId: 'pair',
-            name: 'other',
-            type: 'reference',
-            relatedEntityTypeId: 'pair',
+            properties: [
+                ...system,
+                {
+                    _id: 'pair:other',
+                    entityTypeId: 'pair',
+                    name: 'other',
+                    type: 'reference',
+                    relatedEntityTypeId: 'pair',
+                },
+            ],
         });
         const definition: FormDefinition = {
             fields: {},

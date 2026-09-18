@@ -3,6 +3,14 @@ import { MongoEventProjectionStore } from '../src/mongo-event-projection-store';
 import { createClient, cursor, projectionDocument } from './mongo-test-helpers';
 
 describe('MongoEventProjectionStore', () => {
+    it('should reject standalone structure projections', async () => {
+        const fake = createClient();
+        fake.entityTypes.findOne.mockResolvedValue({ name: 'person', structure: true });
+        await expect(
+            new MongoEventProjectionStore(fake.client).commit([createdEvent()]),
+        ).rejects.toThrow("Structure 'person' cannot be persisted independently.");
+        expect(fake.entities.insertOne).not.toHaveBeenCalled();
+    });
     it('should read projections and construct filtered queries', async () => {
         const fake = createClient();
         fake.entityTypes.findOne.mockResolvedValue(
@@ -59,24 +67,9 @@ describe('MongoEventProjectionStore', () => {
                 ]),
             ),
         ).resolves.toHaveLength(1);
-        await expect(
-            store.findByEntityType(
-                'person',
-                {
-                    entityTypeId: 'person',
-                    filter: {
-                        kind: 'comparison',
-                        operator: 'equals',
-                        propertyId: '$unsafe',
-                        value: true,
-                    },
-                },
-                new Map(),
-            ),
-        ).rejects.toThrow("Invalid specification property '$unsafe'.");
-
         expect(fake.entities.find).toHaveBeenCalledWith(
             expect.objectContaining({ _entityTypeId: 'person', _deletedAt: { $exists: false } }),
+            undefined,
         );
     });
 

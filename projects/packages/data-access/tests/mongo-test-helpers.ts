@@ -2,16 +2,7 @@ import type { MongoClient } from 'mongodb';
 
 export function createClient() {
     const events = { bulkWrite: vi.fn() };
-    const collection = () => ({
-        findOne: vi.fn(),
-        find: vi.fn(),
-        updateOne: vi.fn(),
-        insertOne: vi.fn(),
-        replaceOne: vi.fn(),
-        deleteOne: vi.fn(),
-        createIndex: vi.fn(),
-        drop: vi.fn(),
-    });
+    const collection = createCollection;
     const entities = collection();
     const entityTypes = collection();
     const entityProperties = collection();
@@ -26,8 +17,21 @@ export function createClient() {
         ['user', users],
         ['entities', legacy],
     ]);
+    let active = false;
     const session = {
         withTransaction: vi.fn((callback: () => Promise<void>) => callback()),
+        startTransaction: vi.fn(() => {
+            active = true;
+        }),
+        commitTransaction: vi.fn(() => {
+            active = false;
+            return Promise.resolve();
+        }),
+        abortTransaction: vi.fn(() => {
+            active = false;
+            return Promise.resolve();
+        }),
+        inTransaction: vi.fn(() => active),
         endSession: vi.fn(),
     };
     const database = {
@@ -52,6 +56,19 @@ export function createClient() {
         events,
         session,
         database,
+    };
+}
+
+function createCollection() {
+    return {
+        findOne: vi.fn(),
+        find: vi.fn(),
+        updateOne: vi.fn(),
+        insertOne: vi.fn(),
+        replaceOne: vi.fn(),
+        deleteOne: vi.fn(),
+        createIndex: vi.fn(),
+        drop: vi.fn(),
     };
 }
 

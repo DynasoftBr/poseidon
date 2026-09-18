@@ -76,16 +76,16 @@ async function mutate(
     }
     const id = String(payload.id);
     const current = await entities.get(binding.entityTypeId, id);
-    const command = {
+    const action = {
         id,
         entityTypeId: binding.entityTypeId,
         expectedVersion: Number(payload.expectedVersion),
     };
     if (binding.kind === 'update') {
         const data = componentData(binding.entityTypeId, current, supplied);
-        return entities.update({ ...command, data }, actorId);
+        return entities.update({ ...action, data }, actorId);
     }
-    return entities.delete(command, actorId);
+    return entities.delete(action, actorId);
 }
 
 function componentData(

@@ -1,40 +1,29 @@
 import type { Entity } from '@poseidon/models';
-import { getCommands, toProperty } from '../src/entity-model-utils';
+import { getActions, getProperties, toProperty } from '../src/entity-model-utils';
 
 describe('entity model utilities', () => {
-    it('should expose valid property projections and optional commands', () => {
-        const property = toProperty(
-            projection('name', 'entity-property', { name: 'name', type: 'string' }),
-            'name',
+    it('should reject an entity type without embedded property definitions', () => {
+        expect(() => getProperties(projection('person', 'entity-type', {}))).toThrow(
+            'The entity is invalid.',
         );
-
-        expect(property).toMatchObject({
-            _id: 'name',
-            _entityTypeId: 'entity-property',
+    });
+    it('should expose embedded property definitions and optional actions', () => {
+        const stored = {
+            _id: 'user:name',
+            entityTypeId: 'user',
             name: 'name',
             type: 'string',
-            _version: 1,
-        });
-        expect(getCommands(projection('person', 'entity-type', { commands: [] }))).toEqual([]);
-        expect(getCommands(projection('person', 'entity-type', { commands: {} }))).toBeUndefined();
-    });
-
-    it('should retain property version and audit metadata', () => {
-        const stored = {
-            ...projection('user:name', 'entity-property', {
-                entityTypeId: 'user',
-                name: 'name',
-                type: 'string',
-            }),
-            _version: 3,
-            _changedAt: '2026-09-13T12:00:00.000Z',
-            _changedBy: 'editor',
+            required: true,
         };
-
         expect(toProperty(stored, stored._id)).toEqual(stored);
+        expect(getProperties(projection('user', 'entity-type', { properties: [stored] }))).toEqual([
+            stored,
+        ]);
+        expect(getActions(projection('person', 'entity-type', { actions: [] }))).toEqual([]);
+        expect(getActions(projection('person', 'entity-type', { actions: {} }))).toBeUndefined();
     });
 
-    it('should reject a missing or invalid property projection', () => {
+    it('should reject a missing or invalid property definition', () => {
         expect(() => toProperty(null, 'name')).toThrowError(
             expect.objectContaining({
                 problems: [{ property: 'properties', message: "Property 'name' was not found." }],

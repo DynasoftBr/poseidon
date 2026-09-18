@@ -1,5 +1,5 @@
 import express, { type Express } from 'express';
-import type { CreateEntityCommand } from '@poseidon/models';
+import type { CreateEntityAction } from '@poseidon/models';
 import type { EntityService } from '@poseidon/runtime';
 import { prepareComponentData } from '@poseidon/ui-platform';
 import { errorMiddleware } from './error-middleware';
@@ -67,7 +67,7 @@ function configureEntityMutationRoutes(app: Express, service: EntityService): vo
         try {
             const projection = await service.create(
                 {
-                    ...(request.body as Omit<CreateEntityCommand, 'entityTypeId'>),
+                    ...(request.body as Omit<CreateEntityAction, 'entityTypeId'>),
                     data: mutationData(request.params.entityTypeName, {}, request.body.data),
                     entityTypeId: request.params.entityTypeName,
                 },

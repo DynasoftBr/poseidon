@@ -1,4 +1,4 @@
-import type { Entity, EntityId } from '../entity';
+import type { EntityId } from '../entity';
 
 export const propertyTypes = [
     'string',
@@ -22,7 +22,9 @@ export const relationKinds = ['has-one', 'belongs-to-one', 'has-many', 'belongs-
 
 export type RelationKind = (typeof relationKinds)[number];
 
-export interface EntityProperty extends Entity, EntityPropertyData {}
+export interface EntityProperty extends EntityPropertyData {
+    _id: EntityId;
+}
 
 export type EntityPropertyData = {
     entityTypeId: EntityId;

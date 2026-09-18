@@ -1,13 +1,13 @@
 import type { EntityId, EntityProperty, EntityPropertyData, PropertyType } from '@poseidon/models';
-import { systemFields, type BootstrapContext } from './system-fields';
+import type { BootstrapContext } from './system-fields';
 
 export function createProperty(
     [entityTypeId, name, type, required]: [EntityId, string, PropertyType, boolean],
-    context: BootstrapContext,
+    _context: BootstrapContext,
     options: Partial<EntityPropertyData> = {},
 ): EntityProperty {
     return {
-        ...systemFields(`${entityTypeId}:${name}`, 'entity-property', context),
+        _id: `${entityTypeId}:${name}`,
         entityTypeId,
         name,
         type,

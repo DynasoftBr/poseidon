@@ -25,6 +25,7 @@ describe('createBootstrapModel', () => {
             { _id: 'user', _createdBy: 'system', _createdAt: now.toISOString() },
             { _id: 'identity', _createdBy: 'system', _createdAt: now.toISOString() },
             { _id: 'relation-link', _createdBy: 'system', _createdAt: now.toISOString() },
+            { _id: 'script', _createdBy: 'system', _createdAt: now.toISOString() },
         ]);
         for (const entityType of model.entityTypes) {
             expect(entityType).toEqual(
@@ -36,17 +37,19 @@ describe('createBootstrapModel', () => {
                 }),
             );
         }
-        expect(model.entityProperties).toHaveLength(92);
+        expect(model.entityProperties).toHaveLength(95);
         for (const entityType of model.entityTypes) {
             expect(entityType.properties).toEqual(
-                expect.arrayContaining([`${entityType.name}:_id`, `${entityType.name}:_createdAt`]),
+                expect.arrayContaining([
+                    expect.objectContaining({ _id: `${entityType.name}:_id` }),
+                ]),
             );
         }
         expect(model.entityProperties).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     _id: 'entity-type:properties',
-                    itemsType: 'reference',
+                    itemsType: 'object',
                     relatedEntityTypeId: 'entity-property',
                     uniqueBy: 'name',
                 }),
@@ -69,6 +72,13 @@ describe('createBootstrapModel', () => {
             ]),
         );
         expect(model.indexes).toHaveLength(2);
+        expect(model.scripts).toEqual([
+            expect.objectContaining({
+                _id: 'addMandatoryProperties',
+                _entityTypeId: 'script',
+                code: null,
+            }),
+        ]);
     });
 
     it('should create missing entities with their audit metadata', async () => {
@@ -78,23 +88,15 @@ describe('createBootstrapModel', () => {
         await expect(ensureBootstrapModel(storage, model)).resolves.toBe(true);
         expect(storage.create).toHaveBeenCalledWith('user', model.users[0]);
         expect(storage.create).toHaveBeenCalledWith('entity-type', model.entityTypes[0]);
-        expect(storage.create).toHaveBeenCalledWith('entity-property', model.entityProperties[0]);
+        expect(storage.create).not.toHaveBeenCalledWith('entity-property', expect.anything());
         expect(storage.create).toHaveBeenCalledWith('index', model.indexes[0]);
+        expect(storage.create).toHaveBeenCalledWith('script', model.scripts[0]);
     });
 
     it('should add new core entity types and properties to an existing store', async () => {
         const model = createBootstrapModel('system', new Date());
-        const entities = [
-            ...model.users,
-            ...model.entityTypes,
-            ...model.entityProperties,
-            ...model.indexes,
-        ];
-        const identity = entities.filter(
-            (entity) =>
-                entity._id === 'identity' ||
-                (entity._entityTypeId === 'entity-property' && entity.entityTypeId === 'identity'),
-        );
+        const entities = [...model.users, ...model.entityTypes, ...model.indexes, ...model.scripts];
+        const identity = entities.filter((entity) => entity._id === 'identity');
         const storage = createStorage(
             entities.filter((entity) => !identity.includes(entity)).map((entity) => entity._id),
         );
@@ -108,12 +110,7 @@ describe('createBootstrapModel', () => {
 
     it('should preserve an initialized store', async () => {
         const model = createBootstrapModel('system', new Date());
-        const entities = [
-            ...model.users,
-            ...model.entityTypes,
-            ...model.entityProperties,
-            ...model.indexes,
-        ];
+        const entities = [...model.users, ...model.entityTypes, ...model.indexes, ...model.scripts];
         const storage = createStorage(entities.map((entity) => entity._id));
 
         await expect(ensureBootstrapModel(storage, model)).resolves.toBe(false);
@@ -130,7 +127,7 @@ describe('createBootstrapModel', () => {
 
         await ensureBootstrapModel(storage, model);
 
-        expect(storage.getById).toHaveBeenCalledWith('user', 'system');
+        expect(storage.get).toHaveBeenCalledWith('user', 'system');
         expect(storage.create).toHaveBeenCalledWith('user', model.users[0]);
     });
 
@@ -138,7 +135,7 @@ describe('createBootstrapModel', () => {
         const model = createBootstrapModel('system', new Date());
         model.entityTypes = model.entityTypes.filter((type) => type._id !== 'entity-type');
         const storage = createStorage([]);
-        storage.getById = vi
+        storage.get = vi
             .fn()
             .mockImplementation((name: string, id: string) =>
                 Promise.resolve(
@@ -150,7 +147,7 @@ describe('createBootstrapModel', () => {
 
         await ensureBootstrapModel(storage, model);
 
-        expect(storage.getById).toHaveBeenCalledWith('entity-type', 'entity-type');
+        expect(storage.get).toHaveBeenCalledWith('entity-type', 'entity-type');
         expect(storage.create).toHaveBeenCalledWith('entity-type', model.entityTypes[0]);
     });
 
@@ -168,13 +165,17 @@ describe('createBootstrapModel', () => {
 
 function createStorage(existingIds: string[]): DataStorage & { create: ReturnType<typeof vi.fn> } {
     return {
-        getById: vi
+        get: vi
             .fn()
             .mockImplementation((_entityTypeName: string, id: string) =>
                 Promise.resolve(existingIds.includes(id) ? { _id: id } : null),
             ),
         create: vi.fn().mockResolvedValue(undefined),
+        query: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn().mockResolvedValue(undefined),
+        beginTransaction: () => Promise.resolve(),
+        commitTransaction: () => Promise.resolve(),
+        abortTransaction: () => Promise.resolve(),
     };
 }

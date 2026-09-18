@@ -1,29 +1,30 @@
 import type { EntityId } from './entity';
 import type { BusinessRule } from './business-rule';
 
-export interface EntityCommandBase {
+export interface APIActionBase {
     id: EntityId;
     name: string;
     label: string;
     enabled: boolean;
+    system?: boolean;
     timeoutMs?: number | null;
-    before: EntityCommand[];
-    after: EntityCommand[];
+    before: APIAction[];
+    after: APIAction[];
     inputPropertyIds?: EntityId[];
     rules?: BusinessRule[];
 }
 
-export type EntityCommand = EntityCommandBase &
+export type APIAction = APIActionBase &
     (
         | { operation: 'script'; scriptId: EntityId }
         | { operation: 'create' | 'update' | 'delete' | 'business-rules'; scriptId?: never }
     );
 
-export const entityCommandOperations = [
+export const apiActionOperations = [
     'create',
     'update',
     'delete',
     'script',
     'business-rules',
 ] as const;
-export type EntityCommandOperation = (typeof entityCommandOperations)[number];
+export type APIActionOperation = (typeof apiActionOperations)[number];

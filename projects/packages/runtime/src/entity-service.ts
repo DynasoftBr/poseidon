@@ -3,19 +3,25 @@ import { validateSpecification } from './specification';
 import {
     entityEventTypes,
     entityMutationErrorCodes,
-    type CreateEntityCommand,
-    type DeleteEntityCommand,
+    type CreateEntityAction,
+    type DeleteEntityAction,
     type EntityEvent,
     type Entity,
     type EntityProperty,
-    type QueryEntitiesCommand,
-    type UpdateEntityCommand,
+    type QueryEntitiesAction,
+    type UpdateEntityAction,
 } from '@poseidon/models';
 import type { EventPublisher } from './event-publisher';
 import { applyEntityRules } from './entity-rule-engine';
-import { getCommands, toProperty } from './entity-model-utils';
+import {
+    getActions,
+    getProperties,
+    requireConcreteEntityType,
+    toProperty,
+} from './entity-model-utils';
 import { createRelationEvents, deleteRelationEvents } from './relation-events';
 import { validateEntity } from './entity-validator';
+import { applyDefaultsAndConventions, applyConventions } from './entity-preparation';
 import { createSystemProperties } from './bootstrap-model';
 import {
     EntityAlreadyExistsError,
@@ -32,7 +38,7 @@ export interface EntityStore {
     commit(events: EntityEvent[]): Promise<void>;
     findByEntityType?(
         entityTypeName: string,
-        command: QueryEntitiesCommand,
+        action: QueryEntitiesAction,
         propertyNames: ReadonlyMap<string, string>,
     ): Promise<Entity[]>;
 }
@@ -44,48 +50,48 @@ export class EntityService {
         private readonly publisher: EventPublisher,
     ) {}
 
-    public async create(command: CreateEntityCommand, actorId: string): Promise<Entity> {
-        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
+    public async create(action: CreateEntityAction, actorId: string): Promise<Entity> {
+        const entityType = await this.requireEntityTypeByName(action.entityTypeId);
 
         if (!entityType || entityType._entityTypeId !== 'entity-type') {
-            throw new EntityTypeNotFoundError(command.entityTypeId);
+            throw new EntityTypeNotFoundError(action.entityTypeId);
         }
-        if (await this.store.hasEntity(command.entityTypeId, command.id)) {
-            throw new EntityAlreadyExistsError(command.id);
+        if (await this.store.hasEntity(action.entityTypeId, action.id)) {
+            throw new EntityAlreadyExistsError(action.id);
         }
-        command = { ...command, entityTypeId: entityType._id };
+        action = { ...action, entityTypeId: entityType._id };
 
         const properties = await this.getProperties(entityType);
         const input =
-            command.entityTypeId === 'entity-type'
-                ? withSystemProperties(command.id, command.data, actorId)
-                : command.data;
-        if (command.entityTypeId === 'entity-type') validateEntityTypeName(input.name);
+            action.entityTypeId === 'entity-type'
+                ? withSystemProperties(action.id, action.data, actorId)
+                : action.data;
+        if (action.entityTypeId === 'entity-type') validateEntityTypeName(input.name);
         const prepared = await this.prepareNestedMutations(
-            command.entityTypeId,
+            action.entityTypeId,
             input,
             actorId,
-            new Map([[command.id, { entityTypeId: command.entityTypeId, data: input }]]),
-            new Set([command.id]),
+            new Map([[action.id, { entityTypeId: action.entityTypeId, data: input }]]),
+            new Set([action.id]),
         );
         const data = applyEntityRules(
-            getCommands(entityType),
+            getActions(entityType),
             'create',
             properties,
             applyDefaultsAndConventions(prepared.data, properties),
         );
         const eventTime = new Date();
-        const candidate = projection(command.id, command.entityTypeId, data, actorId, eventTime);
+        const candidate = projection(action.id, action.entityTypeId, data, actorId, eventTime);
         const problems = validateEntity(properties, candidate);
 
         if (problems.length > 0) throw new ValidationError(problems);
         await this.validateReferences(properties, candidate, prepared.staged);
 
         const event: EntityEvent = {
-            id: `entity-created:${command.entityTypeId}:${command.id}`,
+            id: `entity-created:${action.entityTypeId}:${action.id}`,
             type: entityEventTypes.created,
-            entityTypeId: command.entityTypeId,
-            entityId: command.id,
+            entityTypeId: action.entityTypeId,
+            entityId: action.id,
             data,
             actorId,
             occurredAt: eventTime,
@@ -98,7 +104,7 @@ export class EntityService {
                 reverseProperties: await this.getReverseProperties(properties),
             }),
         ];
-        await this.commit(events, command.id);
+        await this.commit(events, action.id);
         this.publisher.publish(events);
 
         return projection(
@@ -121,24 +127,21 @@ export class EntityService {
         return projection;
     }
 
-    public async query(command: QueryEntitiesCommand): Promise<Entity[]> {
-        const entityTypeName = command.entityTypeId;
+    public async query(action: QueryEntitiesAction): Promise<Entity[]> {
+        const entityTypeName = action.entityTypeId;
         const entityType = await this.requireEntityTypeByName(entityTypeName);
-        command = { ...command, entityTypeId: entityType._id };
+        action = { ...action, entityTypeId: entityType._id };
         if (!this.store.findByEntityType) {
             throw new Error('Entity queries are not configured.');
         }
-        if (
-            command.limit !== undefined &&
-            (!Number.isInteger(command.limit) || command.limit < 1)
-        ) {
+        if (action.limit !== undefined && (!Number.isInteger(action.limit) || action.limit < 1)) {
             throw new ValidationError([
                 { property: 'limit', message: 'Limit must be a positive integer.' },
             ]);
         }
         if (
-            command.offset !== undefined &&
-            (!Number.isInteger(command.offset) || command.offset < 0)
+            action.offset !== undefined &&
+            (!Number.isInteger(action.offset) || action.offset < 0)
         ) {
             throw new ValidationError([
                 { property: 'offset', message: 'Offset must be a non-negative integer.' },
@@ -147,18 +150,18 @@ export class EntityService {
 
         const properties = await this.getProperties(entityType);
         const propertyNames = new Map(properties.map((property) => [property._id, property.name]));
-        if (command.filter !== undefined) validateSpecification(command.filter, propertyNames);
-        return this.store.findByEntityType(entityTypeName, command, propertyNames);
+        if (action.filter !== undefined) validateSpecification(action.filter, propertyNames);
+        return this.store.findByEntityType(entityTypeName, action, propertyNames);
     }
 
-    public async update(command: UpdateEntityCommand, actorId: string): Promise<Entity> {
-        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
-        command = { ...command, entityTypeId: entityType._id };
-        const current = await this.requireCurrent(command.entityTypeId, command.id);
+    public async update(action: UpdateEntityAction, actorId: string): Promise<Entity> {
+        const entityType = await this.requireEntityTypeByName(action.entityTypeId);
+        action = { ...action, entityTypeId: entityType._id };
+        const current = await this.requireCurrent(action.entityTypeId, action.id);
         if (
-            command.entityTypeId === 'entity-type' &&
-            command.data.name !== undefined &&
-            command.data.name !== current.name
+            action.entityTypeId === 'entity-type' &&
+            action.data.name !== undefined &&
+            action.data.name !== current.name
         ) {
             throw new ValidationError([
                 { property: 'name', message: 'Entity type names cannot be changed.' },
@@ -166,20 +169,20 @@ export class EntityService {
         }
         const properties = await this.getProperties(entityType);
         const input =
-            command.entityTypeId === 'entity-type'
-                ? retainSystemProperties(command.id, current, command.data)
-                : command.data;
+            action.entityTypeId === 'entity-type'
+                ? retainSystemProperties(action.id, current, action.data)
+                : action.data;
         const prepared = await this.prepareNestedMutations(
-            command.entityTypeId,
+            action.entityTypeId,
             input,
             actorId,
             new Map([
-                [command.id, { entityTypeId: command.entityTypeId, data: entityData(current) }],
+                [action.id, { entityTypeId: action.entityTypeId, data: entityData(current) }],
             ]),
-            new Set([command.id]),
+            new Set([action.id]),
         );
         const data = applyEntityRules(
-            getCommands(entityType),
+            getActions(entityType),
             'update',
             properties,
             applyConventions({ ...entityData(current), ...prepared.data }, properties),
@@ -201,14 +204,14 @@ export class EntityService {
         }
 
         const event: EntityEvent = {
-            id: `entity-updated:${command.entityTypeId}:${command.id}:${command.expectedVersion + 1}`,
+            id: `entity-updated:${action.entityTypeId}:${action.id}:${action.expectedVersion + 1}`,
             type: entityEventTypes.updated,
-            entityTypeId: command.entityTypeId,
-            entityId: command.id,
+            entityTypeId: action.entityTypeId,
+            entityId: action.id,
             data,
             actorId,
             occurredAt: new Date(),
-            expectedVersion: command.expectedVersion,
+            expectedVersion: action.expectedVersion,
         };
 
         const events = [
@@ -219,7 +222,7 @@ export class EntityService {
                 reverseProperties: await this.getReverseProperties(properties),
             }),
         ];
-        await this.commit(events, command.id);
+        await this.commit(events, action.id);
         this.publisher.publish(events);
 
         return {
@@ -231,19 +234,19 @@ export class EntityService {
         };
     }
 
-    public async delete(command: DeleteEntityCommand, actorId: string): Promise<void> {
-        const entityType = await this.requireEntityTypeByName(command.entityTypeId);
-        command = { ...command, entityTypeId: entityType._id };
-        const current = await this.requireCurrent(command.entityTypeId, command.id);
+    public async delete(action: DeleteEntityAction, actorId: string): Promise<void> {
+        const entityType = await this.requireEntityTypeByName(action.entityTypeId);
+        action = { ...action, entityTypeId: entityType._id };
+        const current = await this.requireCurrent(action.entityTypeId, action.id);
         const event: EntityEvent = {
-            id: `entity-deleted:${command.entityTypeId}:${command.id}:${command.expectedVersion + 1}`,
+            id: `entity-deleted:${action.entityTypeId}:${action.id}:${action.expectedVersion + 1}`,
             type: entityEventTypes.deleted,
-            entityTypeId: command.entityTypeId,
-            entityId: command.id,
+            entityTypeId: action.entityTypeId,
+            entityId: action.id,
             data: entityData(current),
             actorId,
             occurredAt: new Date(),
-            expectedVersion: command.expectedVersion,
+            expectedVersion: action.expectedVersion,
         };
 
         const properties = await this.getProperties(entityType);
@@ -253,7 +256,7 @@ export class EntityService {
                 reverseProperties: await this.getReverseProperties(properties),
             }),
         ];
-        await this.commit(events, command.id);
+        await this.commit(events, action.id);
         this.publisher.publish(events);
     }
 
@@ -274,6 +277,7 @@ export class EntityService {
         if (!entityType || entityType._entityTypeId !== 'entity-type' || entityType.name !== name) {
             throw new EntityTypeNotFoundError(name);
         }
+        requireConcreteEntityType(entityType);
         return entityType;
     }
 
@@ -289,22 +293,7 @@ export class EntityService {
     }
 
     private async getProperties(entityType: Entity): Promise<EntityProperty[]> {
-        const propertyIds = entityType.properties;
-
-        if (!Array.isArray(propertyIds) || !propertyIds.every((id) => typeof id === 'string')) {
-            throw new ValidationError([
-                {
-                    property: 'properties',
-                    message: 'Entity type has an invalid property definition.',
-                },
-            ]);
-        }
-
-        const projections = await Promise.all(
-            propertyIds.map((id) => this.store.findProjection('entity-property', id)),
-        );
-
-        return projections.map((projection, index) => toProperty(projection, propertyIds[index]));
+        return getProperties(entityType);
     }
 
     private async prepareNestedMutations(
@@ -318,6 +307,51 @@ export class EntityService {
         const properties = await this.getProperties(entityType);
         const data = { ...input };
         const events: EntityEvent[] = [];
+
+        for (const property of properties) {
+            if (
+                !property.relatedEntityTypeId ||
+                isReference(property) ||
+                data[property.name] === undefined
+            )
+                continue;
+            const structure = await this.requireEntityType(property.relatedEntityTypeId);
+            if (structure.structure !== true) continue;
+            const values = Array.isArray(data[property.name])
+                ? (data[property.name] as unknown[])
+                : [data[property.name]];
+            const embedded = [];
+            for (const value of values) {
+                if (!value || typeof value !== 'object' || Array.isArray(value)) {
+                    throw new ValidationError([
+                        { property: property.name, message: 'Structure values must be objects.' },
+                    ]);
+                }
+                const nested = await this.prepareNestedMutations(
+                    structure._id,
+                    value as Record<string, unknown>,
+                    actorId,
+                    staged,
+                    definitions,
+                );
+                const fields = getProperties(structure);
+                const prepared = applyDefaultsAndConventions(nested.data, fields);
+                const problems = validateEntity(fields, prepared);
+                if (problems.length) throw new ValidationError(problems);
+                await this.validateReferences(fields, prepared, staged);
+                embedded.push(prepared);
+                events.push(...nested.events);
+            }
+            if (property.uniqueBy && !hasUniqueReferenceValues(embedded, property.uniqueBy)) {
+                throw new ValidationError([
+                    {
+                        property: property.name,
+                        message: `Structure values must be unique by '${property.uniqueBy}'.`,
+                    },
+                ]);
+            }
+            data[property.name] = Array.isArray(data[property.name]) ? embedded : embedded[0];
+        }
 
         for (const property of properties.filter((candidate) => isReference(candidate))) {
             const value = data[property.name];
@@ -346,6 +380,7 @@ export class EntityService {
                     const nestedType = await this.requireEntityType(
                         property.relatedEntityTypeId ?? '',
                     );
+                    requireConcreteEntityType(nestedType);
                     const existing = await this.store.findProjection(
                         String(nestedType.name),
                         reference.id,
@@ -361,7 +396,7 @@ export class EntityService {
                     const nestedProperties = await this.getProperties(nestedType);
                     const nextData = existing
                         ? applyEntityRules(
-                              getCommands(nestedType),
+                              getActions(nestedType),
                               'update',
                               nestedProperties,
                               applyConventions(
@@ -370,7 +405,7 @@ export class EntityService {
                               ),
                           )
                         : applyEntityRules(
-                              getCommands(nestedType),
+                              getActions(nestedType),
                               'create',
                               nestedProperties,
                               applyDefaultsAndConventions(nested.data, nestedProperties),
@@ -507,19 +542,19 @@ export class EntityService {
     private async getReverseProperties(
         properties: EntityProperty[],
     ): Promise<Map<string, EntityProperty>> {
-        const reversePropertyIds = properties.flatMap((property) =>
-            property.reversePropertyId ? [property.reversePropertyId] : [],
-        );
-        const projections = await Promise.all(
-            reversePropertyIds.map((id) => this.store.findProjection('entity-property', id)),
-        );
-
-        return new Map(
-            projections.map((projection, index) => [
-                reversePropertyIds[index],
-                toProperty(projection, reversePropertyIds[index]),
-            ]),
-        );
+        const reverse = new Map<string, EntityProperty>();
+        for (const property of properties) {
+            if (!property.reversePropertyId) continue;
+            const relatedType = await this.requireEntityType(property.relatedEntityTypeId ?? '');
+            const match = getProperties(relatedType).find(
+                (candidate) => candidate._id === property.reversePropertyId,
+            );
+            reverse.set(
+                property.reversePropertyId,
+                toProperty(match ?? null, property.reversePropertyId),
+            );
+        }
+        return reverse;
     }
 
     private async commit(events: EntityEvent[], entityId: string): Promise<void> {
@@ -540,35 +575,6 @@ export class EntityService {
 
 function hasCode(error: unknown, code: string): error is { code: string } {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
-}
-
-function applyDefaultsAndConventions(
-    input: Record<string, unknown>,
-    properties: EntityProperty[],
-): Record<string, unknown> {
-    const data = { ...input };
-
-    properties.forEach((property) => {
-        if (data[property.name] === undefined && property.default !== undefined) {
-            data[property.name] = resolveDefault(property.default);
-        }
-        const value = data[property.name];
-        if (typeof value === 'string' && property.convention) {
-            data[property.name] = applyConvention(value, property.convention);
-        }
-    });
-
-    return data;
-}
-
-function applyConventions(
-    input: Record<string, unknown>,
-    properties: EntityProperty[],
-): Record<string, unknown> {
-    return applyDefaultsAndConventions(
-        input,
-        properties.filter((property) => property.default === undefined),
-    );
 }
 
 function isReference(property: EntityProperty): boolean {
@@ -618,7 +624,10 @@ function sameData(left: Record<string, unknown>, right: Record<string, unknown>)
     return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function hasUniqueReferenceValues(projections: Entity[], property: string): boolean {
+function hasUniqueReferenceValues(
+    projections: Record<string, unknown>[],
+    property: string,
+): boolean {
     const values = projections.map((projection) => JSON.stringify(projection[property]));
     return new Set(values).size === values.length;
 }
@@ -676,21 +685,12 @@ function withSystemProperties(
     actorId: string,
 ): Record<string, unknown> {
     const existing = Array.isArray(input.properties) ? input.properties : [];
-    const ids = new Set(
-        existing.map((value) =>
-            typeof value === 'string'
-                ? value
-                : typeof value === 'object' && value !== null && 'id' in value
-                  ? value.id
-                  : undefined,
-        ),
-    );
+    if (input.structure === true) return input;
+    const ids = new Set(existing.map((property: EntityProperty) => property._id));
     const system = createSystemProperties(entityTypeId, {
         systemUserId: actorId,
         now: new Date(),
-    })
-        .filter((property) => !ids.has(property._id))
-        .map((property) => ({ id: property._id, data: entityData(property) }));
+    }).filter((property) => !ids.has(property._id));
     return { ...input, properties: [...existing, ...system] };
 }
 
@@ -711,42 +711,15 @@ function validateEntityTypeName(name: unknown): void {
 }
 
 function retainSystemProperties(
-    entityTypeId: string,
+    _entityTypeId: string,
     current: Entity,
     input: Record<string, unknown>,
 ): Record<string, unknown> {
     if (!Array.isArray(input.properties)) return input;
-    const declared = new Set(Array.isArray(current.properties) ? current.properties : []);
-    const supplied = new Set(
-        input.properties.map((value) =>
-            typeof value === 'string'
-                ? value
-                : typeof value === 'object' && value !== null && 'id' in value
-                  ? value.id
-                  : undefined,
-        ),
+    if (current.structure === true || input.structure === true) return input;
+    const supplied = new Set(input.properties.map((property: EntityProperty) => property._id));
+    const retained = getProperties(current).filter(
+        (property) => property.name.startsWith('_') && !supplied.has(property._id),
     );
-    const retained = createSystemProperties(entityTypeId, {
-        systemUserId: current._createdBy,
-        now: new Date(current._createdAt),
-    })
-        .map((property) => property._id)
-        .filter((id) => declared.has(id) && !supplied.has(id));
     return { ...input, properties: [...input.properties, ...retained] };
-}
-
-function resolveDefault(value: unknown): unknown {
-    return value === '[[NOW]]' ? new Date().toISOString() : value;
-}
-
-function applyConvention(value: string, convention: EntityProperty['convention']): string {
-    if (convention === 'lower-case') return value.toLowerCase();
-    if (convention === 'upper-case') return value.toUpperCase();
-    if (convention === 'capitalize-first-letter') {
-        return value.replace(
-            /\w\S*/g,
-            (word) => word[0].toUpperCase() + word.slice(1).toLowerCase(),
-        );
-    }
-    return value;
 }

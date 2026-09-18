@@ -121,12 +121,12 @@ export async function submitForm(
     const result: Entity[] = [];
     for (const target of targets) {
         try {
-            const command = { id: target.id, entityTypeId: target.entityTypeId, data: target.data };
+            const action = { id: target.id, entityTypeId: target.entityTypeId, data: target.data };
             result.push(
                 target.expectedVersion === undefined
-                    ? await service.create(command, context.actorId)
+                    ? await service.create(action, context.actorId)
                     : await service.update(
-                          { ...command, expectedVersion: target.expectedVersion },
+                          { ...action, expectedVersion: target.expectedVersion },
                           context.actorId,
                       ),
             );

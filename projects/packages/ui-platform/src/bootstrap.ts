@@ -36,9 +36,7 @@ export function createUIBootstrap(now: Date): BootstrapModel {
         ([entityTypeId, fields]) => [
             ...createSystemProperties(entityTypeId, context),
             ...Object.entries(fields).map(([name, type]) => ({
-                ...metadata,
                 _id: `${entityTypeId}:${name}`,
-                _entityTypeId: 'entity-property',
                 entityTypeId,
                 name,
                 type,
@@ -50,6 +48,7 @@ export function createUIBootstrap(now: Date): BootstrapModel {
     return {
         users: [],
         indexes: [],
+        scripts: [],
         entityProperties,
         entityTypes: Object.keys(definitions).map((name) => ({
             ...metadata,
@@ -57,7 +56,7 @@ export function createUIBootstrap(now: Date): BootstrapModel {
             _entityTypeId: 'entity-type',
             name,
             ...entityTypeMetadata[name],
-            properties: entityProperties.filter((p) => p.entityTypeId === name).map((p) => p._id),
+            properties: entityProperties.filter((p) => p.entityTypeId === name),
         })),
     };
 }
@@ -107,7 +106,7 @@ export async function bootstrapUI(storage: DataStorage, seeds: Entity[]): Promis
         if (!entityTypeName) {
             throw new Error(`UI seed '${entity._id}' has no entity type definition.`);
         }
-        if (await storage.getById(entityTypeName, entity._id)) continue;
+        if (await storage.get(entityTypeName, entity._id)) continue;
         await storage.create(entityTypeName, entity);
     }
 }

@@ -16,7 +16,7 @@ export class DatabaseSeed {
                 entity._entityTypeId,
                 namesById,
             );
-            if (await this.storage.getById(entityTypeName, entity._id)) continue;
+            if (await this.storage.get(entityTypeName, entity._id)) continue;
             await this.storage.create(entityTypeName, entity);
             created = true;
         }
@@ -29,7 +29,7 @@ export class DatabaseSeed {
     ): Promise<string> {
         const known = namesById.get(entityTypeId);
         if (known) return known;
-        const entityType = await this.storage.getById('entity-type', entityTypeId);
+        const entityType = await this.storage.get('entity-type', entityTypeId);
         if (typeof entityType?.name !== 'string') {
             throw new Error(`Seed entity type '${entityTypeId}' has no definition.`);
         }
@@ -39,5 +39,5 @@ export class DatabaseSeed {
 }
 
 function bootstrapEntities(model: BootstrapModel): Entity[] {
-    return [...model.users, ...model.entityTypes, ...model.entityProperties, ...model.indexes];
+    return [...model.users, ...model.entityTypes, ...model.indexes, ...model.scripts];
 }

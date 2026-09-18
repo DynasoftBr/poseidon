@@ -7,26 +7,26 @@ export interface NestedEntityEnvelope {
     expectedVersion?: number;
 }
 
-export interface CreateEntityCommand {
+export interface CreateEntityAction {
     id: EntityId;
     entityTypeId: EntityId;
     data: EntityData;
 }
 
-export interface UpdateEntityCommand {
+export interface UpdateEntityAction {
     entityTypeId: EntityId;
     id: EntityId;
     data: EntityData;
     expectedVersion: number;
 }
 
-export interface DeleteEntityCommand {
+export interface DeleteEntityAction {
     entityTypeId: EntityId;
     id: EntityId;
     expectedVersion: number;
 }
 
-export interface QueryEntitiesCommand {
+export interface QueryEntitiesAction {
     entityTypeId: EntityId;
     filter?: Specification;
     limit?: number;

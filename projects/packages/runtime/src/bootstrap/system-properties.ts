@@ -5,14 +5,16 @@ import {
     type EntityId,
     type EntityProperty,
 } from '@poseidon/models';
+import { systemEntityTypeNames } from '../system/entity-types';
 import { createProperty } from './create-property';
-import { coreEntityTypeNames } from './system-entity-types';
 import type { BootstrapContext } from './system-fields';
 
 export function createCoreProperties(context: BootstrapContext): EntityProperty[] {
     return [
-        ...coreEntityTypeNames.flatMap((entityTypeId) =>
-            createSystemProperties(entityTypeId, context),
+        ...systemEntityTypeNames.flatMap((entityTypeId) =>
+            entityTypeId === 'entity-property'
+                ? [createProperty([entityTypeId, '_id', 'string', true], context)]
+                : createSystemProperties(entityTypeId, context),
         ),
         ...createCoreBusinessProperties(context),
     ];
@@ -22,15 +24,16 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
     return [
         createProperty(['entity-type', 'name', 'string', true], context),
         createProperty(['entity-type', 'label', 'string', true], context),
+        createProperty(['entity-type', 'structure', 'boolean', false], context, { default: false }),
         createProperty(['entity-type', 'pluralLabel', 'string', false], context),
         createProperty(['entity-type', 'description', 'string', false], context),
         createProperty(['entity-type', 'menuLocation', 'string', false], context),
         createProperty(['entity-type', 'properties', 'array', true], context, {
-            itemsType: 'reference',
+            itemsType: 'object',
             relatedEntityTypeId: 'entity-property',
             uniqueBy: 'name',
         }),
-        createProperty(['entity-type', 'commands', 'json', false], context),
+        createProperty(['entity-type', 'actions', 'json', false], context),
         createProperty(['entity-property', 'entityTypeId', 'reference', true], context, {
             relatedEntityTypeId: 'entity-type',
         }),
@@ -57,15 +60,14 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
         createProperty(['entity-property', 'relationKind', 'string', false], context, {
             enum: [...relationKinds],
         }),
-        createProperty(['entity-property', 'reversePropertyId', 'reference', false], context, {
-            relatedEntityTypeId: 'entity-property',
-        }),
+        createProperty(['entity-property', 'reversePropertyId', 'string', false], context),
         createProperty(['entity-property', 'itemsType', 'string', false], context, {
             enum: [...propertyTypes],
         }),
         createProperty(['entity-property', 'uniqueItems', 'boolean', false], context),
         createProperty(['entity-property', 'uniqueBy', 'string', false], context),
         createProperty(['entity-property', 'multipleOf', 'number', false], context),
+        createProperty(['script', 'code', 'string', false], context),
         createProperty(['index', 'entityTypeId', 'reference', true], context),
         createProperty(['index', 'name', 'string', true], context),
         createProperty(['index', 'propertyIds', 'array', true], context),
