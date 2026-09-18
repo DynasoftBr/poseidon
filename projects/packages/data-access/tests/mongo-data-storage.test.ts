@@ -1,5 +1,5 @@
 import { MongoDataStorage } from '../src/mongo-data-storage';
-import { createClient, cursor, projectionDocument } from './mongo-test-helpers';
+import { createClient, cursor, entityDocument } from './mongo-test-helpers';
 
 describe('MongoDataStorage', () => {
     it('should reject standalone structure writes before accessing their collection', async () => {
@@ -7,14 +7,14 @@ describe('MongoDataStorage', () => {
         fake.entityTypes.findOne.mockResolvedValue({ name: 'address', structure: true });
         const storage = new MongoDataStorage(fake.client);
         await expect(
-            storage.create('address', projectionDocument('home', 'address', {})),
+            storage.create('address', entityDocument('home', 'address', {})),
         ).rejects.toThrow("Structure 'address' cannot be persisted independently.");
         expect(fake.database.collection).not.toHaveBeenCalledWith('address');
     });
-    it('should write entities directly without creating events', async () => {
+    it('should write entities directly', async () => {
         const fake = createClient();
         const storage = new MongoDataStorage(fake.client);
-        const entity = projectionDocument('ada', 'person', { name: 'Ada' });
+        const entity = entityDocument('ada', 'person', { name: 'Ada' });
         fake.entities.findOne.mockResolvedValue(entity);
         fake.entities.replaceOne.mockResolvedValue({ matchedCount: 1 });
         fake.entities.deleteOne.mockResolvedValue({ deletedCount: 1 });
@@ -31,13 +31,12 @@ describe('MongoDataStorage', () => {
             undefined,
         );
         expect(fake.entities.deleteOne).toHaveBeenCalledWith({ _id: 'ada' }, undefined);
-        expect(fake.events.bulkWrite).not.toHaveBeenCalled();
     });
 
     it('should reject writes when the entity version or ID no longer matches', async () => {
         const fake = createClient();
         const storage = new MongoDataStorage(fake.client);
-        const entity = projectionDocument('ada', 'person', { name: 'Ada' });
+        const entity = entityDocument('ada', 'person', { name: 'Ada' });
         fake.entities.replaceOne.mockResolvedValue({ matchedCount: 0 });
         fake.entities.deleteOne.mockResolvedValue({ deletedCount: 0 });
 
@@ -53,7 +52,7 @@ describe('MongoDataStorage', () => {
 describe('MongoDataStorage queries', () => {
     it('should query live entities by type', async () => {
         const fake = createClient();
-        const entity = projectionDocument('ada', 'person', { name: 'Ada' });
+        const entity = entityDocument('ada', 'person', { name: 'Ada' });
         fake.entities.find.mockReturnValue(cursor([entity]));
         fake.entityTypes.findOne.mockResolvedValue({
             _id: 'person',
@@ -88,7 +87,7 @@ describe('MongoDataStorage transactions', () => {
 
         await storage.beginTransaction();
         await storage.beginTransaction();
-        await storage.create('person', projectionDocument('ada', 'person', { name: 'Ada' }));
+        await storage.create('person', entityDocument('ada', 'person', { name: 'Ada' }));
         await storage.commitTransaction();
         expect(fake.session.commitTransaction).not.toHaveBeenCalled();
         await storage.commitTransaction();
@@ -100,7 +99,7 @@ describe('MongoDataStorage transactions', () => {
 
     it('should commit writes from one session', async () => {
         const fake = createClient();
-        const entity = projectionDocument('ada', 'person', { name: 'Ada' });
+        const entity = entityDocument('ada', 'person', { name: 'Ada' });
         const storage = new MongoDataStorage(fake.client);
 
         await storage.beginTransaction();

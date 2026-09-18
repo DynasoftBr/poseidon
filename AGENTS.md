@@ -10,6 +10,7 @@ You MUST read the [Poseidon Vision](./VISION.md) to understand the product philo
 - Keep this repository backend-only; do not add Portal, frontend packages, or browser build/test workflows.
 - Implement only the basic required behavior first; add validation, conditions, and edge-case handling only when a concrete requirement calls for them.
 - Follow the closest existing pattern before adding one.
+- When one-off development migrations, tests, validations, or similar tasks are necessary, implement them temporarily, run them, and then discard their code and any supporting tests or startup hooks; do not retain them in the codebase.
 - Keep `@poseidon/data-access` as the only package that knows MongoDB or Mongoose.
 - Keep `@poseidon/models` free of persistence and transport concerns.
 - Keep `@poseidon/runtime` free of MongoDB and HTTP concerns.

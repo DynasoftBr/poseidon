@@ -90,7 +90,7 @@ Create/update preparation retains defaults, conventions, business rules, propert
 
 Queries accept declarative filters, offset, and limit. MongoDB resolves filter property IDs against the type's properties. There is no separate runtime pagination validation. Index definitions are reconciled at startup; creation-event-driven index realization has been removed with event publication.
 
-Relationship properties and the `relation-link` bootstrap type are removed for now. Existing reference definitions migrate to ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
+Relationship properties and the `relation-link` bootstrap type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
 
 The planned typed action contract is a cascade: each operation declares input/output EntityTypes, adjacent steps must agree, and each action's public input/output are inferred recursively from its first/last executed step. Without before/after steps, these are the main operation's types. Client generation uses that resolved contract; type declarations and generation are not implemented by this transport simplification.
 

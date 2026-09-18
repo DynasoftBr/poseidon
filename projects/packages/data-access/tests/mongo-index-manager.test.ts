@@ -1,5 +1,5 @@
 import { MongoIndexManager } from '../src/mongo-index-manager';
-import { createClient, cursor, projectionDocument } from './mongo-test-helpers';
+import { createClient, cursor, entityDocument } from './mongo-test-helpers';
 
 describe('MongoIndexManager', () => {
     it('should reject a collection index on a structure', async () => {
@@ -18,7 +18,7 @@ describe('MongoIndexManager', () => {
         const fake = createClient();
         fake.indexes.find.mockReturnValue(
             cursor([
-                projectionDocument('person-name', 'index', {
+                entityDocument('person-name', 'index', {
                     entityTypeId: 'person',
                     name: 'person-name',
                     propertyIds: ['person:name'],
@@ -27,7 +27,7 @@ describe('MongoIndexManager', () => {
             ]),
         );
         fake.entityTypes.findOne.mockResolvedValue(
-            projectionDocument('person', 'entity-type', {
+            entityDocument('person', 'entity-type', {
                 name: 'person',
                 properties: [{ _id: 'person:name', name: 'name' }],
             }),
@@ -44,7 +44,7 @@ describe('MongoIndexManager', () => {
     it('should reject invalid or incomplete index definitions', async () => {
         const fake = createClient();
         fake.entityTypes.findOne.mockResolvedValue(
-            projectionDocument('person', 'entity-type', { name: 'person', properties: [] }),
+            entityDocument('person', 'entity-type', { name: 'person', properties: [] }),
         );
         const manager = new MongoIndexManager(fake.client);
 

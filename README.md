@@ -26,7 +26,7 @@ Or start both together:
 npm run dev:stack
 ```
 
-On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, and Index definitions. EntityProperties are embedded in each EntityType’s `properties` array. Existing separate property records are migrated into their owners before the old collection is removed.
+On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, and Index definitions. EntityProperties are embedded in each EntityType’s `properties` array.
 
 An EntityType with `structure: true` describes embedded values and cannot be persisted independently or have its own collection indexes. EntityProperty is a structure; its `_id` identifies the property for model references, while version and audit metadata belong to the owning EntityType. Object properties and arrays of objects select their structure through `relatedEntityTypeId`.
 
@@ -68,7 +68,7 @@ curl -X POST http://localhost:3000/person \
   -d '{"action":"delete","input":{"_id":"ada"}}'
 ```
 
-Entities are written directly without mutation events or projections. Relationship properties and implicit nested entity writes are removed; existing reference definitions migrate to ordinary IDs, while embedded structures remain supported.
+Entities are written directly without mutation events or projections. Relationship properties and implicit nested entity writes are removed; references use ordinary IDs, while embedded structures remain supported.
 
 ## Verification
 

@@ -1,12 +1,5 @@
 import 'dotenv/config';
-import {
-    connectDatabase,
-    MongoDataStorage,
-    MongoIndexManager,
-    MongoCollectionMigration,
-    MongoStructureMigration,
-    MongoActionModelMigration,
-} from '@poseidon/data-access';
+import { connectDatabase, MongoDataStorage, MongoIndexManager } from '@poseidon/data-access';
 import { createBootstrapModel, ensureBootstrapModel, RuntimeContext } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
 import { createApp } from './app';
@@ -22,9 +15,6 @@ async function start(): Promise<void> {
     }
 
     const client = await connectDatabase(databaseUri);
-    await new MongoCollectionMigration(client).migrate();
-    await new MongoStructureMigration(client).migrate();
-    await new MongoActionModelMigration(client).migrate();
     const storage = new MongoDataStorage(client);
     const indexManager = new MongoIndexManager(client);
     const initialized = await ensureBootstrapModel(
