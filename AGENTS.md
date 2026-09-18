@@ -2,9 +2,12 @@
 
 Poseidon is a self-describing business application runtime. The platform model is the source of truth: core entity types and user-created entity types use the same model.
 
+You MUST read the [Poseidon Vision](./VISION.md) to understand the product philosophy and the standard every feature should be judged against.
+
 ## Scope
 
 - Keep changes focused on the requested outcome.
+- Implement only the basic required behavior first; add validation, conditions, and edge-case handling only when a concrete requirement calls for them.
 - Follow the closest existing pattern before adding one.
 - Keep `@poseidon/data-access` as the only package that knows MongoDB or Mongoose.
 - Keep `@poseidon/models` free of persistence and transport concerns.

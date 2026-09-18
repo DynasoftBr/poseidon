@@ -2,6 +2,8 @@
 
 Poseidon is a self-describing business application runtime. Its core entities and user-created entities are defined by the same model.
 
+Read the [Poseidon Vision](./VISION.md) to understand the product philosophy and the standard every feature should be judged against.
+
 ## Local development
 
 Use Node 20 and install the workspace dependencies once:
@@ -24,7 +26,9 @@ Or start both together:
 npm run dev:stack
 ```
 
-On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, EntityProperties, and Index definitions. Bootstrap events and their generic entity projections are written in one MongoDB transaction. Existing bootstrap data is never overwritten.
+On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, and Index definitions. EntityProperties are embedded in each EntityType’s `properties` array. Existing separate property records are migrated into their owners before the old collection is removed.
+
+An EntityType with `structure: true` describes embedded values and cannot be persisted independently or have its own collection indexes. EntityProperty is a structure; its `_id` identifies the property for model references, while version and audit metadata belong to the owning EntityType. Object properties and arrays of objects select their structure through `relatedEntityTypeId`.
 
 Set `JWT_SECRET` to resolve `Authorization: Bearer` JWTs with a `userId` claim to stored user entities. Requests without a valid token continue with a null user, except when `POSEIDON_LOCAL_UI=true` outside production: a missing token then resolves to the seeded `system` user. Poseidon does not issue tokens or restrict routes yet.
 
@@ -32,12 +36,12 @@ The health check is available at `http://localhost:3000/health`.
 
 ## API smoke flow
 
-Create an EntityType and its properties through the same generic graph endpoint, then create records through that type:
+Create an EntityType with embedded properties, then create records through that type:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/entities/entity-type \
   -H 'content-type: application/json' \
-  -d '{"id":"person","data":{"name":"Person","label":"Person","properties":[{"id":"person:name","data":{"entityTypeId":"person","name":"name","type":"string","required":true}}]}}'
+  -d '{"id":"person","data":{"name":"person","label":"Person","properties":[{"_id":"person:name","entityTypeId":"person","name":"name","type":"string","required":true}]}}'
 
 curl -X POST http://localhost:3000/api/v1/entities/person \
   -H 'content-type: application/json' \
