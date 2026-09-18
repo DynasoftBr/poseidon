@@ -1,136 +1,61 @@
 import express, { type Express } from 'express';
-import type { CreateEntityAction } from '@poseidon/models';
-import type { EntityService } from '@poseidon/runtime';
-import { prepareComponentData } from '@poseidon/ui-platform';
+import type { Entity, EntityData } from '@poseidon/models';
+import { ValidationError, type PoseidonContext } from '@poseidon/runtime';
 import { errorMiddleware } from './error-middleware';
-import type { AuthMiddleware } from './auth-middleware';
+import type { AuthMiddleware, AuthenticatedRequest } from './auth-middleware';
 
 export interface AppDependencies {
-    entityService?: EntityService;
+    createContext?: (user: Entity) => PoseidonContext;
     auth?: AuthMiddleware;
 }
 
 export function createApp(dependencies: AppDependencies = {}): Express {
     const app = express();
-
     app.use(express.json());
-
     app.get('/health', (_request, response) => {
-        response.status(200).json({ status: 'ok' });
+        response.json({ status: 'ok' });
     });
-
     if (dependencies.auth) app.use(dependencies.auth.authenticate);
-
-    if (dependencies.entityService) {
-        configureEntityRoutes(app, dependencies.entityService);
-    }
-
+    if (dependencies.createContext) configureActions(app, dependencies.createContext);
     app.use(errorMiddleware);
-
     return app;
 }
 
-function configureEntityRoutes(app: Express, service: EntityService): void {
-    configureEntityReadRoutes(app, service);
-    configureEntityMutationRoutes(app, service);
-}
-
-function configureEntityReadRoutes(app: Express, service: EntityService): void {
-    app.get('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
+function configureActions(app: Express, createContext: (user: Entity) => PoseidonContext): void {
+    app.post('/:entityTypeName', async (request, response, next) => {
         try {
-            response
-                .status(200)
-                .json(await service.get(request.params.entityTypeName, request.params.id));
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
-
-    app.post('/api/v1/entities/:entityTypeName/query', async (request, response, next) => {
-        try {
-            response.status(200).json(
-                await service.query({
-                    entityTypeId: request.params.entityTypeName,
-                    filter: request.body.filter,
-                    limit: toOptionalNumber(request.body.limit),
-                    offset: toOptionalNumber(request.body.offset),
-                }),
-            );
-        } catch (error: unknown) {
+            const user = (request as AuthenticatedRequest).user;
+            if (!user) {
+                response.status(401).json({ error: { code: 'unauthenticated' } });
+                return;
+            }
+            const { action, input } = actionRequest(request.body);
+            const repository = createContext(user).repository(request.params.entityTypeName);
+            const result = await repository.execute(action, input);
+            response.status(200).json(result ?? null);
+        } catch (error) {
             next(error);
         }
     });
 }
 
-function configureEntityMutationRoutes(app: Express, service: EntityService): void {
-    app.post('/api/v1/entities/:entityTypeName', async (request, response, next) => {
-        try {
-            const projection = await service.create(
-                {
-                    ...(request.body as Omit<CreateEntityAction, 'entityTypeId'>),
-                    data: mutationData(request.params.entityTypeName, {}, request.body.data),
-                    entityTypeId: request.params.entityTypeName,
-                },
-                'system',
-            );
-
-            response.status(201).json(projection);
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
-
-    app.patch('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
-        try {
-            const current = await service.get(request.params.entityTypeName, request.params.id);
-            const projection = await service.update(
-                {
-                    entityTypeId: request.params.entityTypeName,
-                    id: request.params.id,
-                    data: mutationData(request.params.entityTypeName, current, request.body.data),
-                    expectedVersion: request.body.expectedVersion,
-                },
-                'system',
-            );
-
-            response.status(200).json(projection);
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
-
-    app.delete('/api/v1/entities/:entityTypeName/:id', async (request, response, next) => {
-        try {
-            await service.delete(
-                {
-                    entityTypeId: request.params.entityTypeName,
-                    id: request.params.id,
-                    expectedVersion: request.body.expectedVersion,
-                },
-                'system',
-            );
-
-            response.status(204).end();
-        } catch (error: unknown) {
-            next(error);
-        }
-    });
-}
-
-function mutationData(
-    entityTypeId: string,
-    current: Record<string, unknown>,
-    supplied: unknown,
-): Record<string, unknown> {
-    if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) {
-        throw new Error('Entity data must be an object.');
+function actionRequest(body: unknown): { action: string; input: EntityData } {
+    if (!body || typeof body !== 'object') {
+        throw new ValidationError([
+            { property: 'request', message: 'An action request is required.' },
+        ]);
     }
-    return entityTypeId === 'ui-component'
-        ? prepareComponentData(current, supplied as Record<string, unknown>)
-        : (supplied as Record<string, unknown>);
-}
-
-function toOptionalNumber(value: unknown): number | undefined {
-    if (value === undefined) return undefined;
-    return Number(value);
+    const { action, input } = body as { action?: unknown; input?: unknown };
+    if (
+        typeof action !== 'string' ||
+        !action ||
+        !input ||
+        typeof input !== 'object' ||
+        Array.isArray(input)
+    ) {
+        throw new ValidationError([
+            { property: 'request', message: 'An action name and input object are required.' },
+        ]);
+    }
+    return { action, input: input as EntityData };
 }

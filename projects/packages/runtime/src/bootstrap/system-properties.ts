@@ -1,7 +1,6 @@
 import {
     propertyConventions,
     propertyTypes,
-    relationKinds,
     type EntityId,
     type EntityProperty,
 } from '@poseidon/models';
@@ -34,9 +33,7 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
             uniqueBy: 'name',
         }),
         createProperty(['entity-type', 'actions', 'json', false], context),
-        createProperty(['entity-property', 'entityTypeId', 'reference', true], context, {
-            relatedEntityTypeId: 'entity-type',
-        }),
+        createProperty(['entity-property', 'entityTypeId', 'string', true], context),
         createProperty(['entity-property', 'name', 'string', true], context),
         createProperty(['entity-property', 'type', 'string', true], context, {
             enum: [...propertyTypes],
@@ -54,13 +51,7 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
         createProperty(['entity-property', 'convention', 'string', false], context, {
             enum: [...propertyConventions],
         }),
-        createProperty(['entity-property', 'relatedEntityTypeId', 'reference', false], context, {
-            relatedEntityTypeId: 'entity-type',
-        }),
-        createProperty(['entity-property', 'relationKind', 'string', false], context, {
-            enum: [...relationKinds],
-        }),
-        createProperty(['entity-property', 'reversePropertyId', 'string', false], context),
+        createProperty(['entity-property', 'relatedEntityTypeId', 'string', false], context),
         createProperty(['entity-property', 'itemsType', 'string', false], context, {
             enum: [...propertyTypes],
         }),
@@ -68,15 +59,12 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
         createProperty(['entity-property', 'uniqueBy', 'string', false], context),
         createProperty(['entity-property', 'multipleOf', 'number', false], context),
         createProperty(['script', 'code', 'string', false], context),
-        createProperty(['index', 'entityTypeId', 'reference', true], context),
+        createProperty(['index', 'entityTypeId', 'string', true], context),
         createProperty(['index', 'name', 'string', true], context),
         createProperty(['index', 'propertyIds', 'array', true], context),
         createProperty(['user', 'name', 'string', true], context),
         createProperty(['user', 'login', 'string', true], context),
         ...createIdentityProperties(context),
-        createProperty(['relation-link', 'relationPropertyId', 'string', true], context),
-        createProperty(['relation-link', 'thisId', 'string', true], context),
-        createProperty(['relation-link', 'thatId', 'string', true], context),
     ];
 }
 
@@ -86,45 +74,20 @@ export function createSystemProperties(
 ): EntityProperty[] {
     return [
         createProperty([entityTypeId, '_id', 'string', true], context),
-        createProperty([entityTypeId, '_entityTypeId', 'reference', true], context, {
-            relatedEntityTypeId: 'entity-type',
-        }),
+        createProperty([entityTypeId, '_entityTypeId', 'string', true], context),
         createProperty([entityTypeId, '_version', 'integer', true], context),
         createProperty([entityTypeId, '_createdAt', 'date-time', true], context),
-        createProperty([entityTypeId, '_createdBy', 'reference', true], context, {
-            relatedEntityTypeId: 'user',
-        }),
+        createProperty([entityTypeId, '_createdBy', 'string', true], context),
         createProperty([entityTypeId, '_changedAt', 'date-time', false], context),
-        createProperty([entityTypeId, '_changedBy', 'reference', false], context, {
-            relatedEntityTypeId: 'user',
-        }),
+        createProperty([entityTypeId, '_changedBy', 'string', false], context),
         createProperty([entityTypeId, '_deletedAt', 'date-time', false], context),
-        createProperty([entityTypeId, '_deletedBy', 'reference', false], context, {
-            relatedEntityTypeId: 'user',
-        }),
+        createProperty([entityTypeId, '_deletedBy', 'string', false], context),
     ];
 }
 
 function createIdentityProperties(context: BootstrapContext): EntityProperty[] {
     return [
         createProperty(['identity', 'name', 'string', true], context),
-        createProperty(['identity', 'owner', 'reference', true], context, {
-            relatedEntityTypeId: 'user',
-            relationKind: 'belongs-to-one',
-        }),
-        createProperty(['identity', 'members', 'array', true], context, {
-            itemsType: 'reference',
-            relatedEntityTypeId: 'identity',
-            relationKind: 'has-many',
-            reversePropertyId: 'identity:memberOf',
-            uniqueItems: true,
-        }),
-        createProperty(['identity', 'memberOf', 'array', true], context, {
-            itemsType: 'reference',
-            relatedEntityTypeId: 'identity',
-            relationKind: 'belongs-to-many',
-            reversePropertyId: 'identity:members',
-            uniqueItems: true,
-        }),
+        createProperty(['identity', 'owner', 'string', true], context),
     ];
 }

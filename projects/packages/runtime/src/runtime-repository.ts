@@ -1,12 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { Entity, APIAction, EntityData, QueryEntitiesAction } from '@poseidon/models';
 import type { DataStorage } from '@poseidon/data-access';
-import { EntityNotFoundError, ValidationError } from './poseidon-error';
+import {
+    EntityNotFoundError,
+    EntityTypeNotFoundError,
+    EntityVersionConflictError,
+    ValidationError,
+    type ValidationProblem,
+} from './poseidon-error';
 import type { Repository } from './repository';
 import type { RuntimeContext } from './runtime-context';
 import { initializeEntityMetadata } from './system-actions';
 import { system } from './system';
-import { requireConcreteEntityType } from './entity-model-utils';
+import { requireConcreteEntityType, getProperties } from './entity-model-utils';
+import { prepareMutation } from './prepare-mutation';
+import { applyBusinessRules } from './entity-rule-engine';
 
 interface ActionState {
     payload: EntityData;
@@ -32,14 +40,18 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
 
     public async query(action: QueryEntitiesAction): Promise<TEntity[]> {
         await this.requireConcreteType();
-        return (await this.storage.query(this.entityTypeName, action)) as TEntity[];
+        return (await this.storage.query(this.entityTypeName, {
+            ...action,
+            entityTypeId: this.entityTypeName,
+        })) as TEntity[];
     }
 
     public async create(data: EntityData): Promise<TEntity> {
         await this.requireConcreteType();
+        const prepared = await prepareMutation(this.context, this.entityTypeName, data);
         const entity = initializeEntityMetadata(
-            data,
-            this.entityTypeName,
+            prepared,
+            (await this.context.entityType(this.entityTypeName))!._id,
             this.context.user._id,
         ) as TEntity;
         await this.storage.create(this.entityTypeName, entity);
@@ -48,30 +60,56 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
 
     public async update(entity: TEntity): Promise<TEntity> {
         await this.requireConcreteType();
-        await this.storage.update(this.entityTypeName, entity);
-        return entity;
+        const current = await this.get(entity._id);
+        if (entity._version !== current._version) throw new EntityVersionConflictError(entity._id);
+        const data = await prepareMutation(this.context, this.entityTypeName, entity, current);
+        const updated = {
+            ...current,
+            ...data,
+            _version: current._version + 1,
+            _changedAt: new Date().toISOString(),
+            _changedBy: this.context.user._id,
+        } as TEntity;
+        await this.storage.update(this.entityTypeName, updated);
+        return updated;
     }
 
-    public async delete(id: string): Promise<void> {
+    public async delete(id: string, expectedVersion?: number): Promise<void> {
         await this.requireConcreteType();
+        if (expectedVersion !== undefined && (await this.get(id))._version !== expectedVersion) {
+            throw new EntityVersionConflictError(id);
+        }
         return this.storage.delete(this.entityTypeName, id);
     }
 
     public async execute(actionName: string, payload: EntityData): Promise<unknown> {
-        const action = (
-            await this.context.repository('entity-type').get(this.entityTypeName)
-        ).actions?.find((candidate) => candidate.name === actionName);
+        const type = await this.context.entityType(this.entityTypeName);
+        if (!type) throw new EntityTypeNotFoundError(this.entityTypeName);
+        const action =
+            (type.actions as APIAction[] | undefined)?.find(
+                (candidate) => candidate.name === actionName,
+            ) ?? defaultAction(actionName);
         if (!action) throw new Error(`Action '${actionName}' does not exist.`);
 
         const result = await this.runAction(action, {
-            payload: createInput(payload),
+            payload:
+                action.operation === 'create'
+                    ? {
+                          ...Object.fromEntries(
+                              Object.entries(payload).filter(
+                                  ([key]) => !key.startsWith('_') || key === '_id',
+                              ),
+                          ),
+                          _id: payload._id ?? randomUUID(),
+                      }
+                    : { ...payload },
             outputs: {},
         });
-        return result.outputs[action.id] ?? result.payload;
+        return action.id in result.outputs ? result.outputs[action.id] : result.payload;
     }
 
     private async requireConcreteType(): Promise<void> {
-        const entityType = await this.storage.get('entity-type', this.entityTypeName);
+        const entityType = await this.context.entityType(this.entityTypeName);
         if (entityType) requireConcreteEntityType(entityType);
     }
 
@@ -110,12 +148,44 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
                 return output(state, action.id, entity, entity);
             }
             case 'delete':
-                await this.delete(String(state.payload._id));
+                await this.delete(
+                    String(state.payload._id),
+                    state.payload._version as number | undefined,
+                );
                 return output(state, action.id, undefined);
             case 'script':
                 return await this.executeScript(action, state);
-            case 'business-rules':
-                return state;
+            case 'get':
+                return output(state, action.id, await this.get(String(state.payload._id)));
+            case 'query':
+                return output(
+                    state,
+                    action.id,
+                    await this.query({ ...state.payload, entityTypeId: this.entityTypeName }),
+                );
+            case 'validate':
+                return output(state, action.id, await this.validate(state.payload));
+            case 'business-rules': {
+                const type = await this.context.entityType(this.entityTypeName);
+                const payload = applyBusinessRules(
+                    action.rules ?? [],
+                    getProperties(type!),
+                    state.payload,
+                );
+                return output(state, action.id, payload, payload);
+            }
+        }
+    }
+
+    private async validate(
+        input: EntityData,
+    ): Promise<{ valid: boolean; problems: ValidationProblem[] }> {
+        try {
+            await prepareMutation(this.context, this.entityTypeName, input);
+            return { valid: true, problems: [] };
+        } catch (error) {
+            if (!(error instanceof ValidationError)) throw error;
+            return { valid: false, problems: error.problems };
         }
     }
 
@@ -166,20 +236,10 @@ function output(
     };
 }
 
-function createInput(payload: EntityData): EntityData {
-    const {
-        _entityTypeId,
-        _version,
-        _createdAt,
-        _createdBy,
-        _changedAt,
-        _changedBy,
-        _deletedAt,
-        _deletedBy,
-        ...input
-    } = payload;
-    return {
-        ...input,
-        _id: typeof input._id === 'string' ? input._id : randomUUID(),
-    };
+function defaultAction(name: string): APIAction | undefined {
+    const operations = ['create', 'update', 'delete', 'get', 'query', 'validate'] as const;
+    const operation = operations.find((candidate) => candidate === name);
+    return operation
+        ? { id: name, name, label: name, enabled: true, operation, before: [], after: [] }
+        : undefined;
 }

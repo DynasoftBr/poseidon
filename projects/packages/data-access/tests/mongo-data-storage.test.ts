@@ -55,6 +55,10 @@ describe('MongoDataStorage queries', () => {
         const fake = createClient();
         const entity = projectionDocument('ada', 'person', { name: 'Ada' });
         fake.entities.find.mockReturnValue(cursor([entity]));
+        fake.entityTypes.findOne.mockResolvedValue({
+            _id: 'person',
+            properties: [{ _id: 'person:name', name: 'name' }],
+        });
 
         await expect(
             new MongoDataStorage(fake.client).query('person', {

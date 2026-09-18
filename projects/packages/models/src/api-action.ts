@@ -17,10 +17,17 @@ export interface APIActionBase {
 export type APIAction = APIActionBase &
     (
         | { operation: 'script'; scriptId: EntityId }
-        | { operation: 'create' | 'update' | 'delete' | 'business-rules'; scriptId?: never }
+        | {
+              operation:
+                  'create' | 'update' | 'delete' | 'get' | 'query' | 'validate' | 'business-rules';
+              scriptId?: never;
+          }
     );
 
 export const apiActionOperations = [
+    'get',
+    'query',
+    'validate',
     'create',
     'update',
     'delete',

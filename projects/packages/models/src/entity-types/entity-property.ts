@@ -6,7 +6,6 @@ export const propertyTypes = [
     'integer',
     'boolean',
     'date-time',
-    'reference',
     'array',
     'object',
     'json',
@@ -17,10 +16,6 @@ export type PropertyType = (typeof propertyTypes)[number];
 export const propertyConventions = ['lower-case', 'upper-case', 'capitalize-first-letter'] as const;
 
 export type PropertyConvention = (typeof propertyConventions)[number];
-
-export const relationKinds = ['has-one', 'belongs-to-one', 'has-many', 'belongs-to-many'] as const;
-
-export type RelationKind = (typeof relationKinds)[number];
 
 export interface EntityProperty extends EntityPropertyData {
     _id: EntityId;
@@ -41,8 +36,6 @@ export type EntityPropertyData = {
     convention?: PropertyConvention;
     base64Encoded?: boolean;
     relatedEntityTypeId?: EntityId;
-    relationKind?: RelationKind;
-    reversePropertyId?: EntityId;
     itemsType?: PropertyType;
     uniqueItems?: boolean;
     multipleOf?: number;

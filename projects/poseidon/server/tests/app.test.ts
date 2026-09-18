@@ -1,168 +1,105 @@
 import type { Entity } from '@poseidon/models';
-import { type EntityService, ValidationError } from '@poseidon/runtime';
+import { RuntimeContext, ValidationError } from '@poseidon/runtime';
+import type { DataStorage } from '@poseidon/data-access';
 import request from 'supertest';
 import { createApp } from '../src/app';
 import { createAuthMiddleware } from '../src/auth-middleware';
 
-describe('createApp', () => {
-    it('should allow entity routes with a null user when unauthenticated', async () => {
-        const services = createServices();
-        const app = createApp({
-            ...services,
-            auth: createAuthMiddleware(services.entityService),
-        });
-
-        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
-            status: 200,
-            body: { _id: 'ada' },
-        });
-    });
-
-    it('should expose health without optional services', async () => {
-        await expect(request(createApp()).get('/health')).resolves.toMatchObject({
-            status: 200,
-            body: { status: 'ok' },
-        });
-    });
-
-    it('should expose every successful API operation', async () => {
-        const services = createServices();
-        const app = createApp(services);
-
-        await expect(request(app).get('/health')).resolves.toMatchObject({
-            status: 200,
-            body: { status: 'ok' },
-        });
-        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
-            status: 200,
-            body: { _id: 'ada' },
-        });
-        await expect(
-            request(app)
-                .post('/api/v1/entities/person')
-                .send({ id: 'ada', data: { name: 'Ada' } }),
-        ).resolves.toMatchObject({ status: 201, body: { _id: 'ada' } });
-        await expect(
-            request(app)
-                .patch('/api/v1/entities/person/ada')
-                .send({ expectedVersion: 1, data: { name: 'Ada Byron' } }),
-        ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
-        await expect(
-            request(app).delete('/api/v1/entities/person/ada').send({ expectedVersion: 2 }),
-        ).resolves.toMatchObject({ status: 204 });
-        await expect(
-            request(app).post('/api/v1/entities/person/query').send({ limit: 10, offset: 0 }),
-        ).resolves.toMatchObject({ status: 200, body: [{ _id: 'ada' }] });
-
-        expect(services.entityServiceMock.query).toHaveBeenCalledWith({
-            entityTypeId: 'person',
-            filter: undefined,
-            limit: 10,
-            offset: 0,
-        });
-    });
-
-    it('should return a Poseidon error from an entity route', async () => {
-        const services = createServices();
-        services.entityServiceMock.create.mockRejectedValue(
-            new ValidationError([{ property: 'name', message: 'Name is required.' }]),
-        );
-
-        const response = await request(createApp(services))
-            .post('/api/v1/entities/person')
-            .send({ id: 'ada', data: {} });
-
-        expect(response).toMatchObject({ status: 422, body: { error: { code: 'validation' } } });
-    });
-
-    it('should reject malformed data and derive UI component contracts', async () => {
-        const services = createServices();
-        const app = createApp(services);
-
-        await expect(
-            request(app).post('/api/v1/entities/person').send({ id: 'ada', data: [] }),
-        ).resolves.toMatchObject({ status: 500 });
-        await request(app)
-            .post('/api/v1/entities/ui-component')
-            .send({
-                id: 'card',
-                data: {
-                    name: 'Card',
-                    source: {
-                        code: 'type Props = { title: string; onOpen(value: string): void }; export default function Card(props: Props) { return null; }',
-                    },
-                    props: { forged: { type: 'string' } },
-                    events: {},
-                },
-            });
-
-        expect(services.entityServiceMock.create).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                data: expect.objectContaining({
-                    props: { title: { type: 'string', required: true } },
-                    events: { onOpen: { type: 'string' } },
-                }),
-            }),
-            'system',
-        );
-    });
-
-    it('should return an unexpected error from a query route', async () => {
-        const services = createServices();
-        services.entityServiceMock.query.mockRejectedValue(new Error('Database unavailable.'));
-
-        const response = await request(createApp(services))
-            .post('/api/v1/entities/person/query')
-            .send({});
-
-        expect(response).toMatchObject({
-            status: 500,
-            body: { error: { code: 'unexpected-error' } },
-        });
-    });
-
-    it('should forward failures from remaining mutation routes', async () => {
-        const services = createServices();
-        services.entityServiceMock.get.mockRejectedValue(new Error('Missing entity.'));
-        services.entityServiceMock.update.mockRejectedValue(new Error('Update failed.'));
-        services.entityServiceMock.delete.mockRejectedValue(new Error('Delete failed.'));
-        const app = createApp(services);
-
-        await expect(request(app).get('/api/v1/entities/person/ada')).resolves.toMatchObject({
-            status: 500,
-        });
-        await expect(
-            request(app)
-                .patch('/api/v1/entities/person/ada')
-                .send({ expectedVersion: 1, data: {} }),
-        ).resolves.toMatchObject({ status: 500 });
-        await expect(
-            request(app).delete('/api/v1/entities/person/ada').send({ expectedVersion: 1 }),
-        ).resolves.toMatchObject({ status: 500 });
-    });
-});
-
-function createServices() {
-    const entityService = {
-        create: vi.fn().mockResolvedValue(projection('ada')),
-        update: vi.fn().mockResolvedValue(projection('ada')),
-        delete: vi.fn().mockResolvedValue(undefined),
-        get: vi.fn().mockResolvedValue(projection('ada')),
-        query: vi.fn().mockResolvedValue([projection('ada')]),
-    };
-
-    return {
-        entityService: entityService as unknown as EntityService,
-        entityServiceMock: entityService,
-    };
-}
-
-function projection(id: string): Entity {
-    return {
-        _id: id,
-        _entityTypeId: 'person',
+function setup() {
+    const user: Entity = {
+        _id: 'system',
+        _entityTypeId: 'user',
         _version: 1,
         _createdAt: new Date().toISOString(),
         _createdBy: 'system',
     };
+    const storage = {
+        get: vi.fn().mockResolvedValue(user),
+        query: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        beginTransaction: vi.fn(),
+        commitTransaction: vi.fn(),
+        abortTransaction: vi.fn(),
+    } satisfies DataStorage;
+    const context = new RuntimeContext(storage, user);
+    const repository = context.repository('customer');
+    const execute = vi.spyOn(repository, 'execute').mockResolvedValue({ _id: 'ada' });
+    const select = vi.spyOn(context, 'repository').mockImplementation((name) => {
+        Object.defineProperty(repository, 'entityTypeName', { value: name, configurable: true });
+        return repository as ReturnType<RuntimeContext['repository']>;
+    });
+    const createContext = vi.fn().mockReturnValue(context);
+    const auth = createAuthMiddleware(storage, undefined, true);
+    return { app: createApp({ createContext, auth }), execute, select, createContext, user };
 }
+
+describe('action endpoint', () => {
+    it('should dispatch an entity-scoped action with its input and authenticated user', async () => {
+        const services = setup();
+        await expect(
+            request(services.app)
+                .post('/customer')
+                .send({ action: 'onboard', input: { name: 'Ada' } }),
+        ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
+        expect(services.select).toHaveBeenCalledWith('customer');
+        expect(services.execute).toHaveBeenCalledWith('onboard', { name: 'Ada' });
+        expect(services.createContext).toHaveBeenCalledWith(services.user);
+    });
+    it('should use the same contract for reads, queries and deletes', async () => {
+        const { app, execute } = setup();
+        for (const action of ['get', 'query', 'delete', 'validate']) {
+            execute.mockResolvedValueOnce(action === 'delete' ? undefined : []);
+            const response = await request(app).post('/customer').send({ action, input: {} });
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual(action === 'delete' ? null : []);
+        }
+    });
+    it('should reject malformed action requests without dispatching', async () => {
+        const { app, execute } = setup();
+        for (const body of [
+            {},
+            { action: '', input: {} },
+            { action: 'create' },
+            { action: 'create', input: [] },
+        ]) {
+            expect((await request(app).post('/customer').send(body)).status).toBe(422);
+        }
+        expect((await request(app).post('/customer')).status).toBe(422);
+        expect(execute).not.toHaveBeenCalled();
+    });
+    it('should require a resolved user before creating a context', async () => {
+        const { createContext } = setup();
+        expect(
+            (
+                await request(createApp({ createContext }))
+                    .post('/customer')
+                    .send({ action: 'query', input: {} })
+            ).status,
+        ).toBe(401);
+        expect(createContext).not.toHaveBeenCalled();
+    });
+    it('should forward domain and unexpected errors', async () => {
+        const { app, execute } = setup();
+        execute.mockRejectedValueOnce(
+            new ValidationError([{ property: 'name', message: 'Required' }]),
+        );
+        expect(
+            (await request(app).post('/customer').send({ action: 'create', input: {} })).status,
+        ).toBe(422);
+        execute.mockRejectedValueOnce(new Error('Unavailable'));
+        expect(
+            (await request(app).post('/customer').send({ action: 'query', input: {} })).status,
+        ).toBe(500);
+    });
+    it('should remove the resource routes while keeping health available', async () => {
+        const { app } = setup();
+        expect((await request(app).get('/health')).status).toBe(200);
+        expect((await request(createApp()).get('/health')).status).toBe(200);
+        expect((await request(app).get('/api/v1/entities/customer/ada')).status).toBe(404);
+        expect((await request(app).post('/api/v1/entities/customer').send({})).status).toBe(404);
+        expect((await request(app).patch('/customer').send({})).status).toBe(404);
+        expect((await request(app).delete('/customer')).status).toBe(404);
+    });
+});

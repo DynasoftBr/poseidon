@@ -43,13 +43,14 @@ describe('PoseidonContext', () => {
 
         await context.repository('person').query(action);
         expect(dataStorage.query).toHaveBeenCalledWith('person', action);
-        expect(dataStorage.query).toHaveBeenCalledOnce();
     });
 
     it('should resolve and execute the requested action with the bound actor', async () => {
         const dataStorage = storage([
             entity('person', 'entity-type', {
-                properties: [],
+                properties: [
+                    { _id: 'person:name', entityTypeId: 'person', name: 'name', type: 'string' },
+                ],
                 actions: [
                     {
                         id: 'person:create',

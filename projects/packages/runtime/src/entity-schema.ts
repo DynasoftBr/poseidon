@@ -65,7 +65,6 @@ function buildTypeSchema(property: EntityProperty): Pick<PropertySchema, 'type' 
 }
 
 function toJsonSchemaType(type: EntityProperty['type']): string {
-    if (type === 'reference') return 'string';
     if (type === 'array') return 'array';
     return type;
 }

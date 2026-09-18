@@ -10,9 +10,6 @@
         },
         {
             "path": "../../packages/service-utils/tsconfig.build.json"
-        },
-        {
-            "path": "../../packages/ui-platform/tsconfig.build.json"
         }
     ]
 }

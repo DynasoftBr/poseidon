@@ -51,7 +51,6 @@ export default defineConfig([
         '**/package-lock.json',
         '**/*.tsbuildinfo',
         '.vscode/**',
-        'projects/packages/runtime/src/entity-service.ts',
     ]),
     js.configs.recommended,
     ...tseslint.configs.recommended,

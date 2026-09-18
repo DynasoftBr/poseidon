@@ -1,10 +1,10 @@
 import type { Request, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import type { SystemUser } from '@poseidon/models';
-import type { EntityService } from '@poseidon/runtime';
+import type { DataStorage } from '@poseidon/data-access';
 
 export interface AuthenticatedRequest extends Request {
-    user: SystemUser | null;
+    user?: SystemUser | null;
 }
 
 export interface AuthMiddleware {
@@ -13,7 +13,7 @@ export interface AuthMiddleware {
 }
 
 export function createAuthMiddleware(
-    users: EntityService,
+    users: Pick<DataStorage, 'get'>,
     secret?: string,
     localDevelopment = false,
 ): AuthMiddleware {

@@ -61,14 +61,7 @@ export const systemEntityTypes = {
         name: 'identity',
         label: 'Identity',
         pluralLabel: 'Identities',
-        description: 'Represents an identity and its memberships.',
-        menuLocation: 'Platform',
-    }),
-    relationLink: defineEntityType<Entity>()({
-        name: 'relation-link',
-        label: 'Relation link',
-        pluralLabel: 'Relation links',
-        description: 'Records a relationship between entities.',
+        description: 'Represents an identity.',
         menuLocation: 'Platform',
     }),
     script: defineEntityType<Script>()({

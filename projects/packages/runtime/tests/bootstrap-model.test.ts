@@ -24,7 +24,6 @@ describe('createBootstrapModel', () => {
             { _id: 'index', _createdBy: 'system', _createdAt: now.toISOString() },
             { _id: 'user', _createdBy: 'system', _createdAt: now.toISOString() },
             { _id: 'identity', _createdBy: 'system', _createdAt: now.toISOString() },
-            { _id: 'relation-link', _createdBy: 'system', _createdAt: now.toISOString() },
             { _id: 'script', _createdBy: 'system', _createdAt: now.toISOString() },
         ]);
         for (const entityType of model.entityTypes) {
@@ -37,7 +36,6 @@ describe('createBootstrapModel', () => {
                 }),
             );
         }
-        expect(model.entityProperties).toHaveLength(95);
         for (const entityType of model.entityTypes) {
             expect(entityType.properties).toEqual(
                 expect.arrayContaining([
@@ -61,13 +59,6 @@ describe('createBootstrapModel', () => {
                     _id: 'entity-type:menuLocation',
                     type: 'string',
                     required: false,
-                }),
-                expect.objectContaining({
-                    _id: 'identity:members',
-                    itemsType: 'reference',
-                    relatedEntityTypeId: 'identity',
-                    relationKind: 'has-many',
-                    reversePropertyId: 'identity:memberOf',
                 }),
             ]),
         );

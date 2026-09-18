@@ -15,9 +15,6 @@
         },
         {
             "path": "../../packages/service-utils"
-        },
-        {
-            "path": "../../packages/ui-platform"
         }
     ],
     "include": ["src/**/*"]

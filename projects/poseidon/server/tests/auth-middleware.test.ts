@@ -1,7 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import type { EntityService } from '@poseidon/runtime';
+import type { DataStorage } from '@poseidon/data-access';
 import { createAuthMiddleware, type AuthenticatedRequest } from '../src/auth-middleware';
 
 const secret = 'test-secret';
@@ -15,7 +15,7 @@ function testApp(configuredSecret?: string, localDevelopment = false) {
         }),
     );
     const auth = createAuthMiddleware(
-        { get } as unknown as EntityService,
+        { get } as Pick<DataStorage, 'get'>,
         configuredSecret,
         localDevelopment,
     );

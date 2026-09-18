@@ -34,11 +34,25 @@ describe('APIAction', () => {
         const notify = scriptStep('notify-fulfilment');
         const dataStorage = storage([
             entity('order', 'entity-type', {
-                properties: [],
+                properties: [
+                    {
+                        _id: 'order:productId',
+                        entityTypeId: 'order',
+                        name: 'productId',
+                        type: 'string',
+                    },
+                ],
                 actions: [createAction([check], [notify])],
             }),
             entity('stock', 'entity-type', {
-                properties: [],
+                properties: [
+                    {
+                        _id: 'stock:orderId',
+                        entityTypeId: 'stock',
+                        name: 'orderId',
+                        type: 'string',
+                    },
+                ],
                 actions: [createAction()],
             }),
             entity('check-stock', 'script', { code: 'check' }),
@@ -77,7 +91,14 @@ describe('APIAction', () => {
     it('should abort the whole transaction when a before script fails', async () => {
         const dataStorage = storage([
             entity('order', 'entity-type', {
-                properties: [],
+                properties: [
+                    {
+                        _id: 'order:productId',
+                        entityTypeId: 'order',
+                        name: 'productId',
+                        type: 'string',
+                    },
+                ],
                 actions: [createAction([scriptStep('reject')])],
             }),
             entity('reject', 'script', { code: 'throw' }),
@@ -97,7 +118,20 @@ describe('APIAction', () => {
         const scriptId = 'addMandatoryProperties';
         const dataStorage = storage([
             entity('entity-type', 'entity-type', {
-                properties: [],
+                properties: [
+                    {
+                        _id: 'entity-type:name',
+                        entityTypeId: 'entity-type',
+                        name: 'name',
+                        type: 'string',
+                    },
+                    {
+                        _id: 'entity-type:properties',
+                        entityTypeId: 'entity-type',
+                        name: 'properties',
+                        type: 'json',
+                    },
+                ],
                 actions: [createAction([scriptStep(scriptId, true)])],
             }),
             entity(scriptId, 'script', { code: null }),
@@ -120,7 +154,20 @@ describe('APIAction', () => {
         const scriptId = 'addMandatoryProperties';
         const dataStorage = storage([
             entity('entity-type', 'entity-type', {
-                properties: [],
+                properties: [
+                    {
+                        _id: 'entity-type:name',
+                        entityTypeId: 'entity-type',
+                        name: 'name',
+                        type: 'string',
+                    },
+                    {
+                        _id: 'entity-type:properties',
+                        entityTypeId: 'entity-type',
+                        name: 'properties',
+                        type: 'json',
+                    },
+                ],
                 actions: [createAction([scriptStep(scriptId, true)])],
             }),
             entity(scriptId, 'script', { code: null, _createdBy: 'alice' }),
