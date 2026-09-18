@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { connectDatabase, MongoDataStorage, MongoIndexManager } from '@poseidon/data-access';
+import { connectDatabase, MongoDataStorage } from '@poseidon/data-access';
 import { createBootstrapModel, ensureBootstrapModel, RuntimeContext } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
 import { createApp } from './app';
@@ -16,12 +16,10 @@ async function start(): Promise<void> {
 
     const client = await connectDatabase(databaseUri);
     const storage = new MongoDataStorage(client);
-    const indexManager = new MongoIndexManager(client);
     const initialized = await ensureBootstrapModel(
         storage,
         createBootstrapModel('system', new Date()),
     );
-    await indexManager.reconcile();
     const port = Number(process.env.PORT ?? 3000);
     const app = createApp({
         createContext: (actor) => new RuntimeContext(new MongoDataStorage(client), actor),

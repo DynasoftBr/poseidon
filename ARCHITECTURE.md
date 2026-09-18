@@ -88,7 +88,7 @@ Promotion must check the current production data, not assume the test copy is st
 
 Create/update preparation retains defaults, conventions, business rules, property validation, and embedded structure validation. EntityType creation adds system properties, updates retain them, and names remain immutable. Updates merge changed fields, increment the version, and use optimistic concurrency. The `validate` action returns `{ valid, problems }` without persisting data; writes still validate independently. Before steps and the main operation share a transaction, with after steps running after that action commits; an enclosing transaction, such as a compound business action, can group multiple actions.
 
-Queries accept declarative filters, offset, and limit. MongoDB resolves filter property IDs against the type's properties. There is no separate runtime pagination validation. Index definitions are reconciled at startup; creation-event-driven index realization has been removed with event publication.
+Queries accept declarative filters, offset, and limit. MongoDB resolves filter property IDs against the type's properties. There is no separate runtime pagination validation. Index definitions remain model data; automatic MongoDB index creation is deferred.
 
 Relationship properties and the `relation-link` bootstrap type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
 
