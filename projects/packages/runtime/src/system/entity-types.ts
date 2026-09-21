@@ -1,12 +1,4 @@
-import type {
-    Entity,
-    EntityProperty,
-    EntityType,
-    Identity,
-    IndexDefinition,
-    Script,
-    SystemUser,
-} from '@poseidon/models';
+import type { Entity, EntityProperty, EntityType } from '@poseidon/models';
 
 export interface SystemEntityTypeDefinition<
     TEntity extends Entity | EntityProperty,
@@ -41,34 +33,6 @@ export const systemEntityTypes = {
         label: 'Entity property',
         pluralLabel: 'Entity properties',
         description: 'Defines a property on an entity type.',
-        menuLocation: 'Platform',
-    }),
-    index: defineEntityType<IndexDefinition>()({
-        name: 'index',
-        label: 'Index',
-        pluralLabel: 'Indexes',
-        description: 'Defines an index over entity properties.',
-        menuLocation: 'Platform',
-    }),
-    user: defineEntityType<SystemUser>()({
-        name: 'user',
-        label: 'User',
-        pluralLabel: 'Users',
-        description: 'Represents a user of the platform.',
-        menuLocation: 'Platform',
-    }),
-    identity: defineEntityType<Identity>()({
-        name: 'identity',
-        label: 'Identity',
-        pluralLabel: 'Identities',
-        description: 'Represents an identity.',
-        menuLocation: 'Platform',
-    }),
-    script: defineEntityType<Script>()({
-        name: 'script',
-        label: 'Script',
-        pluralLabel: 'Scripts',
-        description: 'Defines executable code for an API action.',
         menuLocation: 'Platform',
     }),
 } as const;

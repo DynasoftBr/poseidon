@@ -3,7 +3,6 @@ export const poseidonErrorCodes = {
     entityTypeNotFound: 'entity-type-not-found',
     entityNotFound: 'entity-not-found',
     entityAlreadyExists: 'entity-already-exists',
-    entityVersionConflict: 'entity-version-conflict',
     accessDenied: 'access-denied',
 } as const;
 
@@ -53,16 +52,6 @@ export class EntityAlreadyExistsError extends PoseidonError {
     public constructor(entityId: string) {
         super(poseidonErrorCodes.entityAlreadyExists, `Entity '${entityId}' already exists.`);
         this.name = 'EntityAlreadyExistsError';
-    }
-}
-
-export class EntityVersionConflictError extends PoseidonError {
-    public constructor(entityId: string) {
-        super(
-            poseidonErrorCodes.entityVersionConflict,
-            `Entity '${entityId}' was changed by another operation.`,
-        );
-        this.name = 'EntityVersionConflictError';
     }
 }
 

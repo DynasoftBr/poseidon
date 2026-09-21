@@ -1,7 +1,6 @@
-import type { Entity, QueryEntitiesAction } from '@poseidon/models';
+import type { Entity, EntityType } from '@poseidon/models';
 import type { ClientSession, MongoClient } from 'mongodb';
 import type { DataStorage } from './data-storage';
-import { findEntities } from './mongo-entity-query';
 
 export class MongoDataStorage implements DataStorage {
     private session?: ClientSession;
@@ -16,8 +15,11 @@ export class MongoDataStorage implements DataStorage {
             .findOne({ _id: id }, this.session ? { session: this.session } : undefined);
     }
 
-    public async query(entityTypeName: string, action: QueryEntitiesAction): Promise<Entity[]> {
-        return await findEntities(this.client, entityTypeName, action, this.session);
+    public async getEntityType(name: string): Promise<EntityType | null> {
+        return await this.client
+            .db()
+            .collection<EntityType>('entity-type')
+            .findOne({ name }, this.session ? { session: this.session } : undefined);
     }
 
     public async create(entityTypeName: string, entity: Entity): Promise<void> {
@@ -34,11 +36,11 @@ export class MongoDataStorage implements DataStorage {
             .db()
             .collection<Entity>(entityTypeName)
             .replaceOne(
-                { _id: entity._id, _version: entity._version - 1 },
+                { _id: entity._id },
                 entity,
                 this.session ? { session: this.session } : undefined,
             );
-        if (result.matchedCount !== 1) throw new Error(`Entity '${entity._id}' version mismatch.`);
+        if (result.matchedCount !== 1) throw new Error(`Entity '${entity._id}' does not exist.`);
     }
 
     public async delete(entityTypeName: string, id: string): Promise<void> {
@@ -86,10 +88,7 @@ export class MongoDataStorage implements DataStorage {
     }
 
     private async requireConcreteType(name: string): Promise<void> {
-        const entityType = await this.client
-            .db()
-            .collection<Entity>('entity-type')
-            .findOne({ name }, this.session ? { session: this.session } : undefined);
+        const entityType = await this.getEntityType(name);
         if (entityType?.structure === true) {
             throw new Error(`Structure '${name}' cannot be persisted independently.`);
         }

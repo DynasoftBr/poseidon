@@ -1,19 +1,15 @@
 import express, { type Express } from 'express';
-import type { Entity, EntityData } from '@poseidon/models';
+import type { EntityData } from '@poseidon/models';
 import {
-    createBootstrapModel,
-    EntityTypeRepository,
     EntityTypeNotFoundError,
     requireConcreteEntityType,
     ValidationError,
     type RuntimeContext,
 } from '@poseidon/runtime';
 import { errorMiddleware } from './error-middleware';
-import type { AuthMiddleware, AuthenticatedRequest } from './auth-middleware';
 
 export interface AppDependencies {
-    createContext: (user: Entity) => RuntimeContext;
-    auth?: AuthMiddleware;
+    createContext: () => RuntimeContext;
 }
 
 export function createApp(dependencies: AppDependencies): Express {
@@ -22,27 +18,17 @@ export function createApp(dependencies: AppDependencies): Express {
     app.get('/health', (_request, response) => {
         response.json({ status: 'ok' });
     });
-    if (dependencies.auth) app.use(dependencies.auth.authenticate);
     configureActions(app, dependencies.createContext);
     app.use(errorMiddleware);
     return app;
 }
 
-function configureActions(app: Express, createContext: (user: Entity) => RuntimeContext): void {
-    const entityTypeDefinition = createBootstrapModel('system', new Date()).entityTypes.find(
-        (type) => type.name === 'entity-type',
-    )!;
+function configureActions(app: Express, createContext: () => RuntimeContext): void {
     app.post('/:entityTypeName', async (request, response, next) => {
         try {
-            const user = (request as AuthenticatedRequest).user;
-            if (!user) {
-                response.status(401).json({ error: { code: 'unauthenticated' } });
-                return;
-            }
             const { action, input } = actionRequest(request.body);
-            const context = createContext(user);
-            const entityTypes = new EntityTypeRepository(entityTypeDefinition, context);
-            const entityType = await entityTypes.findByName(request.params.entityTypeName);
+            const context = createContext();
+            const entityType = await context.storage.getEntityType(request.params.entityTypeName);
             if (!entityType) throw new EntityTypeNotFoundError(request.params.entityTypeName);
             requireConcreteEntityType(entityType);
             const repository = context.repository(entityType);

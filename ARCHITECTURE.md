@@ -4,7 +4,7 @@ Poseidon is a self-describing business-data runtime and API. Its own system enti
 
 ## Product boundary
 
-Poseidon is the business-logic and authorization layer over a database. Clients use its API to query entities and execute commands under the authenticated user's permissions. In that sense, it can be treated as a business-focused data system: it exposes a smaller, domain-aware interface rather than the general capabilities of the underlying database. The product boundary is the business API, exposed through protocol adapters; HTTP is the current transport.
+Poseidon is intended to be the business-logic and authorization layer over a database. The long-term design lets clients query entities and execute commands under authenticated permissions; the MVP has no authentication, actor context, or audit fields. In that sense, it can be treated as a business-focused data system: it exposes a smaller, domain-aware interface rather than the general capabilities of the underlying database. The product boundary is the business API, exposed through protocol adapters; HTTP is the current transport.
 
 Poseidon will provide a model-generated typed client exposing the `PoseidonContext` interface described below. The repository is backend-only; Portal, browser rendering, UI compilation, and frontend packages have been removed.
 
@@ -20,7 +20,7 @@ The repository currently implements HTTP in `projects/poseidon/server`; the pack
 
 ### Unified HTTP contract
 
-The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `get`, `query`, `create`, `update`, `delete`, and `validate` operations use the same contract as named model actions; an action's operation does not select an HTTP verb. Entity IDs belong in `input._id`, and updates supply the current `input._version` alongside changed fields. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
+The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `get`, `create`, `update`, `delete`, and `validate` actions use the same contract as custom model actions. Entity IDs belong in `input._id`, and updates supply the changed fields. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
 
 Login and signup will also be APIActions through this endpoint. Actions must explicitly declare whether unauthenticated callers may invoke them; trusted server code remains responsible for credentials and session handling. HTTP request–response is the selected starting point. WebSockets may support future subscriptions or bidirectional updates when required.
 
@@ -44,21 +44,21 @@ GraphQL is not required for this developer experience: ordinary TypeScript calls
 projects/
   poseidon/server/             HTTP adapter and composition root (rename planned)
   packages/
-    models/                     declarative entity and index types
+    models/                     declarative entity types
     data-access/               MongoDB-only persistence implementation
-    runtime/                   bootstrap, action execution, and queries
+    runtime/                   core definitions and action execution
     service-utils/             logging and shared service infrastructure
 ```
 
 `@poseidon/models` and `@poseidon/runtime` do not know MongoDB or transport protocols. The HTTP adapter currently composes the runtime with the MongoDB implementation from `@poseidon/data-access`.
 
-All runtime entities use `Entity<TData>`: `id`, `entityTypeId`, `data`, `version`, and audit metadata. Core types specialize the same envelope with typed data; for example, an EntityProperty has `entityTypeId: 'entity-property'`, while `data.entityTypeId` identifies the type that owns the property. Bootstrap records use this representation directly, and MongoDB only maps `id` to `_id` at the persistence boundary.
+Runtime entities contain business fields alongside `_id`; their collection identifies their entity type. EntityProperties are embedded in their owning EntityType and carry their own `_id`. Audit fields and user models are deferred for the MVP.
 
 EntityTypes are deliberately flat. The earlier `abstract` and `superTypeId` fields were removed because no current behavior required inheritance; shared behavior should remain explicit until a concrete use case justifies inheritance semantics.
 
 ## Bootstrap
 
-Server startup connects to MongoDB and idempotently creates any missing system user, core EntityTypes, EntityProperties, and Index definitions. This makes bootstrap additive when a new core model record is introduced. The bootstrap model is ordinary Poseidon model data.
+Server startup connects to MongoDB without seeding model data. The previous bootstrap model and seeding machinery have been removed; replacement initialization remains to be implemented. Hardcoded core entity definitions remain available in the runtime. Identity, SystemUser, and IndexDefinition models are deferred for the MVP.
 
 ## Environments and promotion
 
@@ -84,15 +84,15 @@ Promotion must check the current production data, not assume the test copy is st
 
 ## Action execution and persistence
 
-`RuntimeContext` binds the caller and storage; `RuntimeRepository` resolves named APIActions and executes their before steps, main operation, and after steps. Built-in operations are available when no model action of the same name is declared. `EntityService`, mutation events, projection writes, relationship-link maintenance, and event publication have been removed. MongoDB stores entities directly in a collection per EntityType; deletes remove the record. Existing historical collections are not dropped by this change.
+`RuntimeContext` holds storage; `RuntimeRepository` resolves named APIActions and executes their before steps, then dispatches built-in behavior by action name. APIActions have no operation field. Each action requires its own implementation; before steps run ahead of it. Actions without an implementation throw an error. Custom action implementations are deferred for the MVP. Built-in actions are available when no model action of the same name is declared. `EntityService`, mutation events, projection writes, relationship-link maintenance, and event publication have been removed. MongoDB stores entities directly in a collection per EntityType; deletes remove the record. Existing historical collections are not dropped by this change.
 
-Create/update preparation retains defaults, conventions, business rules, property validation, and embedded structure validation. EntityType creation adds system properties, updates retain them, and names remain immutable. Updates merge changed fields, increment the version, and use optimistic concurrency. The `validate` action returns `{ valid, problems }` without persisting data; writes still validate independently. Before steps and the main operation share a transaction, with after steps running after that action commits; an enclosing transaction, such as a compound business action, can group multiple actions.
+Default create and validate actions run applyDefaults followed by applyConventions as explicit before actions; update runs applyConventions only. These steps mutate the shared input and record null outputs. Mutation preparation retains property validation and embedded structure validation. Business-rule definitions and execution are deferred for the MVP. EntityType creation adds system properties, updates retain them, and names remain immutable. Updates merge changed fields; optimistic concurrency is deferred for the MVP. The `validate` action returns `{ valid, problems }` without persisting data; writes still validate independently. Before steps and the named action share a transaction; an enclosing transaction, such as a compound business action, can group multiple actions. Action chains have no `after` steps. Work triggered by a committed change belongs exclusively to event handlers that can retry independently; event delivery and retry handling remain to be implemented.
 
-Queries accept declarative filters, offset, and limit. MongoDB resolves filter property IDs against the type's properties. There is no separate runtime pagination validation. Index definitions remain model data; automatic MongoDB index creation is deferred.
+The MVP reads one entity by ID with `get`; entity-type routing resolves one definition by name. Runtime queries, filtering, pagination, and the model Specification are deferred. The standalone query builder remains available. Index definitions and automatic MongoDB index creation are deferred for the MVP.
 
 Relationship properties and the `relation-link` bootstrap type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
 
-The planned typed action contract is a cascade: each operation declares input/output EntityTypes, adjacent steps must agree, and each action's public input/output are inferred recursively from its first/last executed step. Without before/after steps, these are the main operation's types. Client generation uses that resolved contract; type declarations and generation are not implemented by this transport simplification.
+The planned typed action contract is a cascade: each action declares input/output EntityTypes, adjacent steps must agree, and each action's public input/output are inferred recursively from its first/last executed step. Without before steps, these are the action handler's types. Client generation uses that resolved contract; type declarations and generation are not implemented by this transport simplification.
 
 ### Command tracing and causal relationships
 

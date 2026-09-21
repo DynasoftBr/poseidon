@@ -1,8 +1,8 @@
-import type { Entity, QueryEntitiesAction } from '@poseidon/models';
+import type { Entity, EntityType } from '@poseidon/models';
 
 export interface DataStorage {
     get(entityTypeName: string, id: string): Promise<Entity | null>;
-    query(entityTypeName: string, action: QueryEntitiesAction): Promise<Entity[]>;
+    getEntityType(name: string): Promise<EntityType | null>;
     create(entityTypeName: string, entity: Entity): Promise<void>;
     update(entityTypeName: string, entity: Entity): Promise<void>;
     delete(entityTypeName: string, id: string): Promise<void>;

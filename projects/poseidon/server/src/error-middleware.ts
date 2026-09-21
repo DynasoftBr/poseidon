@@ -9,7 +9,6 @@ const statusByErrorCode = {
     [poseidonErrorCodes.entityTypeNotFound]: 404,
     [poseidonErrorCodes.entityNotFound]: 404,
     [poseidonErrorCodes.entityAlreadyExists]: 409,
-    [poseidonErrorCodes.entityVersionConflict]: 409,
     [poseidonErrorCodes.accessDenied]: 403,
 } as const;
 

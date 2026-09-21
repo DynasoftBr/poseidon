@@ -1,13 +1,28 @@
 import type { Entity } from '@poseidon/models';
-import { getActions, getProperties, toProperty } from '../src/entity-model-utils';
+import { getProperties, requireConcreteEntityType, toProperty } from '../src/entity-model-utils';
 
 describe('entity model utilities', () => {
-    it('should reject an entity type without embedded property definitions', () => {
-        expect(() => getProperties(projection('person', 'entity-type', {}))).toThrow(
-            'The entity is invalid.',
+    it('should reject structures as standalone entity types', () => {
+        expect(() =>
+            requireConcreteEntityType(projection('address', { name: 'address', structure: true })),
+        ).toThrowError(
+            expect.objectContaining({
+                problems: [
+                    {
+                        property: 'structure',
+                        message: "Structure 'address' cannot be persisted independently.",
+                    },
+                ],
+            }),
         );
+        expect(() =>
+            requireConcreteEntityType(projection('customer', { name: 'customer' })),
+        ).not.toThrow();
     });
-    it('should expose embedded property definitions and optional actions', () => {
+    it('should reject an entity type without embedded property definitions', () => {
+        expect(() => getProperties(projection('person', {}))).toThrow('The entity is invalid.');
+    });
+    it('should expose embedded property definitions', () => {
         const stored = {
             _id: 'user:name',
             name: 'name',
@@ -15,11 +30,7 @@ describe('entity model utilities', () => {
             required: true,
         };
         expect(toProperty(stored, stored._id)).toEqual(stored);
-        expect(getProperties(projection('user', 'entity-type', { properties: [stored] }))).toEqual([
-            stored,
-        ]);
-        expect(getActions(projection('person', 'entity-type', { actions: [] }))).toEqual([]);
-        expect(getActions(projection('person', 'entity-type', { actions: {} }))).toBeUndefined();
+        expect(getProperties(projection('user', { properties: [stored] }))).toEqual([stored]);
     });
 
     it('should reject a missing or invalid property definition', () => {
@@ -28,7 +39,7 @@ describe('entity model utilities', () => {
                 problems: [{ property: 'properties', message: "Property 'name' was not found." }],
             }),
         );
-        expect(() => toProperty(projection('name', 'person', {}), 'name')).toThrowError(
+        expect(() => toProperty(projection('name', {}), 'name')).toThrowError(
             expect.objectContaining({
                 problems: [{ property: 'properties', message: "Property 'name' was not found." }],
             }),
@@ -36,13 +47,9 @@ describe('entity model utilities', () => {
     });
 });
 
-function projection(id: string, entityTypeId: string, data: Record<string, unknown>): Entity {
+function projection(id: string, data: Record<string, unknown>): Entity {
     return {
         ...data,
         _id: id,
-        _entityTypeId: entityTypeId,
-        _version: 1,
-        _createdAt: new Date().toISOString(),
-        _createdBy: 'system',
     };
 }

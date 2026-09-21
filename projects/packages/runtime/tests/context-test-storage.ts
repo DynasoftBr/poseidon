@@ -1,47 +1,45 @@
 import type { Entity, EntityType } from '@poseidon/models';
 import type { DataStorage } from '@poseidon/data-access';
 
-export function entity(
-    id: string,
-    entityTypeId: string,
-    data: Record<string, unknown> = {},
-): Entity {
+export function entity(id: string, data: Record<string, unknown> = {}): Entity {
     return {
         _id: id,
-        _entityTypeId: entityTypeId,
-        _version: 1,
-        _createdAt: '2026-09-16T00:00:00.000Z',
-        _createdBy: 'system',
         ...data,
     };
 }
 
 export function storage(
-    records: Entity[],
-): DataStorage & { query: ReturnType<typeof vi.fn>; commits: number } {
-    const entities = new Map(records.map((record) => [record._id, record]));
+    collections: Record<string, Entity[]> = {},
+): DataStorage & { commits: number } {
+    const entities = collectionRecords(collections);
     let snapshot: Map<string, Entity> | undefined;
     let transactionDepth = 0;
-    const result: DataStorage & { query: ReturnType<typeof vi.fn>; commits: number } = {
+    const result: DataStorage & { commits: number } = {
         commits: 0,
         get: vi.fn((entityTypeName: string, id: string) => {
-            const record = entities.get(id);
-            return Promise.resolve(record?._entityTypeId === entityTypeName ? record : null);
+            const record = entities.get(key(entityTypeName, id));
+            return Promise.resolve(record ?? null);
         }),
-        query: vi.fn().mockResolvedValue([]),
-        create: vi.fn((_entityTypeName: string, record: Entity) => {
-            if (entities.has(record._id)) {
+        getEntityType: vi.fn((name: string) =>
+            Promise.resolve(
+                ([...entities.entries()].find(
+                    ([id, record]) => id === key('entity-type', record._id) && record.name === name,
+                )?.[1] as EntityType | undefined) ?? null,
+            ),
+        ),
+        create: vi.fn((entityTypeName: string, record: Entity) => {
+            if (entities.has(key(entityTypeName, record._id))) {
                 return Promise.reject(new Error('Entity already exists.'));
             }
-            entities.set(record._id, record);
+            entities.set(key(entityTypeName, record._id), record);
             return Promise.resolve();
         }),
-        update: vi.fn((_entityTypeName: string, record: Entity) => {
-            entities.set(record._id, record);
+        update: vi.fn((entityTypeName: string, record: Entity) => {
+            entities.set(key(entityTypeName, record._id), record);
             return Promise.resolve();
         }),
-        delete: vi.fn((_entityTypeName: string, id: string) => {
-            entities.delete(id);
+        delete: vi.fn((entityTypeName: string, id: string) => {
+            entities.delete(key(entityTypeName, id));
             return Promise.resolve();
         }),
         beginTransaction: () => {
@@ -74,5 +72,17 @@ export async function getEntityType(data: DataStorage, name: string): Promise<En
 }
 
 export function entityType(name: string, data: Partial<EntityType> = {}): EntityType {
-    return { ...entity(name, 'entity-type'), name, label: name, properties: [], ...data };
+    return { ...entity(name), name, label: name, properties: [], ...data };
+}
+
+function key(name: string, id: string): string {
+    return JSON.stringify([name, id]);
+}
+
+function collectionRecords(collections: Record<string, Entity[]>): Map<string, Entity> {
+    return new Map(
+        Object.entries(collections).flatMap(([name, records]) =>
+            records.map((record) => [key(name, record._id), record] as const),
+        ),
+    );
 }

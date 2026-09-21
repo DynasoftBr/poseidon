@@ -1,4 +1,4 @@
-import type { APIAction, Entity, EntityProperty } from '@poseidon/models';
+import type { Entity, EntityProperty } from '@poseidon/models';
 import { ValidationError } from './poseidon-error';
 
 export function toProperty(projection: unknown, id: string): EntityProperty {
@@ -14,10 +14,6 @@ export function toProperty(projection: unknown, id: string): EntityProperty {
     }
 
     return projection as EntityProperty;
-}
-
-export function getActions(projection: Entity): APIAction[] | undefined {
-    return Array.isArray(projection.actions) ? (projection.actions as APIAction[]) : undefined;
 }
 
 export function getProperties(entityType: Entity): EntityProperty[] {

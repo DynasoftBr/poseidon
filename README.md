@@ -26,22 +26,24 @@ Or start both together:
 npm run dev:stack
 ```
 
-On startup, the server connects with `MONGODB_URI` and idempotently bootstraps Poseidon’s system user, core EntityTypes, and Index definitions. EntityProperties are embedded in each EntityType’s `properties` array.
+On startup, the server connects with `MONGODB_URI` without seeding model data; replacement initialization is still to be implemented. EntityProperties are embedded in each EntityType’s `properties` array.
 
-An EntityType with `structure: true` describes embedded values and cannot be persisted independently or have its own collection indexes. EntityProperty is a structure; its `_id` identifies the property for model references, while version and audit metadata belong to the owning EntityType. Object properties and arrays of objects select their structure through `relatedEntityTypeId`.
+An EntityType with `structure: true` describes embedded values and cannot be persisted independently. EntityProperty is a structure; its `_id` identifies the property for model references. Object properties and arrays of objects select their structure through `relatedEntityTypeId`.
 
-Set `JWT_SECRET` to resolve `Authorization: Bearer` JWTs with a `userId` claim to stored user entities. Requests without a valid token continue with a null user, except when `POSEIDON_LOCAL_DEVELOPMENT=true` outside production: a missing token then resolves to the seeded `system` user. The action endpoint requires a resolved user; Poseidon does not yet issue tokens or enforce per-entity permissions.
+The MVP has no authentication, actor context, or audit fields; requests can call the action endpoint directly.
 
 The health check is available at `http://localhost:3000/health`.
 
 ## API smoke flow
 
-All business operations use `POST /:entityTypeName` with an action name and input object. These examples assume the explicit local identity (`POSEIDON_LOCAL_DEVELOPMENT=true`); otherwise supply a valid Bearer token.
+This flow requires core EntityTypes to already exist in the database.
+
+All business operations use `POST /:entityTypeName` with an action name and input object.
 
 ```bash
 curl -X POST http://localhost:3000/entity-type \
   -H 'content-type: application/json' \
-  -d '{"action":"create","input":{"_id":"person","name":"person","label":"Person","properties":[{"_id":"person:name","entityTypeId":"person","name":"name","type":"string","required":true}]}}'
+  -d '{"action":"create","input":{"_id":"person","name":"person","label":"Person","properties":[{"_id":"person:name","name":"name","type":"string","required":true}]}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
@@ -49,15 +51,11 @@ curl -X POST http://localhost:3000/person \
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
-  -d '{"action":"query","input":{"filter":{"kind":"comparison","propertyId":"person:name","operator":"equals","value":"Ada Lovelace"}}}'
-
-curl -X POST http://localhost:3000/person \
-  -H 'content-type: application/json' \
   -d '{"action":"get","input":{"_id":"ada"}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
-  -d '{"action":"update","input":{"_id":"ada","_version":1,"name":"Ada Byron"}}'
+  -d '{"action":"update","input":{"_id":"ada","name":"Ada Byron"}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \

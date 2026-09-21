@@ -1,32 +1,29 @@
 import type { EntityProperty } from '@poseidon/models';
+import type { ActionContext } from './action-context';
 
-export function applyDefaultsAndConventions(
-    input: Record<string, unknown>,
+export function applyDefaults(
+    { input }: ActionContext,
     properties: EntityProperty[],
-): Record<string, unknown> {
-    const data = { ...input };
-
-    properties.forEach((property) => {
-        if (data[property.name] === undefined && property.default !== undefined) {
-            data[property.name] = resolveDefault(property.default);
+): Promise<null> {
+    for (const property of properties) {
+        if (input[property.name] === undefined && property.default !== undefined) {
+            input[property.name] = resolveDefault(property.default);
         }
-        const value = data[property.name];
-        if (typeof value === 'string' && property.convention) {
-            data[property.name] = applyConvention(value, property.convention);
-        }
-    });
-
-    return data;
+    }
+    return Promise.resolve(null);
 }
 
 export function applyConventions(
-    input: Record<string, unknown>,
+    { input }: ActionContext,
     properties: EntityProperty[],
-): Record<string, unknown> {
-    return applyDefaultsAndConventions(
-        input,
-        properties.filter((property) => property.default === undefined),
-    );
+): Promise<null> {
+    for (const property of properties) {
+        const value = input[property.name];
+        if (typeof value === 'string' && property.convention) {
+            input[property.name] = applyConvention(value, property.convention);
+        }
+    }
+    return Promise.resolve(null);
 }
 
 function resolveDefault(value: unknown): unknown {
