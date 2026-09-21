@@ -1,4 +1,4 @@
-import type { Entity } from '@poseidon/models';
+import type { Entity, EntityType } from '@poseidon/models';
 import { RuntimeContext, ValidationError } from '@poseidon/runtime';
 import type { DataStorage } from '@poseidon/data-access';
 import request from 'supertest';
@@ -13,9 +13,17 @@ function setup() {
         _createdAt: new Date().toISOString(),
         _createdBy: 'system',
     };
+    const customerType: EntityType = {
+        ...user,
+        _id: 'customer-type-id',
+        _entityTypeId: 'entity-type',
+        name: 'customer',
+        label: 'Customer',
+        properties: [],
+    };
     const storage = {
         get: vi.fn().mockResolvedValue(user),
-        query: vi.fn(),
+        query: vi.fn().mockResolvedValue([customerType]),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -24,15 +32,20 @@ function setup() {
         abortTransaction: vi.fn(),
     } satisfies DataStorage;
     const context = new RuntimeContext(storage, user);
-    const repository = context.repository('customer');
+    const repository = context.repository(customerType);
     const execute = vi.spyOn(repository, 'execute').mockResolvedValue({ _id: 'ada' });
-    const select = vi.spyOn(context, 'repository').mockImplementation((name) => {
-        Object.defineProperty(repository, 'entityTypeName', { value: name, configurable: true });
-        return repository as ReturnType<RuntimeContext['repository']>;
-    });
+    const select = vi.spyOn(context, 'repository').mockReturnValue(repository);
     const createContext = vi.fn().mockReturnValue(context);
     const auth = createAuthMiddleware(storage, undefined, true);
-    return { app: createApp({ createContext, auth }), execute, select, createContext, user };
+    return {
+        app: createApp({ createContext, auth }),
+        execute,
+        select,
+        createContext,
+        user,
+        storage,
+        customerType,
+    };
 }
 
 describe('action endpoint', () => {
@@ -43,9 +56,27 @@ describe('action endpoint', () => {
                 .post('/customer')
                 .send({ action: 'onboard', input: { name: 'Ada' } }),
         ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
-        expect(services.select).toHaveBeenCalledWith('customer');
+        expect(services.select).toHaveBeenCalledWith(services.customerType);
         expect(services.execute).toHaveBeenCalledWith('onboard', { name: 'Ada' });
         expect(services.createContext).toHaveBeenCalledWith(services.user);
+    });
+    it('should reject a request when its entity type does not exist', async () => {
+        const { app, storage, execute, select } = setup();
+        storage.query.mockResolvedValueOnce([]);
+        const response = await request(app).post('/missing').send({ action: 'query', input: {} });
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('entity-type-not-found');
+        expect(select).not.toHaveBeenCalled();
+        expect(execute).not.toHaveBeenCalled();
+    });
+    it('should reject structure requests before constructing a runtime repository', async () => {
+        const { app, storage, customerType, execute, select } = setup();
+        storage.query.mockResolvedValueOnce([{ ...customerType, structure: true }]);
+        const response = await request(app).post('/customer').send({ action: 'create', input: {} });
+        expect(response.status).toBe(422);
+        expect(response.body.error.code).toBe('validation');
+        expect(select).not.toHaveBeenCalled();
+        expect(execute).not.toHaveBeenCalled();
     });
     it('should use the same contract for reads, queries and deletes', async () => {
         const { app, execute } = setup();

@@ -1,13 +1,21 @@
 import type { Entity, EntityProperty, APIAction } from '@poseidon/models';
 import { createBootstrapModel } from '../src/bootstrap-model';
+import { EntityTypeRepository } from '../src/entity-type-repository';
 import { RuntimeContext } from '../src/runtime-context';
-import { storage } from './context-test-storage';
+import { getEntityType, storage } from './context-test-storage';
 
 function setup() {
     const model = createBootstrapModel('system', new Date());
     const data = storage([...model.users, ...model.entityTypes, ...model.scripts]);
     const context = new RuntimeContext(data, model.users[0]);
-    return { data, context, types: context.repository('entity-type') };
+    return {
+        data,
+        context,
+        types: new EntityTypeRepository(
+            model.entityTypes.find((type) => type.name === 'entity-type')!,
+            context,
+        ),
+    };
 }
 function field(name: string, extras: Partial<EntityProperty> = {}): EntityProperty {
     return { _id: 'customer:' + name, entityTypeId: 'customer', name, type: 'string', ...extras };
@@ -26,7 +34,10 @@ async function customers() {
             field('registeredAt', { type: 'date-time', default: '[[NOW]]' }),
         ],
     });
-    return { ...services, repository: services.context.repository('customer') };
+    return {
+        ...services,
+        repository: services.context.repository(await services.types.get('customer')),
+    };
 }
 
 describe('repository mutations', () => {
@@ -95,8 +106,6 @@ describe('repository mutations', () => {
         await expect(
             repository.execute('create', { name: 'Ada', extra: true }),
         ).rejects.toMatchObject({ code: 'validation' });
-        vi.mocked(data.get).mockRejectedValueOnce(new Error('Storage unavailable'));
-        await expect(repository.execute('validate', {})).rejects.toThrow('Storage unavailable');
     });
     it('should retain mandatory properties and reject renaming entity types', async () => {
         const { types } = await customers();
@@ -141,7 +150,7 @@ describe('repository mutations', () => {
                 }),
             ],
         });
-        const repository = context.repository('customer');
+        const repository = context.repository(await getEntityType(context.storage, 'customer'));
         const created = (await repository.execute('create', {
             _id: 'ada',
             address: { city: 'London' },
@@ -159,12 +168,9 @@ describe('repository mutations', () => {
                 code: 'validation',
             });
         }
-        await expect(
-            context.repository('address').execute('create', { city: 'London' }),
-        ).rejects.toMatchObject({ code: 'validation' });
     });
-    it('should dispatch model actions, including rules, and reject missing actions and types', async () => {
-        const { repository, types, context, data } = await customers();
+    it('should dispatch model actions, including rules, and reject missing actions', async () => {
+        const { types, context, data } = await customers();
         const current = await types.get('customer');
         const action: APIAction = {
             id: 'approve',
@@ -191,6 +197,7 @@ describe('repository mutations', () => {
             _version: current._version,
             actions: [action, { ...action, id: 'disabled', name: 'disabled', enabled: false }],
         });
+        const repository = context.repository(await types.get('customer'));
         expect(await repository.execute('approve', { name: 'Ada' })).toMatchObject({
             status: 'approved',
         });
@@ -201,12 +208,9 @@ describe('repository mutations', () => {
             limit: -2,
         });
         await expect(repository.execute('missing', {})).rejects.toThrow('does not exist');
-        await expect(context.repository('missing').execute('create', {})).rejects.toMatchObject({
-            code: 'entity-type-not-found',
-        });
     });
     it('should apply mutation rules and reject implicit nested entity input', async () => {
-        const { repository, types } = await customers();
+        const { context, types } = await customers();
         const current = await types.get('customer');
         await types.execute('update', {
             _id: 'customer',
@@ -234,6 +238,7 @@ describe('repository mutations', () => {
                 },
             ],
         });
+        const repository = context.repository(await types.get('customer'));
         expect(await repository.execute('onboard', { name: 'Ada' })).toMatchObject({
             status: 'onboarded',
         });

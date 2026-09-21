@@ -1,27 +1,25 @@
-import type { Entity, EntityData, EntityProperty } from '@poseidon/models';
+import type { Entity, EntityData, EntityProperty, EntityType } from '@poseidon/models';
 import type { RuntimeContext } from './runtime-context';
 import { getProperties, getActions } from './entity-model-utils';
 import { applyDefaultsAndConventions, applyConventions } from './entity-preparation';
 import { applyEntityRules } from './entity-rule-engine';
 import { validateEntity } from './entity-validator';
-import { EntityTypeNotFoundError, ValidationError } from './poseidon-error';
+import { ValidationError } from './poseidon-error';
 import { createSystemProperties } from './bootstrap-model';
 
 export async function prepareMutation(
     context: RuntimeContext,
-    name: string,
+    type: EntityType,
     input: EntityData,
     current?: Entity,
 ): Promise<EntityData> {
-    const type = await context.entityType(name);
-    if (!type) throw new EntityTypeNotFoundError(name);
     const supplied = Object.fromEntries(
         Object.entries(input).filter(
             ([key]) => !key.startsWith('_') || key === '_id' || key === '_version',
         ),
     );
     let data = { ...current, ...supplied };
-    if (name === 'entity-type') data = prepareEntityType(context, data, current);
+    if (type.name === 'entity-type') data = prepareEntityType(context, data, current);
     const properties = getProperties(type);
     data = current
         ? applyConventions(data, properties)
@@ -46,7 +44,7 @@ async function prepareStructures(
         if (!field.relatedEntityTypeId || data[field.name] === undefined) continue;
         const structure = await context.storage.get('entity-type', field.relatedEntityTypeId);
         if (!structure?.structure) continue;
-        await prepareStructureValues(context, field, data);
+        await prepareStructureValues(context, field, data, structure as EntityType);
     }
 }
 
@@ -54,6 +52,7 @@ async function prepareStructureValues(
     context: RuntimeContext,
     field: EntityProperty,
     data: EntityData,
+    structure: EntityType,
 ): Promise<void> {
     const value = data[field.name];
     const values = Array.isArray(value) ? value : [value];
@@ -64,7 +63,7 @@ async function prepareStructureValues(
                 { property: field.name, message: 'Structure values must be objects.' },
             ]);
         }
-        prepared.push(await prepareMutation(context, field.relatedEntityTypeId!, item));
+        prepared.push(await prepareMutation(context, structure, item));
     }
     if (
         field.uniqueBy &&

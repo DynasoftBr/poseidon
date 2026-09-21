@@ -1,4 +1,4 @@
-import type { Entity } from '@poseidon/models';
+import type { Entity, EntityType } from '@poseidon/models';
 import type { DataStorage } from '@poseidon/data-access';
 
 export function entity(
@@ -67,4 +67,12 @@ export function storage(
         },
     };
     return result;
+}
+
+export async function getEntityType(data: DataStorage, name: string): Promise<EntityType> {
+    return (await data.get('entity-type', name)) as EntityType;
+}
+
+export function entityType(name: string, data: Partial<EntityType> = {}): EntityType {
+    return { ...entity(name, 'entity-type'), name, label: name, properties: [], ...data };
 }

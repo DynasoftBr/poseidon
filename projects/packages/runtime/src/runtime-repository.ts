@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import type { Entity, APIAction, EntityData, QueryEntitiesAction } from '@poseidon/models';
+import type {
+    Entity,
+    EntityType,
+    APIAction,
+    EntityData,
+    QueryEntitiesAction,
+} from '@poseidon/models';
 import type { DataStorage } from '@poseidon/data-access';
 import {
     EntityNotFoundError,
-    EntityTypeNotFoundError,
     EntityVersionConflictError,
     ValidationError,
     type ValidationProblem,
@@ -12,7 +17,7 @@ import type { Repository } from './repository';
 import type { RuntimeContext } from './runtime-context';
 import { initializeEntityMetadata } from './system-actions';
 import { system } from './system';
-import { requireConcreteEntityType, getProperties } from './entity-model-utils';
+import { getProperties } from './entity-model-utils';
 import { prepareMutation } from './prepare-mutation';
 import { applyBusinessRules } from './entity-rule-engine';
 
@@ -25,21 +30,23 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     private storage: DataStorage;
 
     public constructor(
-        public readonly entityTypeName: string,
+        public readonly entityType: EntityType,
         private readonly context: RuntimeContext,
     ) {
         this.storage = context.storage;
     }
 
+    public get entityTypeName(): string {
+        return this.entityType.name;
+    }
+
     public async get(id: string): Promise<TEntity> {
-        await this.requireConcreteType();
         const entity = await this.storage.get(this.entityTypeName, id);
         if (!entity || entity._deletedAt) throw new EntityNotFoundError(id);
         return entity as TEntity;
     }
 
     public async query(action: QueryEntitiesAction): Promise<TEntity[]> {
-        await this.requireConcreteType();
         return (await this.storage.query(this.entityTypeName, {
             ...action,
             entityTypeId: this.entityTypeName,
@@ -47,11 +54,10 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async create(data: EntityData): Promise<TEntity> {
-        await this.requireConcreteType();
-        const prepared = await prepareMutation(this.context, this.entityTypeName, data);
+        const prepared = await prepareMutation(this.context, this.entityType, data);
         const entity = initializeEntityMetadata(
             prepared,
-            (await this.context.entityType(this.entityTypeName))!._id,
+            this.entityType._id,
             this.context.user._id,
         ) as TEntity;
         await this.storage.create(this.entityTypeName, entity);
@@ -59,10 +65,9 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async update(entity: TEntity): Promise<TEntity> {
-        await this.requireConcreteType();
         const current = await this.get(entity._id);
         if (entity._version !== current._version) throw new EntityVersionConflictError(entity._id);
-        const data = await prepareMutation(this.context, this.entityTypeName, entity, current);
+        const data = await prepareMutation(this.context, this.entityType, entity, current);
         const updated = {
             ...current,
             ...data,
@@ -75,7 +80,6 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async delete(id: string, expectedVersion?: number): Promise<void> {
-        await this.requireConcreteType();
         if (expectedVersion !== undefined && (await this.get(id))._version !== expectedVersion) {
             throw new EntityVersionConflictError(id);
         }
@@ -83,12 +87,9 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async execute(actionName: string, payload: EntityData): Promise<unknown> {
-        const type = await this.context.entityType(this.entityTypeName);
-        if (!type) throw new EntityTypeNotFoundError(this.entityTypeName);
         const action =
-            (type.actions as APIAction[] | undefined)?.find(
-                (candidate) => candidate.name === actionName,
-            ) ?? defaultAction(actionName);
+            this.entityType.actions?.find((candidate) => candidate.name === actionName) ??
+            defaultAction(actionName);
         if (!action) throw new Error(`Action '${actionName}' does not exist.`);
 
         const result = await this.runAction(action, {
@@ -106,11 +107,6 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
             outputs: {},
         });
         return action.id in result.outputs ? result.outputs[action.id] : result.payload;
-    }
-
-    private async requireConcreteType(): Promise<void> {
-        const entityType = await this.context.entityType(this.entityTypeName);
-        if (entityType) requireConcreteEntityType(entityType);
     }
 
     private async runAction(action: APIAction, state: ActionState): Promise<ActionState> {
@@ -166,10 +162,9 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
             case 'validate':
                 return output(state, action.id, await this.validate(state.payload));
             case 'business-rules': {
-                const type = await this.context.entityType(this.entityTypeName);
                 const payload = applyBusinessRules(
                     action.rules ?? [],
-                    getProperties(type!),
+                    getProperties(this.entityType),
                     state.payload,
                 );
                 return output(state, action.id, payload, payload);
@@ -181,7 +176,7 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
         input: EntityData,
     ): Promise<{ valid: boolean; problems: ValidationProblem[] }> {
         try {
-            await prepareMutation(this.context, this.entityTypeName, input);
+            await prepareMutation(this.context, this.entityType, input);
             return { valid: true, problems: [] };
         } catch (error) {
             if (!(error instanceof ValidationError)) throw error;
@@ -193,7 +188,8 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
         action: Extract<APIAction, { operation: 'script' }>,
         state: ActionState,
     ): Promise<ActionState> {
-        const script = await this.context.repository('script').get(action.scriptId);
+        const script = await this.storage.get('script', action.scriptId);
+        if (!script || script._deletedAt) throw new EntityNotFoundError(action.scriptId);
         const definition = action.system
             ? system.entityTypes.entityType.actions[
                   action.scriptId as keyof typeof system.entityTypes.entityType.actions
