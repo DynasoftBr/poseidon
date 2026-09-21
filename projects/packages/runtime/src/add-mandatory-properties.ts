@@ -1,7 +1,6 @@
 import type { ActionContext } from './action-context';
 import type { DataStorage } from '@poseidon/data-access';
 import { getProperties } from './entity-model-utils';
-import { createSystemProperties } from './system/system-properties';
 import { ValidationError } from './poseidon-error';
 
 export async function addMandatoryProperties(
@@ -18,7 +17,7 @@ export async function addMandatoryProperties(
     const supplied = new Set(properties.map((property) => property._id));
     const mandatory = current
         ? getProperties(current).filter((property) => property.name.startsWith('_'))
-        : createSystemProperties(input._id);
+        : [{ _id: `${input._id}:_id`, name: '_id', type: 'string' as const, required: true }];
     input.properties = [
         ...properties,
         ...mandatory.filter((property) => !supplied.has(property._id)),

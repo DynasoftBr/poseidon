@@ -1,18 +1,15 @@
 import type { Entity, EntityType, EntityProperty, APIAction } from '@poseidon/models';
-import { createCoreEntityTypes } from '../src/system/core-entity-types';
 import { RuntimeContext } from '../src/runtime-context';
-import { storage } from './context-test-storage';
+import { entityTypeDefinition, storage } from './context-test-storage';
 
 function setup() {
-    const entityTypes = createCoreEntityTypes();
-    const data = storage({ 'entity-type': entityTypes });
+    const definition = entityTypeDefinition();
+    const data = storage({ 'entity-type': [definition] });
     const context = new RuntimeContext(data);
     return {
         data,
         context,
-        types: context.repository<EntityType>(
-            entityTypes.find((type) => type.name === 'entity-type')!,
-        ),
+        types: context.repository<EntityType>(definition),
     };
 }
 function field(name: string, extras: Partial<EntityProperty> = {}): EntityProperty {
@@ -39,7 +36,7 @@ async function customers() {
 }
 
 describe('repository mutations', () => {
-    it('should prepare and persist a create, patch and delete through built-in actions', async () => {
+    it('should prepare and persist a create, update and delete through built-in actions', async () => {
         const { repository, data } = await customers();
         const created = (await repository.execute('create', {
             _id: 'ada',
@@ -57,7 +54,7 @@ describe('repository mutations', () => {
         });
         expect(await repository.execute('get', { _id: 'ada' })).toEqual(created);
         const updated = (await repository.execute('update', {
-            _id: 'ada',
+            ...created,
             name: 'grace hopper',
         })) as Entity;
         expect(updated).toMatchObject({
@@ -70,7 +67,7 @@ describe('repository mutations', () => {
             code: 'entity-not-found',
         });
     });
-    it('should return validation results without writing and independently validate saves', async () => {
+    it('should return validation results without writing', async () => {
         const { repository, data } = await customers();
         const before = vi.mocked(data.create).mock.calls.length;
         expect(await repository.execute('validate', {})).toMatchObject({
@@ -82,29 +79,14 @@ describe('repository mutations', () => {
             problems: [],
         });
         expect(vi.mocked(data.create).mock.calls).toHaveLength(before);
-        await expect(repository.execute('create', {})).rejects.toMatchObject({
-            code: 'validation',
-        });
-        await expect(
-            repository.execute('create', { name: 'Ada', extra: true }),
-        ).rejects.toMatchObject({ code: 'validation' });
     });
-    it('should retain mandatory properties and reject renaming entity types', async () => {
+    it('should retain mandatory properties through its before action', async () => {
         const { types } = await customers();
         const updated = (await types.execute('update', {
             _id: 'customer',
             properties: [field('name')],
         })) as Entity;
         expect(updated.properties).toContainEqual(expect.objectContaining({ name: '_id' }));
-        await expect(
-            types.execute('update', {
-                _id: 'customer',
-                name: 'renamed',
-            }),
-        ).rejects.toMatchObject({ code: 'validation' });
-        await expect(
-            types.execute('create', { name: 'invalid name', label: 'Bad', properties: [] }),
-        ).rejects.toMatchObject({ code: 'validation' });
     });
     it('should save object values without looking up other entity types', async () => {
         const { types, context, data } = setup();
@@ -133,7 +115,7 @@ describe('repository mutations', () => {
             before: [],
         };
         await types.execute('update', {
-            _id: 'customer',
+            ...(await types.get('customer')),
             actions: [action, { ...action, id: 'disabled', name: 'disabled', enabled: false }],
         });
         const repository = context.repository(await types.get('customer'));
@@ -146,10 +128,15 @@ describe('repository mutations', () => {
         await expect(repository.execute('missing', {})).rejects.toThrow('does not exist');
         await expect(repository.execute('query', {})).rejects.toThrow('does not exist');
     });
-    it('should reject object values for a string property', async () => {
-        const { repository } = await customers();
-        await expect(
-            repository.execute('create', { name: { id: 'other', data: { name: 'Nested' } } }),
-        ).rejects.toMatchObject({ code: 'validation' });
+    it('should write supplied data without implicit validation or merging', async () => {
+        const { repository, data } = await customers();
+        await repository.create({ _id: 'raw', extra: true, _custom: 'retained' });
+        expect(await data.get('customer', 'raw')).toEqual({
+            _id: 'raw',
+            extra: true,
+            _custom: 'retained',
+        });
+        await repository.update({ _id: 'raw', replacement: true });
+        expect(await data.get('customer', 'raw')).toEqual({ _id: 'raw', replacement: true });
     });
 });

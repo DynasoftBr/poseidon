@@ -1,13 +1,12 @@
-import { createCoreEntityTypes } from '../src/system/core-entity-types';
 import type { EntityType } from '@poseidon/models';
 import { RuntimeContext } from '../src/runtime-context';
-import { storage } from './context-test-storage';
+import { entityTypeDefinition, storage } from './context-test-storage';
 
 describe('entity type actions', () => {
     it.each([true, false])(
         'should add mandatory properties only through the before action: %s',
         async (enabled) => {
-            const definition = createCoreEntityTypes().find((type) => type.name === 'entity-type')!;
+            const definition = entityTypeDefinition();
             if (!enabled) definition.actions = [];
             const repository = new RuntimeContext(storage()).repository<EntityType>(definition);
             await repository.execute('create', {
@@ -26,7 +25,7 @@ describe('entity type actions', () => {
     );
 
     it('should keep structure properties unchanged on creation and update', async () => {
-        const definition = createCoreEntityTypes().find((type) => type.name === 'entity-type')!;
+        const definition = entityTypeDefinition();
         const repository = new RuntimeContext(storage()).repository<EntityType>(definition);
         await repository.execute('create', {
             _id: 'address',
@@ -40,11 +39,9 @@ describe('entity type actions', () => {
     });
 
     it('should create and retrieve entity types without an entity type name', async () => {
-        const entityTypes = createCoreEntityTypes();
-        const data = storage({ 'entity-type': entityTypes });
-        const repository = new RuntimeContext(data).repository<EntityType>(
-            entityTypes.find((type) => type.name === 'entity-type')!,
-        );
+        const definition = entityTypeDefinition();
+        const data = storage({ 'entity-type': [definition] });
+        const repository = new RuntimeContext(data).repository<EntityType>(definition);
 
         await repository.execute('create', {
             _id: 'customer',

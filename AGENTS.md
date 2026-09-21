@@ -21,7 +21,7 @@ You MUST read the [Poseidon Vision](./VISION.md) to understand the product philo
 - `projects/packages/models`: TypeScript interfaces for core Poseidon entity types and the declarative language. Entity types live in `src/entity-types`, one per file.
 - Keep each entity type and its data shape in its own model file; do not group multiple entity types in a shared model file.
 - `projects/packages/data-access`: MongoDB connection and persistence models.
-- `projects/packages/runtime`: validation, mutations, querying, model revisions, and bootstrap.
+- `projects/packages/runtime`: validation, persistence actions, and action execution.
 - `projects/packages/service-utils`: shared logging, configuration, and health-check utilities.
 - `projects/poseidon/server`: HTTP composition root.
 

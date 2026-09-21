@@ -8,7 +8,7 @@ import { addMandatoryProperties } from './add-mandatory-properties';
 import { defaultAction } from './default-action';
 import { applyDefaults, applyConventions } from './entity-preparation';
 import { getProperties } from './entity-model-utils';
-import { prepareMutation } from './prepare-mutation';
+import { validateEntity } from './entity-validator';
 
 import type { ActionContext } from './action-context';
 
@@ -47,20 +47,17 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async create(data: EntityData): Promise<TEntity> {
-        const prepared = prepareMutation(this.entityType, data);
         const entity = {
-            ...prepared,
-            _id: typeof prepared._id === 'string' ? prepared._id : randomUUID(),
+            ...data,
+            _id: typeof data._id === 'string' ? data._id : randomUUID(),
         } as TEntity;
         await this.storage.create(this.entityTypeName, entity);
         return entity;
     }
 
     public async update(entity: TEntity): Promise<TEntity> {
-        const current = await this.get(entity._id);
-        const updated = prepareMutation(this.entityType, entity, current) as TEntity;
-        await this.storage.update(this.entityTypeName, updated);
-        return updated;
+        await this.storage.update(this.entityTypeName, entity);
+        return entity;
     }
 
     public delete(id: string): Promise<void> {
@@ -111,8 +108,14 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
         input: EntityData,
     ): Promise<{ valid: boolean; problems: ValidationProblem[] }> {
         try {
-            prepareMutation(this.entityType, input);
-            return Promise.resolve({ valid: true, problems: [] });
+            const fields = getProperties(this.entityType).filter(
+                (field) => !field.name.startsWith('_'),
+            );
+            const problems = validateEntity(
+                fields,
+                Object.fromEntries(Object.entries(input).filter(([key]) => !key.startsWith('_'))),
+            );
+            return Promise.resolve({ valid: problems.length === 0, problems });
         } catch (error) {
             if (!(error instanceof ValidationError)) return Promise.reject(error);
             return Promise.resolve({ valid: false, problems: error.problems });

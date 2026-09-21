@@ -20,7 +20,7 @@ The repository currently implements HTTP in `projects/poseidon/server`; the pack
 
 ### Unified HTTP contract
 
-The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `get`, `create`, `update`, `delete`, and `validate` actions use the same contract as custom model actions. Entity IDs belong in `input._id`, and updates supply the changed fields. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
+The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `get`, `create`, `update`, `delete`, and `validate` actions use the same contract as custom model actions. Entity IDs belong in `input._id`, and updates supply the replacement entity. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
 
 Login and signup will also be APIActions through this endpoint. Actions must explicitly declare whether unauthenticated callers may invoke them; trusted server code remains responsible for credentials and session handling. HTTP request–response is the selected starting point. WebSockets may support future subscriptions or bidirectional updates when required.
 
@@ -46,7 +46,7 @@ projects/
   packages/
     models/                     declarative entity types
     data-access/               MongoDB-only persistence implementation
-    runtime/                   core definitions and action execution
+    runtime/                   validation and action execution
     service-utils/             logging and shared service infrastructure
 ```
 
@@ -56,9 +56,9 @@ Runtime entities contain business fields alongside `_id`; their collection ident
 
 EntityTypes are deliberately flat. The earlier `abstract` and `superTypeId` fields were removed because no current behavior required inheritance; shared behavior should remain explicit until a concrete use case justifies inheritance semantics.
 
-## Bootstrap
+## Model initialization
 
-Server startup connects to MongoDB without seeding model data. The previous bootstrap model and seeding machinery have been removed; replacement initialization remains to be implemented. Hardcoded core entity definitions remain available in the runtime. Identity, SystemUser, and IndexDefinition models are deferred for the MVP.
+Server startup connects to MongoDB without seeding model data. Core entity definitions and their initialization remain to be implemented. The runtime contains no hardcoded core model registry or builders. Identity, SystemUser, and IndexDefinition models are deferred for the MVP.
 
 ## Environments and promotion
 
@@ -86,11 +86,11 @@ Promotion must check the current production data, not assume the test copy is st
 
 `RuntimeContext` holds storage; `RuntimeRepository` resolves named APIActions and executes their before steps, then dispatches built-in behavior by action name. APIActions have no operation field. Each action requires its own implementation; before steps run ahead of it. Actions without an implementation throw an error. Custom action implementations are deferred for the MVP. Built-in actions are available when no model action of the same name is declared. `EntityService`, mutation events, projection writes, relationship-link maintenance, and event publication have been removed. MongoDB stores entities directly in a collection per EntityType; deletes remove the record. Existing historical collections are not dropped by this change.
 
-Default create and validate actions run applyDefaults followed by applyConventions as explicit before actions; update runs applyConventions only. These steps mutate the shared input and record null outputs. Mutation preparation retains property validation and embedded structure validation. Business-rule definitions and execution are deferred for the MVP. EntityType creation adds system properties, updates retain them, and names remain immutable. Updates merge changed fields; optimistic concurrency is deferred for the MVP. The `validate` action returns `{ valid, problems }` without persisting data; writes still validate independently. Before steps and the named action share a transaction; an enclosing transaction, such as a compound business action, can group multiple actions. Action chains have no `after` steps. Work triggered by a committed change belongs exclusively to event handlers that can retry independently; event delivery and retry handling remain to be implemented.
+Default create and validate actions run applyDefaults followed by applyConventions as explicit before actions; update runs applyConventions only. These steps mutate the shared input and record null outputs. The explicit validate action performs property and embedded structure validation. Business-rule definitions and execution are deferred for the MVP. The addMandatoryProperties handler remains available for explicitly configured before actions; the runtime no longer supplies EntityType action definitions. Updates replace the stored entity; name immutability and optimistic concurrency are deferred for the MVP. The `validate` action returns `{ valid, problems }` without persisting data; writes do not implicitly validate or filter input. Before steps and the named action share a transaction; an enclosing transaction, such as a compound business action, can group multiple actions. Action chains have no `after` steps. Work triggered by a committed change belongs exclusively to event handlers that can retry independently; event delivery and retry handling remain to be implemented.
 
 The MVP reads one entity by ID with `get`; entity-type routing resolves one definition by name. Runtime queries, filtering, pagination, and the model Specification are deferred. The standalone query builder remains available. Index definitions and automatic MongoDB index creation are deferred for the MVP.
 
-Relationship properties and the `relation-link` bootstrap type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
+Relationship properties and the `relation-link` type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
 
 The planned typed action contract is a cascade: each action declares input/output EntityTypes, adjacent steps must agree, and each action's public input/output are inferred recursively from its first/last executed step. Without before steps, these are the action handler's types. Client generation uses that resolved contract; type declarations and generation are not implemented by this transport simplification.
 

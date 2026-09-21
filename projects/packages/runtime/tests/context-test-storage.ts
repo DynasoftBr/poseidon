@@ -1,4 +1,5 @@
 import type { Entity, EntityType } from '@poseidon/models';
+import { defaultAction } from '../src/default-action';
 import type { DataStorage } from '@poseidon/data-access';
 
 export function entity(id: string, data: Record<string, unknown> = {}): Entity {
@@ -85,4 +86,35 @@ function collectionRecords(collections: Record<string, Entity[]>): Map<string, E
             records.map((record) => [key(name, record._id), record] as const),
         ),
     );
+}
+
+export function entityTypeDefinition(): EntityType {
+    return entityType('entity-type', {
+        properties: [
+            { _id: 'entity-type:name', name: 'name', type: 'string', required: true },
+            { _id: 'entity-type:label', name: 'label', type: 'string', required: true },
+            {
+                _id: 'entity-type:properties',
+                name: 'properties',
+                type: 'array',
+                itemsType: 'object',
+            },
+        ],
+        actions: ['create', 'update'].map((name) => {
+            const action = defaultAction(name)!;
+            return {
+                ...action,
+                before: [
+                    {
+                        id: 'addMandatoryProperties',
+                        name: 'addMandatoryProperties',
+                        label: 'Add mandatory properties',
+                        enabled: true,
+                        before: [],
+                    },
+                    ...action.before,
+                ],
+            };
+        }),
+    });
 }

@@ -1,9 +1,8 @@
 import type { APIAction } from '@poseidon/models';
 import * as preparation from '../src/entity-preparation';
 import * as mandatoryProperties from '../src/add-mandatory-properties';
-import { createCoreEntityTypes } from '../src/system/core-entity-types';
 import { RuntimeContext } from '../src/runtime-context';
-import { entityType, storage } from './context-test-storage';
+import { entityType, entityTypeDefinition, storage } from './context-test-storage';
 
 function action(name: string, before: APIAction[] = []): APIAction {
     return { id: name, name, label: name, enabled: true, before };
@@ -63,7 +62,7 @@ describe('APIAction', () => {
         const handler = vi.spyOn(mandatoryProperties, 'addMandatoryProperties');
         try {
             const data = storage();
-            const type = createCoreEntityTypes().find((type) => type.name === 'entity-type')!;
+            const type = entityTypeDefinition();
             type.actions = [
                 action('create', [action('validate'), action('addMandatoryProperties')]),
             ];
