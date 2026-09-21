@@ -34,9 +34,7 @@ export type EntityPropertyData = {
     default?: unknown;
     convention?: PropertyConvention;
     base64Encoded?: boolean;
-    relatedEntityTypeId?: EntityId;
     itemsType?: PropertyType;
     uniqueItems?: boolean;
     multipleOf?: number;
-    uniqueBy?: string;
 };

@@ -54,7 +54,7 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     }
 
     public async create(data: EntityData): Promise<TEntity> {
-        const prepared = await prepareMutation(this.context, this.entityType, data);
+        const prepared = prepareMutation(this.context, this.entityType, data);
         const entity = initializeEntityMetadata(
             prepared,
             this.entityType._id,
@@ -67,7 +67,7 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
     public async update(entity: TEntity): Promise<TEntity> {
         const current = await this.get(entity._id);
         if (entity._version !== current._version) throw new EntityVersionConflictError(entity._id);
-        const data = await prepareMutation(this.context, this.entityType, entity, current);
+        const data = prepareMutation(this.context, this.entityType, entity, current);
         const updated = {
             ...current,
             ...data,
@@ -172,15 +172,15 @@ export class RuntimeRepository<TEntity extends Entity = Entity> implements Repos
         }
     }
 
-    private async validate(
+    private validate(
         input: EntityData,
     ): Promise<{ valid: boolean; problems: ValidationProblem[] }> {
         try {
-            await prepareMutation(this.context, this.entityType, input);
-            return { valid: true, problems: [] };
+            prepareMutation(this.context, this.entityType, input);
+            return Promise.resolve({ valid: true, problems: [] });
         } catch (error) {
-            if (!(error instanceof ValidationError)) throw error;
-            return { valid: false, problems: error.problems };
+            if (!(error instanceof ValidationError)) return Promise.reject(error);
+            return Promise.resolve({ valid: false, problems: error.problems });
         }
     }
 

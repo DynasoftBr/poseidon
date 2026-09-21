@@ -48,8 +48,6 @@ describe('createBootstrapModel', () => {
                 expect.objectContaining({
                     _id: 'entity-type:properties',
                     itemsType: 'object',
-                    relatedEntityTypeId: 'entity-property',
-                    uniqueBy: 'name',
                 }),
                 expect.objectContaining({
                     _id: 'entity-property:default',

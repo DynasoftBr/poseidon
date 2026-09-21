@@ -1,4 +1,5 @@
-import type { EntityReferenceTarget, PaginatedList } from '@poseidon/utilities';
+import type { PaginatedList } from '@poseidon/utilities';
+import type { EntityReferenceTarget } from '../entity-reference';
 import type { Query } from './query';
 
 export type KnownKeys<T, TType = unknown> = keyof {

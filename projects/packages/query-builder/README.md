@@ -6,7 +6,7 @@ The fluent builder produces query descriptions for a supplied resolver. It suppo
 
 ```ts
 import { Queryable } from '@poseidon/query-builder';
-import type { EntityReference } from '@poseidon/utilities';
+import type { EntityReference } from '@poseidon/query-builder';
 import type { Resolver } from '@poseidon/query-builder';
 
 interface Customer {

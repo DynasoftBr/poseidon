@@ -29,8 +29,6 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
         createProperty(['entity-type', 'menuLocation', 'string', false], context),
         createProperty(['entity-type', 'properties', 'array', true], context, {
             itemsType: 'object',
-            relatedEntityTypeId: 'entity-property',
-            uniqueBy: 'name',
         }),
         createProperty(['entity-type', 'actions', 'json', false], context),
         createProperty(['entity-property', 'name', 'string', true], context),
@@ -50,12 +48,10 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
         createProperty(['entity-property', 'convention', 'string', false], context, {
             enum: [...propertyConventions],
         }),
-        createProperty(['entity-property', 'relatedEntityTypeId', 'string', false], context),
         createProperty(['entity-property', 'itemsType', 'string', false], context, {
             enum: [...propertyTypes],
         }),
         createProperty(['entity-property', 'uniqueItems', 'boolean', false], context),
-        createProperty(['entity-property', 'uniqueBy', 'string', false], context),
         createProperty(['entity-property', 'multipleOf', 'number', false], context),
         createProperty(['script', 'code', 'string', false], context),
         createProperty(['index', 'entityTypeId', 'string', true], context),

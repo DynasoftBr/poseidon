@@ -2,7 +2,7 @@ import type { Entity, EntityProperty, APIAction } from '@poseidon/models';
 import { createBootstrapModel } from '../src/bootstrap-model';
 import { EntityTypeRepository } from '../src/entity-type-repository';
 import { RuntimeContext } from '../src/runtime-context';
-import { getEntityType, storage } from './context-test-storage';
+import { storage } from './context-test-storage';
 
 function setup() {
     const model = createBootstrapModel('system', new Date());
@@ -127,47 +127,22 @@ describe('repository mutations', () => {
             types.execute('create', { name: 'invalid name', label: 'Bad', properties: [] }),
         ).rejects.toMatchObject({ code: 'validation' });
     });
-    it('should validate embedded structures without creating independent records', async () => {
+    it('should save object values without looking up other entity types', async () => {
         const { types, context, data } = setup();
-        await types.execute('create', {
-            _id: 'address',
-            name: 'address',
-            label: 'Address',
-            structure: true,
-            properties: [field('city', { required: true }), field('country', { default: 'UK' })],
-        });
         await types.execute('create', {
             _id: 'customer',
             name: 'customer',
             label: 'Customer',
             properties: [
-                field('address', { type: 'object', relatedEntityTypeId: 'address' }),
-                field('addresses', {
-                    type: 'array',
-                    itemsType: 'object',
-                    relatedEntityTypeId: 'address',
-                    uniqueBy: 'city',
-                }),
+                field('address', { type: 'object' }),
+                field('addresses', { type: 'array', itemsType: 'object' }),
             ],
         });
-        const repository = context.repository(await getEntityType(context.storage, 'customer'));
-        const created = (await repository.execute('create', {
-            _id: 'ada',
-            address: { city: 'London' },
-            addresses: [{ city: 'Paris' }],
-        })) as Entity;
-        expect(created).toMatchObject({
-            address: { city: 'London', country: 'UK' },
-            addresses: [{ city: 'Paris', country: 'UK' }],
-        });
-        expect(
-            vi.mocked(data.create).mock.calls.filter(([name]) => name === 'address'),
-        ).toHaveLength(0);
-        for (const addresses of [[null], [{}], [{ city: 'London' }, { city: 'London' }]]) {
-            await expect(repository.execute('create', { addresses })).rejects.toMatchObject({
-                code: 'validation',
-            });
-        }
+        const repository = context.repository(await types.get('customer'));
+        vi.mocked(data.get).mockClear();
+        const input = { address: { city: 'London' }, addresses: [{ city: 'Paris' }] };
+        expect(await repository.execute('create', input)).toMatchObject(input);
+        expect(data.get).not.toHaveBeenCalled();
     });
     it('should dispatch model actions, including rules, and reject missing actions', async () => {
         const { types, context, data } = await customers();

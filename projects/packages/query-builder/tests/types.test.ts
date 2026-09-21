@@ -1,8 +1,8 @@
-import type { EntityReference, PaginatedList } from '@poseidon/utilities';
+import type { PaginatedList } from '@poseidon/utilities';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import ts from 'typescript';
 import path from 'node:path';
-import { Queryable } from '../src';
+import { Queryable, type EntityReference } from '../src';
 import type { IncludableKeys, NewProperty, SimpleKeys } from '../src/interfaces/utility-types';
 
 interface Customer {
@@ -59,8 +59,8 @@ describe('Query result types', () => {
 function compileExpression(expression: string): ts.Diagnostic[] {
     const filename = path.resolve('tests/type-check-virtual.ts');
     const source = `
-        import { Queryable } from '../src';
-        import { specification, type EntityReference, type PaginatedList } from '@poseidon/utilities';
+        import { Queryable, type EntityReference } from '../src';
+        import { specification, type PaginatedList } from '@poseidon/utilities';
         const order = specification<Order>();
         interface Customer { _id: string; name: string; email: string; }
         interface Order { amount: number; status: string; customer: EntityReference<Customer>; embedded: Customer; array: Customer[]; idOnly: { _id: string }; customers: PaginatedList<Customer>; }

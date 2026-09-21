@@ -1,6 +1,6 @@
-import { specification, type EntityReference, type PaginatedList } from '@poseidon/utilities';
+import { specification, type PaginatedList } from '@poseidon/utilities';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { IncludedQueryable, Queryable } from '../src';
+import { IncludedQueryable, Queryable, type EntityReference } from '../src';
 import type { Query } from '../src/interfaces/query';
 import type { Resolver } from '../src/interfaces/utility-types';
 

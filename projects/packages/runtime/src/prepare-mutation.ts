@@ -1,4 +1,4 @@
-import type { Entity, EntityData, EntityProperty, EntityType } from '@poseidon/models';
+import type { Entity, EntityData, EntityType } from '@poseidon/models';
 import type { RuntimeContext } from './runtime-context';
 import { getProperties, getActions } from './entity-model-utils';
 import { applyDefaultsAndConventions, applyConventions } from './entity-preparation';
@@ -7,12 +7,12 @@ import { validateEntity } from './entity-validator';
 import { ValidationError } from './poseidon-error';
 import { createSystemProperties } from './bootstrap-model';
 
-export async function prepareMutation(
+export function prepareMutation(
     context: RuntimeContext,
     type: EntityType,
     input: EntityData,
     current?: Entity,
-): Promise<EntityData> {
+): EntityData {
     const supplied = Object.fromEntries(
         Object.entries(input).filter(
             ([key]) => !key.startsWith('_') || key === '_id' || key === '_version',
@@ -25,7 +25,6 @@ export async function prepareMutation(
         ? applyConventions(data, properties)
         : applyDefaultsAndConventions(data, properties);
     data = applyEntityRules(getActions(type), current ? 'update' : 'create', properties, data);
-    await prepareStructures(context, properties, data);
     const fields = properties.filter((field) => !field.name.startsWith('_'));
     const businessData = Object.fromEntries(
         Object.entries(data).filter(([key]) => !key.startsWith('_')),
@@ -33,48 +32,6 @@ export async function prepareMutation(
     const problems = validateEntity(fields, businessData);
     if (problems.length) throw new ValidationError(problems);
     return data;
-}
-
-async function prepareStructures(
-    context: RuntimeContext,
-    properties: EntityProperty[],
-    data: EntityData,
-): Promise<void> {
-    for (const field of properties) {
-        if (!field.relatedEntityTypeId || data[field.name] === undefined) continue;
-        const structure = await context.storage.get('entity-type', field.relatedEntityTypeId);
-        if (!structure?.structure) continue;
-        await prepareStructureValues(context, field, data, structure as EntityType);
-    }
-}
-
-async function prepareStructureValues(
-    context: RuntimeContext,
-    field: EntityProperty,
-    data: EntityData,
-    structure: EntityType,
-): Promise<void> {
-    const value = data[field.name];
-    const values = Array.isArray(value) ? value : [value];
-    const prepared = [];
-    for (const item of values) {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) {
-            throw new ValidationError([
-                { property: field.name, message: 'Structure values must be objects.' },
-            ]);
-        }
-        prepared.push(await prepareMutation(context, structure, item));
-    }
-    if (
-        field.uniqueBy &&
-        new Set(prepared.map((item) => JSON.stringify(item[field.uniqueBy!]))).size !==
-            prepared.length
-    ) {
-        throw new ValidationError([
-            { property: field.name, message: `Values must be unique by '${field.uniqueBy}'.` },
-        ]);
-    }
-    data[field.name] = Array.isArray(value) ? prepared : prepared[0];
 }
 
 function prepareEntityType(
