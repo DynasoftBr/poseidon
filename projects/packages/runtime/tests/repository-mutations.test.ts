@@ -18,7 +18,7 @@ function setup() {
     };
 }
 function field(name: string, extras: Partial<EntityProperty> = {}): EntityProperty {
-    return { _id: 'customer:' + name, entityTypeId: 'customer', name, type: 'string', ...extras };
+    return { _id: 'customer:' + name, name, type: 'string', ...extras };
 }
 async function customers() {
     const services = setup();

@@ -13,6 +13,6 @@ export function createCoreEntityTypes(
             'actions' in definition
                 ? Object.values(definition.actions).map(({ code: _code, ...action }) => action)
                 : undefined,
-        properties: properties.filter((property) => property.entityTypeId === definition.name),
+        properties: properties.filter((property) => property._id.startsWith(`${definition.name}:`)),
     }));
 }

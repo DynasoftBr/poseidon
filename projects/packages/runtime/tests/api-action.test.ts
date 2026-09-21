@@ -39,7 +39,6 @@ describe('APIAction', () => {
                 properties: [
                     {
                         _id: 'order:productId',
-                        entityTypeId: 'order',
                         name: 'productId',
                         type: 'string',
                     },
@@ -52,7 +51,6 @@ describe('APIAction', () => {
                 properties: [
                     {
                         _id: 'stock:orderId',
-                        entityTypeId: 'stock',
                         name: 'orderId',
                         type: 'string',
                     },
@@ -104,7 +102,6 @@ describe('APIAction', () => {
                 properties: [
                     {
                         _id: 'order:productId',
-                        entityTypeId: 'order',
                         name: 'productId',
                         type: 'string',
                     },
@@ -135,13 +132,11 @@ describe('APIAction', () => {
                 properties: [
                     {
                         _id: 'entity-type:name',
-                        entityTypeId: 'entity-type',
                         name: 'name',
                         type: 'string',
                     },
                     {
                         _id: 'entity-type:properties',
-                        entityTypeId: 'entity-type',
                         name: 'properties',
                         type: 'json',
                     },
@@ -175,13 +170,11 @@ describe('APIAction', () => {
                 properties: [
                     {
                         _id: 'entity-type:name',
-                        entityTypeId: 'entity-type',
                         name: 'name',
                         type: 'string',
                     },
                     {
                         _id: 'entity-type:properties',
-                        entityTypeId: 'entity-type',
                         name: 'properties',
                         type: 'json',
                     },

@@ -33,7 +33,6 @@ function createCoreBusinessProperties(context: BootstrapContext): EntityProperty
             uniqueBy: 'name',
         }),
         createProperty(['entity-type', 'actions', 'json', false], context),
-        createProperty(['entity-property', 'entityTypeId', 'string', true], context),
         createProperty(['entity-property', 'name', 'string', true], context),
         createProperty(['entity-property', 'type', 'string', true], context, {
             enum: [...propertyTypes],

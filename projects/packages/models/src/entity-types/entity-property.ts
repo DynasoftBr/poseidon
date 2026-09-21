@@ -22,7 +22,6 @@ export interface EntityProperty extends EntityPropertyData {
 }
 
 export type EntityPropertyData = {
-    entityTypeId: EntityId;
     name: string;
     type: PropertyType;
     required?: boolean;

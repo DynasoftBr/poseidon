@@ -8,7 +8,6 @@ export function createProperty(
 ): EntityProperty {
     return {
         _id: `${entityTypeId}:${name}`,
-        entityTypeId,
         name,
         type,
         required,

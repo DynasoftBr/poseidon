@@ -226,7 +226,6 @@ describe('applyEntityRules', () => {
 function property(id: string, name: string): EntityProperty {
     return {
         _id: id,
-        entityTypeId: 'order',
         name,
         type: 'string',
     };

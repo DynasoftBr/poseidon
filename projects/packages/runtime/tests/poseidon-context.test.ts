@@ -26,7 +26,6 @@ describe('PoseidonContext', () => {
             properties: [
                 {
                     _id: 'person:name',
-                    entityTypeId: 'person-type-id',
                     name: 'name',
                     type: 'string',
                 },
@@ -58,9 +57,7 @@ describe('PoseidonContext', () => {
     it('should resolve and execute the requested action with the bound actor', async () => {
         const dataStorage = storage([
             entityType('person', {
-                properties: [
-                    { _id: 'person:name', entityTypeId: 'person', name: 'name', type: 'string' },
-                ],
+                properties: [{ _id: 'person:name', name: 'name', type: 'string' }],
                 actions: [
                     {
                         id: 'person:create',

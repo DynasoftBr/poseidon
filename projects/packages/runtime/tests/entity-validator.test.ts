@@ -55,6 +55,5 @@ function property(
     return {
         ...data,
         _id: id,
-        entityTypeId: 'person',
     };
 }

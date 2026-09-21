@@ -72,6 +72,33 @@ describe('createBootstrapModel', () => {
         ]);
     });
 
+    it('should embed properties without an owner ID', () => {
+        const model = createBootstrapModel('system', new Date());
+        for (const type of model.entityTypes) {
+            for (const property of type.properties) {
+                expect(property).not.toHaveProperty('entityTypeId');
+            }
+        }
+        const propertyType = model.entityTypes.find((type) => type.name === 'entity-property')!;
+        expect(propertyType.properties.map((property) => property.name)).not.toContain(
+            'entityTypeId',
+        );
+        const userType = model.entityTypes.find((type) => type.name === 'user')!;
+        expect(userType.properties.map((property) => property.name)).toEqual([
+            '_id',
+            '_entityTypeId',
+            '_version',
+            '_createdAt',
+            '_createdBy',
+            '_changedAt',
+            '_changedBy',
+            '_deletedAt',
+            '_deletedBy',
+            'name',
+            'login',
+        ]);
+    });
+
     it('should create missing entities with their audit metadata', async () => {
         const model = createBootstrapModel('system', new Date('2026-09-13T00:00:00.000Z'));
         const storage = createStorage([]);

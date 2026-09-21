@@ -6,7 +6,6 @@ describe('mandatory entity properties', () => {
         const dataStorage = storage([]);
         const existing = {
             _id: 'product:_id',
-            entityTypeId: 'product',
             name: '_id',
             type: 'string',
             required: true,

@@ -10,7 +10,6 @@ describe('entity model utilities', () => {
     it('should expose embedded property definitions and optional actions', () => {
         const stored = {
             _id: 'user:name',
-            entityTypeId: 'user',
             name: 'name',
             type: 'string',
             required: true,
