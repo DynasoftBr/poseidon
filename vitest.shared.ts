@@ -6,6 +6,7 @@ const packages = resolve(__dirname, 'projects/packages');
 export default defineConfig({
     resolve: {
         alias: {
+            '@poseidon/utilities': resolve(packages, 'utilities/src/index.ts'),
             '@poseidon/models': resolve(packages, 'models/src/index.ts'),
             '@poseidon/service-utils': resolve(packages, 'service-utils/src/index.ts'),
             '@poseidon/data-access': resolve(packages, 'data-access/src/index.ts'),

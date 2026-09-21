@@ -5,18 +5,18 @@ import { errorMiddleware } from './error-middleware';
 import type { AuthMiddleware, AuthenticatedRequest } from './auth-middleware';
 
 export interface AppDependencies {
-    createContext?: (user: Entity) => PoseidonContext;
+    createContext: (user: Entity) => PoseidonContext;
     auth?: AuthMiddleware;
 }
 
-export function createApp(dependencies: AppDependencies = {}): Express {
+export function createApp(dependencies: AppDependencies): Express {
     const app = express();
     app.use(express.json());
     app.get('/health', (_request, response) => {
         response.json({ status: 'ok' });
     });
     if (dependencies.auth) app.use(dependencies.auth.authenticate);
-    if (dependencies.createContext) configureActions(app, dependencies.createContext);
+    configureActions(app, dependencies.createContext);
     app.use(errorMiddleware);
     return app;
 }

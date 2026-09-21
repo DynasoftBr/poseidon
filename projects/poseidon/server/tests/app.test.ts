@@ -96,7 +96,6 @@ describe('action endpoint', () => {
     it('should remove the resource routes while keeping health available', async () => {
         const { app } = setup();
         expect((await request(app).get('/health')).status).toBe(200);
-        expect((await request(createApp()).get('/health')).status).toBe(200);
         expect((await request(app).get('/api/v1/entities/customer/ada')).status).toBe(404);
         expect((await request(app).post('/api/v1/entities/customer').send({})).status).toBe(404);
         expect((await request(app).patch('/customer').send({})).status).toBe(404);
