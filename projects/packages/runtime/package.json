@@ -12,9 +12,9 @@
         "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@poseidon/data-access": "*",
-        "@poseidon/models": "*",
         "ajv": "^8.20.0",
-        "ajv-formats": "^3.0.1"
+        "ajv-formats": "^3.0.1",
+        "@poseidon/framework": "*",
+        "mongodb": "^6.20.0"
     }
 }

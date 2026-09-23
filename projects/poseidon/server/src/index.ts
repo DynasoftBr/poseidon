@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import { connectDatabase, MongoDataStorage } from '@poseidon/data-access';
-import { RuntimeContext } from '@poseidon/runtime';
+import { PoseidonContext } from '@poseidon/framework';
+import { Runtime } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
+import { MongoClient } from 'mongodb';
 import { createApp } from './app';
 
 const logger = getLogger('poseidon-server');
@@ -13,10 +14,11 @@ async function start(): Promise<void> {
         throw new Error('MONGODB_URI must be configured.');
     }
 
-    const client = await connectDatabase(databaseUri);
+    const client = new MongoClient(databaseUri);
+    await client.connect();
     const port = Number(process.env.PORT ?? 3000);
     const app = createApp({
-        createContext: () => new RuntimeContext(new MongoDataStorage(client)),
+        createContext: () => new PoseidonContext(new Runtime(client), () => undefined),
     });
 
     app.listen(port, '127.0.0.1', () => {

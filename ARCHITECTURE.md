@@ -20,19 +20,19 @@ The repository currently implements HTTP in `projects/poseidon/server`; the pack
 
 ### Unified HTTP contract
 
-The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `get`, `create`, `update`, `delete`, and `validate` actions use the same contract as custom model actions. Entity IDs belong in `input._id`, and updates supply the replacement entity. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
+The business API uses one route, `POST /:entityTypeName`, with `{ "action": "onboard", "input": { ... } }`. The path scopes the action to its entity type. Built-in `save`, `delete`, `get`, and `validate` actions use the same contract as custom model actions. Entity IDs belong in `input._id`. Saving without `_version` creates version 1; saving with `_version` replaces the stored entity. Successful calls return the action result, or JSON null for no result. Health checks are infrastructure endpoints, separate from this business API.
 
 Login and signup will also be APIActions through this endpoint. Actions must explicitly declare whether unauthenticated callers may invoke them; trusted server code remains responsible for credentials and session handling. HTTP request–response is the selected starting point. WebSockets may support future subscriptions or bidirectional updates when required.
 
 ### Model-generated typed client
 
-Clients should work through the same `PoseidonContext` interface, with repositories exposing the properties and named APIActions of their entity types. Generate TypeScript entity types, runtime entity tokens, and typed repository action methods directly from the Poseidon model, including user-created types. The intended call shape is:
+Clients should work through the same `PoseidonContext` interface, with entity classes exposing their properties and named APIActions. Generate TypeScript entity classes and typed action methods directly from the Poseidon model, including user-created types. The intended call shape is:
 
 ```ts
-await context.repository(Customer).onboardCustomer({ name: 'Acme' });
+await Customer.onboardCustomer({ name: 'Acme' });
 ```
 
-Here `context` implements `PoseidonContext`, `Customer` is a generated runtime token identifying the entity type, and `onboardCustomer` is a generated method with model-defined input and result types. The example assumes that action accepts a `name` input. Passing the token lets TypeScript infer the repository type while also supplying its identity at runtime; `repository<Customer>()` alone cannot do that because generic type arguments are erased. No custom compiler transform or decorators are required.
+Here `Customer` is a typed callable facade and `onboardCustomer` is a generated method with model-defined input and result types. The example assumes that action accepts a `name` input. The configured `PoseidonContext` performs the runtime or transport dispatch.
 
 The client translates these calls into the JSON API contract; business behavior, validation, and authorization remain in the runtime. Generated declarations and methods must be regenerated when entity types, properties, or actions change. They describe the model revision used for generation, not a guarantee that an already-built client automatically acquires later model changes. Generation, distribution, and refresh mechanics remain to be implemented.
 
@@ -44,13 +44,12 @@ GraphQL is not required for this developer experience: ordinary TypeScript calls
 projects/
   poseidon/server/             HTTP adapter and composition root (rename planned)
   packages/
-    models/                     declarative entity types
-    data-access/               MongoDB-only persistence implementation
-    runtime/                   validation and action execution
+    framework/                  shared entity contracts and declarations
+    runtime/                   MongoDB persistence, validation, and action execution
     service-utils/             logging and shared service infrastructure
 ```
 
-`@poseidon/models` and `@poseidon/runtime` do not know MongoDB or transport protocols. The HTTP adapter currently composes the runtime with the MongoDB implementation from `@poseidon/data-access`.
+`@poseidon/framework` does not know MongoDB or transport protocols. `@poseidon/runtime` executes actions and persists them through MongoDB; the HTTP adapter composes the runtime.
 
 Runtime entities contain business fields alongside `_id`; their collection identifies their entity type. EntityProperties are embedded in their owning EntityType and carry their own `_id`. Audit fields and user models are deferred for the MVP.
 
@@ -84,13 +83,15 @@ Promotion must check the current production data, not assume the test copy is st
 
 ## Action execution and persistence
 
-`RuntimeContext` holds storage; `RuntimeRepository` resolves named APIActions and executes their before steps, then dispatches built-in behavior by action name. APIActions have no operation field. Each action requires its own implementation; before steps run ahead of it. Actions without an implementation throw an error. Custom action implementations are deferred for the MVP. Built-in actions are available when no model action of the same name is declared. `EntityService`, mutation events, projection writes, relationship-link maintenance, and event publication have been removed. MongoDB stores entities directly in a collection per EntityType; deletes remove the record. Existing historical collections are not dropped by this change.
+`Runtime` resolves named APIActions and executes their before steps, then dispatches built-in behavior by action name. APIActions have no operation field. Each action requires its own implementation; before steps run ahead of it. Actions without an implementation throw an error. Custom action implementations are deferred for the MVP. `EntityService`, mutation events, projection writes, relationship-link maintenance, and event publication have been removed. MongoDB stores entities directly in a collection per EntityType; deletes remove the record. Existing historical collections are not dropped by this change.
 
-Default create and validate actions run applyDefaults followed by applyConventions as explicit before actions; update runs applyConventions only. These steps mutate the shared input and record null outputs. The explicit validate action performs property and embedded structure validation. Business-rule definitions and execution are deferred for the MVP. The addMandatoryProperties handler remains available for explicitly configured before actions; the runtime no longer supplies EntityType action definitions. Updates replace the stored entity; name immutability and optimistic concurrency are deferred for the MVP. The `validate` action returns `{ valid, problems }` without persisting data; writes do not implicitly validate or filter input. Before steps and the named action share a transaction; an enclosing transaction, such as a compound business action, can group multiple actions. Action chains have no `after` steps. Work triggered by a committed change belongs exclusively to event handlers that can retry independently; event delivery and retry handling remain to be implemented.
+The default `save` action runs applyDefaults followed by applyConventions as explicit before actions. These steps mutate the shared input and record null outputs. A save without `_version` creates version 1; a save with `_version` replaces the stored entity. The explicit validate action performs property and embedded structure validation. Business-rule definitions and execution are deferred for the MVP. The `validate` action returns `{ valid, problems }` without persisting data; writes do not implicitly validate or filter input. Before steps and the named action share a transaction; an enclosing transaction, such as a compound business action, can group multiple actions. Action chains have no `after` steps. Work triggered by a committed change belongs exclusively to event handlers that can retry independently; event delivery and retry handling remain to be implemented.
 
 The MVP reads one entity by ID with `get`; entity-type routing resolves one definition by name. Runtime queries, filtering, pagination, and the model Specification are deferred. The standalone query builder remains available. Index definitions and automatic MongoDB index creation are deferred for the MVP.
 
-Relationship properties and the `relation-link` type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly create or update separately persisted records. Related records must be created or updated through explicit actions.
+Relationship properties and the `relation-link` type are removed for now. References use ordinary string IDs or arrays of strings, without relationship metadata. Embedded object structures remain values owned by their containing entity; nested payloads never implicitly save separately persisted records. Related records must be saved through explicit actions.
+
+Restore `uniqueBy` after the MVP to enforce array-item uniqueness by a combination of fields, such as `productId` and `warehouseId`. Declare the constraint on the array property, with the selected item fields forming one composite key; each field need not be unique individually. This was removed for MVP simplification, not dropped from Poseidon's scope.
 
 The planned typed action contract is a cascade: each action declares input/output EntityTypes, adjacent steps must agree, and each action's public input/output are inferred recursively from its first/last executed step. Without before steps, these are the action handler's types. Client generation uses that resolved contract; type declarations and generation are not implemented by this transport simplification.
 

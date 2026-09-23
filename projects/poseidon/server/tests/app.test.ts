@@ -1,113 +1,79 @@
-import type { EntityType } from '@poseidon/models';
-import { RuntimeContext, ValidationError } from '@poseidon/runtime';
-import type { DataStorage } from '@poseidon/data-access';
+import { PoseidonContext, type PoseidonRequest, type PoseidonTransport } from '@poseidon/framework';
 import request from 'supertest';
 import { createApp } from '../src/app';
 
-function setup() {
-    const customerType: EntityType = {
-        _id: 'customer-type-id',
-        name: 'customer',
-        label: 'Customer',
-        properties: [],
-    };
-    const storage = {
-        get: vi.fn().mockResolvedValue(null),
-        getEntityType: vi.fn().mockResolvedValue(customerType),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-        beginTransaction: vi.fn(),
-        commitTransaction: vi.fn(),
-        abortTransaction: vi.fn(),
-    } satisfies DataStorage;
-    const context = new RuntimeContext(storage);
-    const repository = context.repository(customerType);
-    const execute = vi.spyOn(repository, 'execute').mockResolvedValue({ _id: 'ada' });
-    const select = vi.spyOn(context, 'repository').mockReturnValue(repository);
-    const createContext = vi.fn().mockReturnValue(context);
-    return {
-        app: createApp({ createContext }),
-        execute,
-        select,
-        createContext,
-        storage,
-        customerType,
-    };
+class TestTransport implements PoseidonTransport {
+    public request?: PoseidonRequest;
+
+    send<TResult>(request: PoseidonRequest, _token: string | undefined): Promise<TResult> {
+        this.request = request;
+        return Promise.resolve({ _id: 'ada' } as TResult);
+    }
 }
 
 describe('action endpoint', () => {
-    it('should dispatch an entity-scoped action without authentication', async () => {
-        const services = setup();
+    it('should dispatch an action request', async () => {
+        const transport = new TestTransport();
+        const app = createApp({
+            createContext: () => new PoseidonContext(transport, () => undefined),
+        });
+
         await expect(
-            request(services.app)
-                .post('/customer')
-                .send({ action: 'onboard', input: { name: 'Ada' } }),
+            request(app)
+                .post('/')
+                .send({ entityType: 'customer', action: 'onboard', payload: { name: 'Ada' } }),
         ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
-        expect(services.storage.getEntityType).toHaveBeenCalledWith('customer');
-        expect(services.select).toHaveBeenCalledWith(services.customerType);
-        expect(services.execute).toHaveBeenCalledWith('onboard', { name: 'Ada' });
-        expect(services.createContext).toHaveBeenCalledWith();
+        expect(transport.request).toEqual({
+            entityType: 'customer',
+            action: 'onboard',
+            payload: { name: 'Ada' },
+        });
     });
-    it('should reject a request when its entity type does not exist', async () => {
-        const { app, storage, execute, select } = setup();
-        storage.getEntityType.mockResolvedValueOnce(null);
-        const response = await request(app).post('/missing').send({ action: 'get', input: {} });
-        expect(response.status).toBe(404);
-        expect(response.body.error.code).toBe('entity-type-not-found');
-        expect(select).not.toHaveBeenCalled();
-        expect(execute).not.toHaveBeenCalled();
+
+    it('should reject requests without an entity type or action', async () => {
+        const app = createApp({
+            createContext: () => new PoseidonContext(new TestTransport(), () => undefined),
+        });
+        await expect(request(app).post('/').send({ payload: {} })).resolves.toMatchObject({
+            status: 422,
+        });
+        await expect(
+            request(app).post('/').send({ entityType: 'customer' }),
+        ).resolves.toMatchObject({ status: 422 });
+        await expect(request(app).post('/').send({ action: 'get' })).resolves.toMatchObject({
+            status: 422,
+        });
     });
-    it('should reject structure requests before constructing a runtime repository', async () => {
-        const { app, storage, customerType, execute, select } = setup();
-        storage.getEntityType.mockResolvedValueOnce({ ...customerType, structure: true });
-        const response = await request(app).post('/customer').send({ action: 'create', input: {} });
-        expect(response.status).toBe(422);
-        expect(response.body.error.code).toBe('validation');
-        expect(select).not.toHaveBeenCalled();
-        expect(execute).not.toHaveBeenCalled();
+
+    it('should keep health available', async () => {
+        const app = createApp({
+            createContext: () => new PoseidonContext(new TestTransport(), () => undefined),
+        });
+        await expect(request(app).get('/health')).resolves.toMatchObject({ status: 200 });
     });
-    it('should use the same contract for reads, deletes and validation', async () => {
-        const { app, execute } = setup();
-        for (const action of ['get', 'delete', 'validate']) {
-            execute.mockResolvedValueOnce(action === 'delete' ? undefined : []);
-            const response = await request(app).post('/customer').send({ action, input: {} });
-            expect(response.status).toBe(200);
-            expect(response.body).toEqual(action === 'delete' ? null : []);
-        }
-    });
-    it('should reject malformed action requests without dispatching', async () => {
-        const { app, execute } = setup();
-        for (const body of [
-            {},
-            { action: '', input: {} },
-            { action: 'create' },
-            { action: 'create', input: [] },
-        ]) {
-            expect((await request(app).post('/customer').send(body)).status).toBe(422);
-        }
-        expect((await request(app).post('/customer')).status).toBe(422);
-        expect(execute).not.toHaveBeenCalled();
-    });
-    it('should forward domain and unexpected errors', async () => {
-        const { app, execute } = setup();
-        execute.mockRejectedValueOnce(
-            new ValidationError([{ property: 'name', message: 'Required' }]),
-        );
-        expect(
-            (await request(app).post('/customer').send({ action: 'create', input: {} })).status,
-        ).toBe(422);
-        execute.mockRejectedValueOnce(new Error('Unavailable'));
-        expect(
-            (await request(app).post('/customer').send({ action: 'get', input: {} })).status,
-        ).toBe(500);
-    });
-    it('should remove the resource routes while keeping health available', async () => {
-        const { app } = setup();
-        expect((await request(app).get('/health')).status).toBe(200);
-        expect((await request(app).get('/api/v1/entities/customer/ada')).status).toBe(404);
-        expect((await request(app).post('/api/v1/entities/customer').send({})).status).toBe(404);
-        expect((await request(app).patch('/customer').send({})).status).toBe(404);
-        expect((await request(app).delete('/customer')).status).toBe(404);
-    });
+});
+
+it('should forward transport failures to error middleware', async () => {
+    const transport: PoseidonTransport = {
+        send<TResult>(): Promise<TResult> {
+            return Promise.reject(new Error('Unavailable'));
+        },
+    };
+    const app = createApp({ createContext: () => new PoseidonContext(transport, () => undefined) });
+    await expect(
+        request(app).post('/').send({ entityType: 'customer', action: 'get', payload: {} }),
+    ).resolves.toMatchObject({ status: 500 });
+});
+
+it('should return null for an undefined operation result and reject an empty body', async () => {
+    const transport: PoseidonTransport = {
+        send<TResult>(): Promise<TResult> {
+            return Promise.resolve(undefined as TResult);
+        },
+    };
+    const app = createApp({ createContext: () => new PoseidonContext(transport, () => undefined) });
+    await expect(
+        request(app).post('/').send({ entityType: 'customer', action: 'delete', payload: {} }),
+    ).resolves.toMatchObject({ status: 200, body: null });
+    await expect(request(app).post('/')).resolves.toMatchObject({ status: 422 });
 });

@@ -4,8 +4,10 @@
         "composite": true,
         "outDir": "./dist",
         "rootDir": "./src",
+        "experimentalDecorators": true,
+        "useDefineForClassFields": false,
         "types": ["node", "vitest/globals"]
     },
-    "references": [{ "path": "../models" }, { "path": "../data-access" }],
+    "references": [{ "path": "../framework" }],
     "include": ["src/**/*"]
 }

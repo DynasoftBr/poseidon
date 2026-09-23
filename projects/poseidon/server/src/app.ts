@@ -1,15 +1,10 @@
 import express, { type Express } from 'express';
-import type { EntityData } from '@poseidon/models';
-import {
-    EntityTypeNotFoundError,
-    requireConcreteEntityType,
-    ValidationError,
-    type RuntimeContext,
-} from '@poseidon/runtime';
+import { poseidon, type PoseidonContext, type PoseidonRequest } from '@poseidon/framework';
+import { ValidationError } from '@poseidon/runtime';
 import { errorMiddleware } from './error-middleware';
 
 export interface AppDependencies {
-    createContext: () => RuntimeContext;
+    createContext: () => PoseidonContext;
 }
 
 export function createApp(dependencies: AppDependencies): Express {
@@ -23,16 +18,12 @@ export function createApp(dependencies: AppDependencies): Express {
     return app;
 }
 
-function configureActions(app: Express, createContext: () => RuntimeContext): void {
-    app.post('/:entityTypeName', async (request, response, next) => {
+function configureActions(app: Express, createContext: () => PoseidonContext): void {
+    app.post('/', async (request, response, next) => {
         try {
-            const { action, input } = actionRequest(request.body);
-            const context = createContext();
-            const entityType = await context.storage.getEntityType(request.params.entityTypeName);
-            if (!entityType) throw new EntityTypeNotFoundError(request.params.entityTypeName);
-            requireConcreteEntityType(entityType);
-            const repository = context.repository(entityType);
-            const result = await repository.execute(action, input);
+            const result = await poseidon.run(createContext(), () =>
+                poseidon.context().execute(actionRequest(request.body)),
+            );
             response.status(200).json(result ?? null);
         } catch (error) {
             next(error);
@@ -40,12 +31,16 @@ function configureActions(app: Express, createContext: () => RuntimeContext): vo
     });
 }
 
-function actionRequest(body: unknown): { action: string; input: EntityData } {
-    const { action, input } = (body || {}) as { action?: unknown; input?: unknown };
-    if (typeof action !== 'string' || !action) {
+function actionRequest(body: unknown): PoseidonRequest {
+    const { entityType, action, payload } = (body || {}) as {
+        entityType?: unknown;
+        action?: unknown;
+        payload?: unknown;
+    };
+    if (typeof entityType !== 'string' || typeof action !== 'string') {
         throw new ValidationError([
-            { property: 'request', message: 'An action name and input object are required.' },
+            { property: 'request', message: 'An entity type, action, and payload are required.' },
         ]);
     }
-    return { action, input: input as EntityData };
+    return { entityType, action, payload: payload as object };
 }

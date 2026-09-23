@@ -1,6 +1,12 @@
 import express from 'express';
 import request from 'supertest';
-import { EntityTypeNotFoundError, ValidationError } from '@poseidon/runtime';
+import {
+    AccessDeniedError,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    EntityTypeNotFoundError,
+    ValidationError,
+} from '@poseidon/runtime';
 import { errorMiddleware } from '../src/error-middleware';
 
 describe('errorMiddleware', () => {
@@ -35,4 +41,35 @@ describe('errorMiddleware', () => {
         expect(response.status).toBe(404);
         expect(response.body.error.code).toBe('entity-type-not-found');
     });
+});
+
+it('should return an internal-error response for unknown errors', async () => {
+    const app = express();
+    app.get('/entities', () => {
+        throw new Error('Unavailable');
+    });
+    app.use(errorMiddleware);
+    await expect(request(app).get('/entities')).resolves.toMatchObject({
+        status: 500,
+        body: { error: { code: 'unexpected-error', message: 'Unexpected error.' } },
+    });
+});
+
+it.each([
+    ['entity-not-found', 404],
+    ['entity-already-exists', 409],
+    ['access-denied', 403],
+])('should map %s errors to %i', async (code, status) => {
+    const error =
+        code === 'entity-not-found'
+            ? new EntityNotFoundError('id')
+            : code === 'entity-already-exists'
+              ? new EntityAlreadyExistsError('id')
+              : new AccessDeniedError();
+    const app = express();
+    app.get('/entities', () => {
+        throw error;
+    });
+    app.use(errorMiddleware);
+    await expect(request(app).get('/entities')).resolves.toMatchObject({ status });
 });

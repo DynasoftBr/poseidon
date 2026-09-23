@@ -1,0 +1,27 @@
+{
+    "name": "@poseidon/framework",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./dist/node/index.js",
+    "types": "./dist/node/index.d.ts",
+    "exports": {
+        ".": {
+            "browser": {
+                "types": "./dist/browser/index.d.ts",
+                "default": "./dist/browser/index.js"
+            },
+            "node": {
+                "types": "./dist/node/index.d.ts",
+                "default": "./dist/node/index.js"
+            },
+            "default": "./dist/node/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc -b tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+        "typecheck": "tsc -b --emitDeclarationOnly",
+        "lint": "eslint .",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage"
+    }
+}

@@ -28,7 +28,7 @@ npm run dev:stack
 
 On startup, the server connects with `MONGODB_URI` without seeding model data; replacement initialization is still to be implemented. EntityProperties are embedded in each EntityType’s `properties` array.
 
-An EntityType with `structure: true` describes embedded values and cannot be persisted independently. EntityProperty is a structure; its `_id` identifies the property for model references. Object properties and arrays of objects select their structure through `relatedEntityTypeId`.
+An EntityType with `structure: true` describes embedded values and cannot be persisted independently. EntityProperty is a structure identified by its name within the owning EntityType.
 
 The MVP has no authentication, actor context, or audit fields; requests can call the action endpoint directly.
 
@@ -43,11 +43,11 @@ All business operations use `POST /:entityTypeName` with an action name and inpu
 ```bash
 curl -X POST http://localhost:3000/entity-type \
   -H 'content-type: application/json' \
-  -d '{"action":"create","input":{"_id":"person","name":"person","label":"Person","properties":[{"_id":"person:name","name":"name","type":"string","required":true}]}}'
+  -d '{"action":"save","input":{"_id":"person","name":"person","label":"Person","properties":[{"name":"name","type":"string","required":true}],"actions":[{"id":"save","name":"save","label":"save","enabled":true,"before":[]},{"id":"get","name":"get","label":"get","enabled":true,"before":[]},{"id":"delete","name":"delete","label":"delete","enabled":true,"before":[]},{"id":"validate","name":"validate","label":"validate","enabled":true,"before":[]}]}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
-  -d '{"action":"create","input":{"_id":"ada","name":"Ada Lovelace"}}'
+  -d '{"action":"save","input":{"_id":"ada","name":"Ada Lovelace"}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
@@ -55,7 +55,7 @@ curl -X POST http://localhost:3000/person \
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
-  -d '{"action":"update","input":{"_id":"ada","name":"Ada Byron"}}'
+  -d '{"action":"save","input":{"_id":"ada","_version":1,"name":"Ada Byron"}}'
 
 curl -X POST http://localhost:3000/person \
   -H 'content-type: application/json' \
@@ -67,6 +67,10 @@ curl -X POST http://localhost:3000/person \
 ```
 
 Entities are written directly without mutation events or projections. Relationship properties and implicit nested entity writes are removed; references use ordinary IDs, while embedded structures remain supported.
+
+## JSDoc
+
+Document public APIs with concise, multiline JSDoc. Include typed `@param` and `@returns` tags, use JSDoc syntax for optional parameters and defaults, describe async returns as `Promise<T>`, and add `@throws` for meaningful failures.
 
 ## Verification
 

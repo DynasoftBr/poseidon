@@ -4,15 +4,8 @@
         "composite": true,
         "outDir": "./dist",
         "rootDir": "./src",
+        "experimentalDecorators": true,
         "types": ["node", "vitest/globals"]
     },
-    "references": [
-        {
-            "path": "../../packages/runtime"
-        },
-        {
-            "path": "../../packages/service-utils"
-        }
-    ],
     "include": ["src/**/*"]
 }

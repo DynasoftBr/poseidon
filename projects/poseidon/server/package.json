@@ -13,10 +13,10 @@
         "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@poseidon/data-access": "*",
         "@poseidon/runtime": "*",
         "@poseidon/service-utils": "*",
         "dotenv": "^17.2.0",
-        "express": "^5.1.0"
+        "express": "^5.1.0",
+        "mongodb": "^6.20.0"
     }
 }
