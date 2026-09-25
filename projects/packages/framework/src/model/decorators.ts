@@ -23,7 +23,7 @@ export type PropertyOptions = Omit<EntityProperty, 'name' | 'itemsType'> & {
     itemsType?: PropertyType | EntityClass;
 };
 
-export type ActionMethod = (...args: never[]) => unknown;
+export type ActionMethod = (...args: never[]) => Promise<unknown>;
 export type ActionOptions = {
     description: string;
     name?: string;
@@ -77,14 +77,18 @@ export function Property(options: PropertyOptions): PropertyDecorator {
  * @returns {MethodDecorator} A method decorator that records action metadata.
  * @throws If the method name is a symbol.
  */
-export function Action(options: ActionOptions): MethodDecorator {
-    return (target, key, descriptor) => {
+export function Action(options: ActionOptions) {
+    return <TMethod extends ActionMethod>(
+        target: object,
+        key: string | symbol,
+        descriptor: TypedPropertyDescriptor<TMethod>,
+    ): void => {
         if (typeof key !== 'string') throw new Error('Action methods must have string names.');
-        if (typeof descriptor.value !== 'function') {
+        const method = descriptor.value;
+        if (typeof method !== 'function') {
             throw new Error('Actions must decorate methods.');
         }
         const owner = typeof target === 'function' ? target : target.constructor;
-        const method = descriptor.value as ActionMethod;
         const metadata = { ...options, method, name: options.name ?? key };
         const actions = actionOptions.get(owner) ?? new Map<string, ActionMetadata>();
         actions.set(metadata.name, metadata);
@@ -98,17 +102,22 @@ export function Action(options: ActionOptions): MethodDecorator {
  * @returns {MethodDecorator} A method decorator that records query metadata.
  * @throws If the method name is a symbol or the decorated value is not a method.
  */
-export function Query(options: QueryOptions): MethodDecorator {
-    return (target, key, descriptor) => {
+export function Query(options: QueryOptions) {
+    return <TMethod extends ActionMethod>(
+        target: object,
+        key: string | symbol,
+        descriptor: TypedPropertyDescriptor<TMethod>,
+    ): void => {
         if (typeof key !== 'string') throw new Error('Queries must have string names.');
-        if (typeof descriptor.value !== 'function') {
+        const method = descriptor.value;
+        if (typeof method !== 'function') {
             throw new Error('Queries must decorate methods.');
         }
         const owner = typeof target === 'function' ? target : target.constructor;
         const queries = queryOptions.get(owner) ?? new Map<string, QueryMetadata>();
         const metadata = {
             ...options,
-            method: descriptor.value as ActionMethod,
+            method,
             name: options.name ?? key,
         };
         queries.set(metadata.name, metadata);

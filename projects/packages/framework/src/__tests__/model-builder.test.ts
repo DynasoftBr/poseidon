@@ -115,7 +115,7 @@ describe('decorated model declarations', () => {
         class Customer {}
         expect(() =>
             Action({ description: 'Performs this action.' })(Customer.prototype, Symbol('run'), {
-                value() {},
+                value: () => Promise.resolve(undefined),
             }),
         ).toThrow('string names');
     });
@@ -131,13 +131,13 @@ describe('decorated model declarations', () => {
         @EntityTypeDef()
         class Customer {
             @Action({ description: 'Performs this action.' })
-            prepare(): void {}
+            async prepare(): Promise<void> {}
 
             @Action({
                 description: 'Performs this action.',
                 before: () => [Customer.prototype.prepare],
             })
-            create(): void {}
+            async create(): Promise<void> {}
         }
 
         expect(definitionOf(Customer).actions).toEqual([
@@ -172,13 +172,13 @@ describe('decorated model declarations', () => {
     it('should reject before methods without an action decorator', () => {
         @EntityTypeDef()
         class Customer {
-            prepare(): void {}
+            async prepare(): Promise<void> {}
 
             @Action({
                 description: 'Performs this action.',
                 before: () => [Customer.prototype.prepare],
             })
-            create(): void {}
+            async create(): Promise<void> {}
         }
 
         expect(() => definitionOf(Customer)).toThrow('decorated with @Action()');
@@ -361,16 +361,16 @@ describe('decorator error paths', () => {
     it('should reject invalid queries and resolve decorated operations', () => {
         class Customer {
             @Action({ description: 'Performs this action.' })
-            create(): void {}
+            async create(): Promise<void> {}
 
             @Query({ description: 'Reads data.' })
-            list(): void {}
+            async list(): Promise<void> {}
         }
         expect(operationMethodOf(Customer, 'create')).toBe(Customer.prototype.create);
         expect(operationMethodOf(Customer, 'list')).toBe(Customer.prototype.list);
         expect(() =>
             Query({ description: 'Reads data.' })(Customer.prototype, Symbol('list'), {
-                value() {},
+                value: () => Promise.resolve(undefined),
             }),
         ).toThrow('string names');
         expect(() => Query({ description: 'Reads data.' })(Customer.prototype, 'list', {})).toThrow(
@@ -389,7 +389,9 @@ describe('decorator error paths', () => {
 it('should record static queries', () => {
     class Customer {
         @Query({ description: 'Reads data.' })
-        static list(): void {}
+        static list(): Promise<void> {
+            return Promise.resolve();
+        }
     }
     expect(operationMethodOf(Customer, 'list')).toBe(Customer.list);
 });
