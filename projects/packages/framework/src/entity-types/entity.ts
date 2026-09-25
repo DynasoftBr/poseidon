@@ -42,7 +42,7 @@ export class Entity extends Structure {
      */
     @Action({
         description: 'Creates or updates an entity.',
-        before: () => [Entity.applyDefaults, Entity.applyConventions],
+        before: () => [Entity.applyDefaults, Entity.applyConventions, Entity.validate],
     })
     static save<TResult = unknown>(this: typeof Entity, payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
@@ -86,6 +86,22 @@ export class Entity extends Structure {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'applyConventions',
+            payload,
+        });
+    }
+
+    /**
+     * Validates entity data against its declared properties.
+     * @template TResult - Action result.
+     * @param {object} payload - Entity data to validate.
+     * @returns {Promise<TResult>} Resolves when the entity is valid.
+     * @throws If validation fails.
+     */
+    @Action({ description: 'Validates entity data against declared properties.' })
+    static validate<TResult = unknown>(this: typeof Entity, payload: object): Promise<TResult> {
+        return poseidon.context().execute<TResult>({
+            entityType: entityTypeNameOf(this as EntityClass),
+            action: 'validate',
             payload,
         });
     }

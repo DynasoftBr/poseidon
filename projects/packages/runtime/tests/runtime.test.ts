@@ -193,21 +193,30 @@ describe('runtime EntityType operations', () => {
                 {
                     entityType: 'entity-type',
                     action: 'validate',
-                    payload: { name: 'customer', label: 'Customer', properties: [] },
+                    payload: {
+                        _id: 'customer',
+                        name: 'customer',
+                        label: 'Customer',
+                        properties: [],
+                    },
                 },
                 undefined,
             ),
-        ).resolves.toMatchObject({ valid: true });
+        ).resolves.toBeUndefined();
         await expect(
             runtime.send(
                 {
                     entityType: 'entity-type',
                     action: 'validate',
-                    payload: { name: 'customer', properties: [{ type: 'invalid' }] },
+                    payload: {
+                        _id: 'customer',
+                        name: 'customer',
+                        properties: [{ type: 'invalid' }],
+                    },
                 },
                 undefined,
             ),
-        ).resolves.toMatchObject({ valid: false });
+        ).rejects.toMatchObject({ code: 'validation' });
     });
 
     it('should preserve structure property declarations', async () => {

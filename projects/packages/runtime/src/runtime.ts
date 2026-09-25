@@ -15,7 +15,11 @@ import type { ActionContext } from './actions/action-context';
 import type { RuntimeOperationContext } from './actions/runtime-operation-context';
 import { applyConventions, applyDefaults } from './actions/entity-preparation';
 import { EntityType as RuntimeEntityType } from './entity-types/entity-type';
-import { EntityNotFoundError } from './poseidon-error';
+import { EntityProperty as RuntimeEntityProperty } from './entity-types/entity-property';
+import { PoseidonAction as RuntimePoseidonAction } from './entity-types/poseidon-action';
+import { PoseidonQuery as RuntimePoseidonQuery } from './entity-types/poseidon-query';
+import { EntityNotFoundError, ValidationError } from './poseidon-error';
+import { validateEntity } from './validation/entity-validator';
 
 type EntityRecord = Record<string, unknown> & { _id: EntityId };
 type DeclaredOperation = PoseidonAction | PoseidonQuery;
@@ -26,6 +30,9 @@ export class Runtime implements PoseidonTransport {
     private transactionDepth = 0;
     private readonly runtimeEntityTypes = new Map<string, EntityClass>([
         [definitionOf(RuntimeEntityType).name, RuntimeEntityType],
+        [definitionOf(RuntimeEntityProperty).name, RuntimeEntityProperty],
+        [definitionOf(RuntimePoseidonAction).name, RuntimePoseidonAction],
+        [definitionOf(RuntimePoseidonQuery).name, RuntimePoseidonQuery],
     ]);
 
     /**
@@ -105,10 +112,11 @@ export class Runtime implements PoseidonTransport {
     public async getEntityType<TEntityType extends EntityRecord = EntityRecord>(
         name: string,
     ): Promise<TEntityType | null> {
-        return (await this.client
+        const stored = (await this.client
             .db()
             .collection<EntityRecord>('entity-type')
             .findOne({ name }, this.options())) as TEntityType | null;
+        return stored ?? (this.runtimeDefinition(name) as TEntityType | null);
     }
 
     private async runOperation(
@@ -154,6 +162,8 @@ export class Runtime implements PoseidonTransport {
                 return applyDefaults(state, entityType.properties);
             case 'applyConventions':
                 return applyConventions(state, entityType.properties);
+            case 'validate':
+                return this.validate(entityType, state.input);
         }
 
         const entityClass = this.runtimeEntityTypes.get(entityType.name);
@@ -201,8 +211,22 @@ export class Runtime implements PoseidonTransport {
     ): Promise<void> {
         for (const definition of definitions) {
             const current = await this.getEntityType<EntityTypeDefinition>(definition.name);
-            await this.save(entityType, { ...current, ...definition });
+            const data = { ...current, ...definition };
+            await this.validate(entityType, data);
+            await this.save(entityType, data);
         }
+    }
+
+    private async validate(
+        entityType: EntityTypeDefinition,
+        data: Record<string, unknown>,
+    ): Promise<void> {
+        const problems = await validateEntity(entityType.properties, data, async (name) => {
+            const definition = await this.getEntityType<EntityTypeDefinition>(name);
+            if (!definition) throw new EntityNotFoundError(name);
+            return definition;
+        });
+        if (problems.length > 0) throw new ValidationError(problems);
     }
 
     private async create(entityTypeName: string, entity: EntityRecord): Promise<void> {
@@ -274,5 +298,10 @@ export class Runtime implements PoseidonTransport {
         if (entityType?.structure === true) {
             throw new Error(`Structure '${name}' cannot be persisted independently.`);
         }
+    }
+
+    private runtimeDefinition(name: string): EntityTypeDefinition | null {
+        const entityClass = this.runtimeEntityTypes.get(name);
+        return entityClass ? definitionOf(entityClass) : null;
     }
 }

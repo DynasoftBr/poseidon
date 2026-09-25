@@ -11,8 +11,6 @@ import type { RuntimeOperationContext } from '../actions/runtime-operation-conte
 import { PoseidonAction } from './poseidon-action';
 import { EntityProperty } from './entity-property';
 import { PoseidonQuery } from './poseidon-query';
-import { ValidationError, type ValidationProblem } from '../poseidon-error';
-import { validateEntity } from '../validation/entity-validator';
 
 @EntityTypeDef({
     label: 'Entity type',
@@ -90,34 +88,13 @@ export class EntityType extends FrameworkEntityType {
         return context.input;
     }
 
-    @Action({ description: 'Validates an entity type definition.' })
-    static async validate(
-        context: RuntimeOperationContext,
-    ): Promise<{ valid: boolean; problems: ValidationProblem[] }> {
-        try {
-            const fields = context.entityType.properties.filter(
-                (field) => !field.name.startsWith('_'),
-            );
-            const problems = await validateEntity(
-                fields,
-                Object.fromEntries(
-                    Object.entries(context.input).filter(([key]) => !key.startsWith('_')),
-                ),
-                (id) => context.runtime.get<EntityTypeDefinition>('entity-type', id, true),
-            );
-            return { valid: problems.length === 0, problems };
-        } catch (error) {
-            if (!(error instanceof ValidationError)) throw error;
-            return { valid: false, problems: error.problems };
-        }
-    }
-
     @Action({
         description: 'Creates or updates an entity type.',
         before: () => [
             EntityType.addMandatoryProperties,
             EntityType.applyDefaults,
             EntityType.applyConventions,
+            EntityType.validate,
         ],
     })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {

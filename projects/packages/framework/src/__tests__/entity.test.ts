@@ -35,6 +35,7 @@ describe('entity actions', () => {
 
         await Customer.get({ _id: 'customer-1' });
         await Customer.save({ _id: 'customer-1', _version: 2, name: 'Ada' });
+        await Customer.validate({ _id: 'customer-1', _version: 2, name: 'Ada' });
         await Customer.delete({ _id: 'customer-1', _version: 2 });
 
         expect(transport.requests).toEqual([
@@ -42,6 +43,11 @@ describe('entity actions', () => {
             {
                 entityType: 'customer',
                 action: 'save',
+                payload: { _id: 'customer-1', _version: 2, name: 'Ada' },
+            },
+            {
+                entityType: 'customer',
+                action: 'validate',
                 payload: { _id: 'customer-1', _version: 2, name: 'Ada' },
             },
             {

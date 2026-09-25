@@ -4,6 +4,7 @@
         "composite": false,
         "rootDir": "..",
         "noEmit": true,
+        "experimentalDecorators": true,
         "types": ["node", "vitest/globals"]
     },
     "include": ["../src/**/*", "./**/*"]
