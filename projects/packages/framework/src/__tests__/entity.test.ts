@@ -1,10 +1,12 @@
 import {
+    Action,
     Entity,
     EntityType,
     EntityTypeDef,
     PoseidonContext,
     Property,
     poseidon,
+    operationMethodOf,
     type PoseidonRequest,
     type PoseidonTransport,
 } from '../index';
@@ -72,6 +74,52 @@ describe('entity actions', () => {
 
         expect(transport.requests[0]).toMatchObject({ entityType: 'entity-type', action: 'save' });
     });
+
+    it('should retain original handlers for runtime dispatch', async () => {
+        const transport = new TestTransport();
+        initialize(transport);
+
+        await Reflect.apply(operationMethodOf(Entity, 'get')!, Customer, [{ _id: 'customer-1' }]);
+        await Reflect.apply(operationMethodOf(Entity, 'save')!, Customer, [{ name: 'Ada' }]);
+        await Reflect.apply(operationMethodOf(Entity, 'applyDefaults')!, Customer, [{}]);
+        await Reflect.apply(operationMethodOf(Entity, 'applyConventions')!, Customer, [{}]);
+        await Reflect.apply(operationMethodOf(Entity, 'validate')!, Customer, [{}]);
+        await Reflect.apply(operationMethodOf(Entity, 'delete')!, Customer, [
+            { _id: 'customer-1', _version: 2 },
+        ]);
+
+        expect(transport.requests.map((request) => request.action)).toEqual([
+            'get',
+            'save',
+            'applyDefaults',
+            'applyConventions',
+            'validate',
+            'delete',
+        ]);
+    });
+});
+
+@EntityTypeDef({ name: 'instance-customer' })
+class InstanceCustomer {
+    @Action({ description: 'Onboards a customer.' })
+    onboard(_payload: object): Promise<unknown> {
+        return Promise.resolve('handler');
+    }
+}
+
+it('should dispatch instance actions through the active context', async () => {
+    const transport = new TestTransport();
+    initialize(transport);
+
+    await new InstanceCustomer().onboard({ name: 'Ada' });
+
+    expect(transport.requests).toEqual([
+        {
+            entityType: 'instance-customer',
+            action: 'onboard',
+            payload: { name: 'Ada' },
+        },
+    ]);
 });
 
 @EntityTypeDef({ name: 'lifecycle-customer' })

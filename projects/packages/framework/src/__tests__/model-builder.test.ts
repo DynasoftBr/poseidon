@@ -366,8 +366,8 @@ describe('decorator error paths', () => {
             @Query({ description: 'Reads data.' })
             async list(): Promise<void> {}
         }
-        expect(operationMethodOf(Customer, 'create')).toBe(Customer.prototype.create);
-        expect(operationMethodOf(Customer, 'list')).toBe(Customer.prototype.list);
+        expect(operationMethodOf(Customer, 'create')).not.toBe(Customer.prototype.create);
+        expect(operationMethodOf(Customer, 'list')).not.toBe(Customer.prototype.list);
         expect(() =>
             Query({ description: 'Reads data.' })(Customer.prototype, Symbol('list'), {
                 value: () => Promise.resolve(undefined),
@@ -393,5 +393,5 @@ it('should record static queries', () => {
             return Promise.resolve();
         }
     }
-    expect(operationMethodOf(Customer, 'list')).toBe(Customer.list);
+    expect(operationMethodOf(Customer, 'list')).not.toBe(Customer.list);
 });

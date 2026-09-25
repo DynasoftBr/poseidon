@@ -4,6 +4,7 @@ import type { PoseidonQuery } from '../entity-types/poseidon-query';
 import type { EntityType } from '../entity-types/entity-type';
 import type { EntityProperty, PropertyType } from '../entity-types/entity-property';
 import type { EntityTypeDefinition } from './entity-type-definition';
+import { currentContext } from '../poseidon';
 
 /**
  * A class used to collect decorator metadata without instantiation.
@@ -84,8 +85,11 @@ export function Property(options: PropertyOptions): PropertyDecorator {
  * @throws If the method name is a symbol.
  */
 export function Action(options: ActionOptions) {
-    return operationDecorator(options, actionOptions, 'Action', (method, metadata) => {
-        actionMethods.set(method, metadata);
+    return operationDecorator(options, actionOptions, 'Action', (metadata) => {
+        const wrapper = operationWrapper(metadata);
+        actionMethods.set(metadata.method, metadata);
+        actionMethods.set(wrapper, metadata);
+        return wrapper;
     });
 }
 
@@ -95,7 +99,7 @@ export function Action(options: ActionOptions) {
  * @throws If the method name is a symbol or the decorated value is not a method.
  */
 export function Query(options: QueryOptions) {
-    return operationDecorator(options, queryOptions, 'Query');
+    return operationDecorator(options, queryOptions, 'Query', operationWrapper);
 }
 
 /**
@@ -119,7 +123,7 @@ function operationDecorator<TOptions extends OperationOptions>(
     options: TOptions,
     metadataByOwner: WeakMap<object, Map<string, OperationMetadata<TOptions>>>,
     operation: string,
-    onRegistered?: (method: ActionMethod, metadata: OperationMetadata<TOptions>) => void,
+    wrap: (metadata: OperationMetadata<TOptions>) => ActionMethod,
 ) {
     return <TMethod extends ActionMethod>(
         target: object,
@@ -139,7 +143,18 @@ function operationDecorator<TOptions extends OperationOptions>(
         const operations = metadataByOwner.get(owner) ?? new Map<string, typeof metadata>();
         operations.set(metadata.name, metadata);
         metadataByOwner.set(owner, operations);
-        onRegistered?.(method, metadata);
+        descriptor.value = wrap(metadata) as TMethod;
+    };
+}
+
+function operationWrapper(metadata: OperationMetadata<OperationOptions>): ActionMethod {
+    return function (this: object, payload: object): Promise<unknown> {
+        const entityClass = (typeof this === 'function' ? this : this.constructor) as EntityClass;
+        return currentContext().execute({
+            entityType: entityTypeNameOf(entityClass),
+            action: metadata.name,
+            payload,
+        });
     };
 }
 

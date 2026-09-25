@@ -2,11 +2,25 @@ import type { ContextStore } from './context/context-store';
 import type { PoseidonContext } from './context/poseidon-context';
 import { ModelBuilder } from './model/model-builder';
 
+let getCurrentContext: () => PoseidonContext = () => {
+    throw new Error('Initialize Poseidon before invoking an operation.');
+};
+
+/**
+ * Gets the context from the initialized Poseidon service locator.
+ * @returns {PoseidonContext} The current request or initialized context.
+ * @throws If Poseidon has not been initialized.
+ * @internal
+ */
+export function currentContext(): PoseidonContext {
+    return getCurrentContext();
+}
+
 /**
  * Framework initialization, context access, and model declarations.
  */
 export function createPoseidon(contexts: ContextStore) {
-    return {
+    const poseidon = {
         /**
          * Sets the context used outside a request scope.
          * @param {{ context: PoseidonContext }} options - Default runtime or transport context.
@@ -49,4 +63,7 @@ export function createPoseidon(contexts: ContextStore) {
             return new ModelBuilder(contexts.context());
         },
     };
+
+    getCurrentContext = () => poseidon.context();
+    return poseidon;
 }

@@ -62,3 +62,10 @@ it('should expose browser and node entry points', async () => {
     expect(browser.poseidon).toBeDefined();
     expect(node.poseidon).toBeDefined();
 });
+
+it('should require Poseidon initialization before resolving an operation context', async () => {
+    vi.resetModules();
+    const { currentContext } = await import('../poseidon');
+
+    expect(() => currentContext()).toThrow('Initialize Poseidon before invoking an operation.');
+});
