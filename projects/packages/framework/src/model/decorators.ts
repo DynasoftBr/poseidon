@@ -1,4 +1,5 @@
 import type { PoseidonAction } from '../entity-types/poseidon-action';
+import type { PoseidonOperation } from '../entity-types/poseidon-operation';
 import type { PoseidonQuery } from '../entity-types/poseidon-query';
 import type { EntityType } from '../entity-types/entity-type';
 import type { EntityProperty, PropertyType } from '../entity-types/entity-property';
@@ -30,11 +31,16 @@ export type ActionOptions = {
     before?: () => readonly ActionMethod[];
 };
 export type QueryOptions = { description: string; name?: string };
+type OperationOptions = { description: string; name?: string };
 
 const entityOptions = new WeakMap<object, EntityTypeOptions>();
 const propertyOptions = new WeakMap<object, Map<string, PropertyOptions>>();
-type ActionMetadata = ActionOptions & { method: ActionMethod; name: string };
-type QueryMetadata = QueryOptions & { method: ActionMethod; name: string };
+type OperationMetadata<TOptions extends OperationOptions> = TOptions & {
+    method: ActionMethod;
+    name: string;
+};
+type ActionMetadata = OperationMetadata<ActionOptions>;
+type QueryMetadata = OperationMetadata<QueryOptions>;
 
 const actionOptions = new WeakMap<object, Map<string, ActionMetadata>>();
 const actionMethods = new WeakMap<ActionMethod, ActionMetadata>();
@@ -78,23 +84,9 @@ export function Property(options: PropertyOptions): PropertyDecorator {
  * @throws If the method name is a symbol.
  */
 export function Action(options: ActionOptions) {
-    return <TMethod extends ActionMethod>(
-        target: object,
-        key: string | symbol,
-        descriptor: TypedPropertyDescriptor<TMethod>,
-    ): void => {
-        if (typeof key !== 'string') throw new Error('Action methods must have string names.');
-        const method = descriptor.value;
-        if (typeof method !== 'function') {
-            throw new Error('Actions must decorate methods.');
-        }
-        const owner = typeof target === 'function' ? target : target.constructor;
-        const metadata = { ...options, method, name: options.name ?? key };
-        const actions = actionOptions.get(owner) ?? new Map<string, ActionMetadata>();
-        actions.set(metadata.name, metadata);
-        actionOptions.set(owner, actions);
+    return operationDecorator(options, actionOptions, 'Action', (method, metadata) => {
         actionMethods.set(method, metadata);
-    };
+    });
 }
 
 /**
@@ -103,26 +95,7 @@ export function Action(options: ActionOptions) {
  * @throws If the method name is a symbol or the decorated value is not a method.
  */
 export function Query(options: QueryOptions) {
-    return <TMethod extends ActionMethod>(
-        target: object,
-        key: string | symbol,
-        descriptor: TypedPropertyDescriptor<TMethod>,
-    ): void => {
-        if (typeof key !== 'string') throw new Error('Queries must have string names.');
-        const method = descriptor.value;
-        if (typeof method !== 'function') {
-            throw new Error('Queries must decorate methods.');
-        }
-        const owner = typeof target === 'function' ? target : target.constructor;
-        const queries = queryOptions.get(owner) ?? new Map<string, QueryMetadata>();
-        const metadata = {
-            ...options,
-            method,
-            name: options.name ?? key,
-        };
-        queries.set(metadata.name, metadata);
-        queryOptions.set(owner, queries);
-    };
+    return operationDecorator(options, queryOptions, 'Query');
 }
 
 /**
@@ -142,13 +115,47 @@ export function operationMethodOf(
     );
 }
 
+function operationDecorator<TOptions extends OperationOptions>(
+    options: TOptions,
+    metadataByOwner: WeakMap<object, Map<string, OperationMetadata<TOptions>>>,
+    operation: string,
+    onRegistered?: (method: ActionMethod, metadata: OperationMetadata<TOptions>) => void,
+) {
+    return <TMethod extends ActionMethod>(
+        target: object,
+        key: string | symbol,
+        descriptor: TypedPropertyDescriptor<TMethod>,
+    ): void => {
+        if (typeof key !== 'string') {
+            throw new Error(`${operation} methods must have string names.`);
+        }
+        const method = descriptor.value;
+        if (typeof method !== 'function') {
+            throw new Error(`${operation}s must decorate methods.`);
+        }
+
+        const owner = typeof target === 'function' ? target : target.constructor;
+        const metadata = { ...options, method, name: options.name ?? key };
+        const operations = metadataByOwner.get(owner) ?? new Map<string, typeof metadata>();
+        operations.set(metadata.name, metadata);
+        metadataByOwner.set(owner, operations);
+        onRegistered?.(method, metadata);
+    };
+}
+
+function operationDefinition(operation: OperationMetadata<OperationOptions>): PoseidonOperation {
+    return {
+        id: operation.name,
+        name: operation.name,
+        label: operation.name,
+        description: operation.description,
+        enabled: true,
+    };
+}
+
 function actionDefinition(action: ActionMetadata): PoseidonAction {
     return {
-        id: action.name,
-        name: action.name,
-        label: action.name,
-        description: action.description,
-        enabled: true,
+        ...operationDefinition(action),
         before: (action.before?.() ?? []).map((method) => {
             const metadata = actionMethods.get(method);
             if (!metadata) {
@@ -160,39 +167,28 @@ function actionDefinition(action: ActionMetadata): PoseidonAction {
 }
 
 function queryDefinition(query: QueryMetadata): PoseidonQuery {
-    return {
-        id: query.name,
-        name: query.name,
-        label: query.name,
-        description: query.description,
-        enabled: true,
-    };
+    return operationDefinition(query);
 }
 
-function actionsOf(entityClass: EntityClass): PoseidonAction[] {
+function operationsOf<TMetadata, TOperation extends { name: string }>(
+    entityClass: EntityClass,
+    metadataByOwner: WeakMap<object, Map<string, TMetadata>>,
+    definitionOf: (metadata: TMetadata) => TOperation,
+): TOperation[] {
     const parent = Object.getPrototypeOf(entityClass) as EntityClass | null;
-    const actions = new Map(
+    const operations = new Map(
         parent && parent !== Function.prototype
-            ? actionsOf(parent).map((action) => [action.name, action])
+            ? operationsOf(parent, metadataByOwner, definitionOf).map((operation) => [
+                  operation.name,
+                  operation,
+              ])
             : [],
     );
-    for (const [, action] of actionOptions.get(entityClass) ?? []) {
-        actions.set(action.name, actionDefinition(action));
+    for (const [, metadata] of metadataByOwner.get(entityClass) ?? []) {
+        const operation = definitionOf(metadata);
+        operations.set(operation.name, operation);
     }
-    return [...actions.values()];
-}
-
-function queriesOf(entityClass: EntityClass): PoseidonQuery[] {
-    const parent = Object.getPrototypeOf(entityClass) as EntityClass | null;
-    const queries = new Map(
-        parent && parent !== Function.prototype
-            ? queriesOf(parent).map((query) => [query.name, query])
-            : [],
-    );
-    for (const [, query] of queryOptions.get(entityClass) ?? []) {
-        queries.set(query.name, queryDefinition(query));
-    }
-    return [...queries.values()];
+    return [...operations.values()];
 }
 
 /**
@@ -221,8 +217,8 @@ function propertiesOf(prototype: object): Map<string, PropertyOptions> {
 export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
     const options = optionsOf(entityClass);
     const name = options.name;
-    const actions = actionsOf(entityClass);
-    const queries = queriesOf(entityClass);
+    const actions = operationsOf(entityClass, actionOptions, actionDefinition);
+    const queries = operationsOf(entityClass, queryOptions, queryDefinition);
 
     return {
         _id: name,
