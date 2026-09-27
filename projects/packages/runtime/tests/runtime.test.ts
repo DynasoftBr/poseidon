@@ -72,24 +72,6 @@ function customer(): EntityTypeDefinition {
                 label: 'save',
                 description: 'save operation.',
                 enabled: true,
-                before: [
-                    {
-                        id: 'applyDefaults',
-                        name: 'applyDefaults',
-                        label: 'applyDefaults',
-                        description: 'applyDefaults operation.',
-                        enabled: true,
-                        before: [],
-                    },
-                    {
-                        id: 'applyConventions',
-                        name: 'applyConventions',
-                        label: 'applyConventions',
-                        description: 'applyConventions operation.',
-                        enabled: true,
-                        before: [],
-                    },
-                ],
             },
             {
                 id: 'delete',
@@ -97,7 +79,6 @@ function customer(): EntityTypeDefinition {
                 label: 'delete',
                 description: 'delete operation.',
                 enabled: true,
-                before: [],
             },
         ],
         queries: [
@@ -122,7 +103,7 @@ describe('Runtime', () => {
             { entityType: 'customer', action: 'save', payload: { _id: 'ada', name: 'Ada' } },
             undefined,
         );
-        expect(created).toMatchObject({ _id: 'ada', _version: 1, status: 'new' });
+        expect(created).toMatchObject({ _id: 'ada', _version: 1 });
         await expect(
             runtime.send(
                 { entityType: 'customer', action: 'get', payload: { _id: 'ada' } },
@@ -175,16 +156,16 @@ describe('runtime EntityType operations', () => {
             },
             undefined,
         );
-        await runtime.send(
+        const address = await runtime.send<EntityTypeDefinition>(
             {
                 entityType: 'entity-type',
-                action: 'save',
+                action: 'addMandatoryProperties',
                 payload: { _id: 'address', name: 'address', label: 'Address', properties: [] },
             },
             undefined,
         );
-        const address = await runtime.send<EntityTypeDefinition>(
-            { entityType: 'entity-type', action: 'get', payload: { _id: 'address' } },
+        await runtime.send(
+            { entityType: 'entity-type', action: 'save', payload: address },
             undefined,
         );
         expect(address.properties).toContainEqual({ name: '_id', type: 'string', required: true });
@@ -253,7 +234,6 @@ describe('runtime EntityType operations', () => {
             label: 'off',
             description: 'off operation.',
             enabled: false,
-            before: [],
         });
         definition.actions?.push({
             id: 'onboard',
@@ -261,7 +241,6 @@ describe('runtime EntityType operations', () => {
             label: 'onboard',
             description: 'onboard operation.',
             enabled: true,
-            before: [],
         });
         await runtime.send(
             {

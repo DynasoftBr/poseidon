@@ -29,7 +29,6 @@ export type ActionMethod = (...args: never[]) => Promise<unknown>;
 export type ActionOptions = {
     description: string;
     name?: string;
-    before?: () => readonly ActionMethod[];
 };
 export type QueryOptions = { description: string; name?: string };
 type OperationOptions = { description: string; name?: string };
@@ -44,7 +43,6 @@ type ActionMetadata = OperationMetadata<ActionOptions>;
 type QueryMetadata = OperationMetadata<QueryOptions>;
 
 const actionOptions = new WeakMap<object, Map<string, ActionMetadata>>();
-const actionMethods = new WeakMap<ActionMethod, ActionMetadata>();
 const queryOptions = new WeakMap<object, Map<string, QueryMetadata>>();
 
 /**
@@ -80,17 +78,12 @@ export function Property(options: PropertyOptions): PropertyDecorator {
 
 /**
  * Declares a method as an action; the method forwards execution to Poseidon.
- * @param {ActionOptions} [options={}] - Decorated actions to run first.
+ * @param {ActionOptions} options - Action description and optional API name.
  * @returns {MethodDecorator} A method decorator that records action metadata.
  * @throws If the method name is a symbol.
  */
 export function Action(options: ActionOptions) {
-    return operationDecorator(options, actionOptions, 'Action', (metadata) => {
-        const wrapper = operationWrapper(metadata);
-        actionMethods.set(metadata.method, metadata);
-        actionMethods.set(wrapper, metadata);
-        return wrapper;
-    });
+    return operationDecorator(options, actionOptions, 'Action', operationWrapper);
 }
 
 /**
@@ -169,16 +162,7 @@ function operationDefinition(operation: OperationMetadata<OperationOptions>): Po
 }
 
 function actionDefinition(action: ActionMetadata): PoseidonAction {
-    return {
-        ...operationDefinition(action),
-        before: (action.before?.() ?? []).map((method) => {
-            const metadata = actionMethods.get(method);
-            if (!metadata) {
-                throw new Error('Before actions must reference methods decorated with @Action().');
-            }
-            return actionDefinition(metadata);
-        }),
-    };
+    return operationDefinition(action);
 }
 
 function queryDefinition(query: QueryMetadata): PoseidonQuery {

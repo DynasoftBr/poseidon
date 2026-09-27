@@ -130,12 +130,6 @@ export class Runtime implements PoseidonTransport {
         try {
             this.beginTransaction();
 
-            if ('before' in operation) {
-                for (const before of operation.before) {
-                    await this.runOperation(entityType, before, state);
-                }
-            }
-
             state.outputs[operation.id] = await this.executeOperation(entityType, operation, state);
             await this.commitTransaction();
 

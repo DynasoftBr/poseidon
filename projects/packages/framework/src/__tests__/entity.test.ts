@@ -64,6 +64,13 @@ describe('entity actions', () => {
         const transport = new TestTransport();
         initialize(transport);
 
+        await Reflect.apply(operationMethodOf(EntityType, 'addMandatoryProperties')!, EntityType, [
+            { name: 'customer' },
+        ]);
+        await EntityType.applyDefinitions({ definitions: [] });
+        await Reflect.apply(operationMethodOf(EntityType, 'applyDefinitions')!, EntityType, [
+            { definitions: [] },
+        ]);
         await EntityType.save({
             _id: 'customer',
             _version: 2,
@@ -71,8 +78,20 @@ describe('entity actions', () => {
             label: 'Customer',
             properties: [],
         });
+        await Reflect.apply(operationMethodOf(EntityType, 'save')!, EntityType, [
+            { _id: 'customer', _version: 2, name: 'customer', label: 'Customer', properties: [] },
+        ]);
 
-        expect(transport.requests[0]).toMatchObject({ entityType: 'entity-type', action: 'save' });
+        expect(transport.requests.map((request) => request.action)).toEqual([
+            'addMandatoryProperties',
+            'applyDefinitions',
+            'applyDefinitions',
+            'save',
+            'save',
+        ]);
+        expect(transport.requests.every((request) => request.entityType === 'entity-type')).toBe(
+            true,
+        );
     });
 
     it('should retain original handlers for runtime dispatch', async () => {

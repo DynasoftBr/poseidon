@@ -3,7 +3,6 @@ import {
     EntityTypeDef,
     EntityType as FrameworkEntityType,
     Property,
-    Query,
     type EntityTypeDefinition,
 } from '@poseidon/framework';
 import { addMandatoryProperties as addMandatoryPropertiesTo } from '../actions/add-mandatory-properties';
@@ -64,40 +63,25 @@ export class EntityType extends FrameworkEntityType {
     })
     override queries?: PoseidonQuery[];
 
-    @Query({ description: 'Reads an entity type by ID.' })
-    static override get<TResult = unknown>(payload: { _id: string }): Promise<TResult> {
-        return super.get<TResult>(payload);
-    }
-
     @Action({ description: 'Applies submitted entity type definitions.' })
-    static async applyDefinitions(context: RuntimeOperationContext): Promise<void> {
-        await context.runtime.applyDefinitions(
-            context.entityType,
-            context.input.definitions as EntityTypeDefinition[],
+    static override async applyDefinitions<TResult = unknown>(context: object): Promise<TResult> {
+        const runtimeContext = context as RuntimeOperationContext;
+        await runtimeContext.runtime.applyDefinitions(
+            runtimeContext.entityType,
+            runtimeContext.input.definitions as EntityTypeDefinition[],
         );
+        return undefined as TResult;
     }
 
     @Action({ description: 'Adds mandatory properties to an entity type.' })
-    static async addMandatoryProperties(
-        context: RuntimeOperationContext,
-    ): Promise<Record<string, unknown>> {
+    protected static override async addMandatoryProperties<TResult = unknown>(
+        context: object,
+    ): Promise<TResult> {
+        const runtimeContext = context as RuntimeOperationContext;
         await addMandatoryPropertiesTo(
-            { input: context.input, outputs: context.outputs },
-            context.runtime,
+            { input: runtimeContext.input, outputs: runtimeContext.outputs },
+            runtimeContext.runtime,
         );
-        return context.input;
-    }
-
-    @Action({
-        description: 'Creates or updates an entity type.',
-        before: () => [
-            EntityType.addMandatoryProperties,
-            EntityType.applyDefaults,
-            EntityType.applyConventions,
-            EntityType.validate,
-        ],
-    })
-    static override save<TResult = unknown>(payload: object): Promise<TResult> {
-        return super.save<TResult>(payload);
+        return runtimeContext.input as TResult;
     }
 }

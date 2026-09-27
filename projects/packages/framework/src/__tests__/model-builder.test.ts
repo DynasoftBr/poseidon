@@ -41,32 +41,6 @@ describe('decorated model declarations', () => {
                 label: 'save',
                 description: 'Creates or updates an entity.',
                 enabled: true,
-                before: [
-                    {
-                        id: 'applyDefaults',
-                        name: 'applyDefaults',
-                        label: 'applyDefaults',
-                        description: 'Applies declared property defaults.',
-                        enabled: true,
-                        before: [],
-                    },
-                    {
-                        id: 'applyConventions',
-                        name: 'applyConventions',
-                        label: 'applyConventions',
-                        description: 'Applies declared property conventions.',
-                        enabled: true,
-                        before: [],
-                    },
-                    {
-                        id: 'validate',
-                        name: 'validate',
-                        label: 'validate',
-                        description: 'Validates entity data against declared properties.',
-                        enabled: true,
-                        before: [],
-                    },
-                ],
             },
             {
                 id: 'applyDefaults',
@@ -74,7 +48,6 @@ describe('decorated model declarations', () => {
                 label: 'applyDefaults',
                 description: 'Applies declared property defaults.',
                 enabled: true,
-                before: [],
             },
             {
                 id: 'applyConventions',
@@ -82,7 +55,6 @@ describe('decorated model declarations', () => {
                 label: 'applyConventions',
                 description: 'Applies declared property conventions.',
                 enabled: true,
-                before: [],
             },
             {
                 id: 'validate',
@@ -90,7 +62,6 @@ describe('decorated model declarations', () => {
                 label: 'validate',
                 description: 'Validates entity data against declared properties.',
                 enabled: true,
-                before: [],
             },
             {
                 id: 'delete',
@@ -98,7 +69,6 @@ describe('decorated model declarations', () => {
                 label: 'delete',
                 description: 'Deletes an entity.',
                 enabled: true,
-                before: [],
             },
             {
                 id: 'list',
@@ -106,7 +76,6 @@ describe('decorated model declarations', () => {
                 label: 'list',
                 description: 'Performs this action.',
                 enabled: true,
-                before: [],
             },
         ]);
     });
@@ -127,72 +96,13 @@ describe('decorated model declarations', () => {
         ).toThrow('decorate methods');
     });
 
-    it('should resolve decorated before actions', () => {
-        @EntityTypeDef()
-        class Customer {
-            @Action({ description: 'Performs this action.' })
-            async prepare(): Promise<void> {}
-
-            @Action({
-                description: 'Performs this action.',
-                before: () => [Customer.prototype.prepare],
-            })
-            async create(): Promise<void> {}
-        }
-
-        expect(definitionOf(Customer).actions).toEqual([
-            {
-                id: 'prepare',
-                name: 'prepare',
-                label: 'prepare',
-                description: 'Performs this action.',
-                enabled: true,
-                before: [],
-            },
-            {
-                id: 'create',
-                name: 'create',
-                label: 'create',
-                description: 'Performs this action.',
-                enabled: true,
-                before: [
-                    {
-                        id: 'prepare',
-                        name: 'prepare',
-                        label: 'prepare',
-                        description: 'Performs this action.',
-                        enabled: true,
-                        before: [],
-                    },
-                ],
-            },
-        ]);
-    });
-
-    it('should reject before methods without an action decorator', () => {
-        @EntityTypeDef()
-        class Customer {
-            async prepare(): Promise<void> {}
-
-            @Action({
-                description: 'Performs this action.',
-                before: () => [Customer.prototype.prepare],
-            })
-            async create(): Promise<void> {}
-        }
-
-        expect(() => definitionOf(Customer)).toThrow('decorated with @Action()');
-    });
-
-    it('should declare PoseidonAction as a structure with recursive before actions', () => {
+    it('should declare PoseidonAction as a structure', () => {
         expect(new Structure()).toBeInstanceOf(Structure);
         const action = new PoseidonAction();
         action.id = 'create';
-        action.before = [];
         expect(action).not.toBeInstanceOf(Entity);
         expect(action).toBeInstanceOf(Structure);
         expect(action.id).toBe('create');
-        expect(action.before).toEqual([]);
     });
 
     it('should inherit the entity identifier for EntityType records', () => {

@@ -2,6 +2,8 @@
 
 Poseidon is a self-describing business application runtime. The platform model is the source of truth: core entity types and user-created entity types use the same model.
 
+Use `SysEntityType` only in our conversation for the runtime-owned `EntityType` system entity type; never write it in code or documentation. Call a record that describes a type an `EntityType definition record`. Use `Action` and `Query`, not `PoseidonAction` or `PoseidonQuery`, in ubiquitous-language terminology and documentation.
+
 You MUST read the [Poseidon Vision](./VISION.md) to understand the product philosophy and the standard every feature should be judged against.
 
 ## Scope

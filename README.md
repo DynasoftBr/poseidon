@@ -4,6 +4,8 @@ Poseidon is a self-describing business application runtime. Its core entities an
 
 Read the [Poseidon Vision](./VISION.md) to understand the product philosophy and the standard every feature should be judged against.
 
+A record that describes Customer, Order, or another type is an `EntityType definition record`. Use `Action` and `Query`, not `PoseidonAction` or `PoseidonQuery`, in ubiquitous-language terminology and documentation.
+
 ## Local development
 
 Use Node 20 and install the workspace dependencies once:
