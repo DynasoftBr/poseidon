@@ -63,7 +63,7 @@ export class EntityType extends FrameworkEntityType {
     })
     override queries?: PoseidonQuery[];
 
-    @Action({ description: 'Applies submitted entity type definitions.' })
+    @Action({ description: 'Applies submitted entity type definitions.', permissions: [] })
     static override async applyDefinitions<TResult = unknown>(context: object): Promise<TResult> {
         const runtimeContext = context as RuntimeOperationContext;
         await runtimeContext.runtime.applyDefinitions(
@@ -73,8 +73,7 @@ export class EntityType extends FrameworkEntityType {
         return undefined as TResult;
     }
 
-    @Action({ description: 'Adds mandatory properties to an entity type.' })
-    protected static override async addMandatoryProperties<TResult = unknown>(
+    protected static async addMandatoryProperties<TResult = unknown>(
         context: object,
     ): Promise<TResult> {
         const runtimeContext = context as RuntimeOperationContext;

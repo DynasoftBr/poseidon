@@ -22,6 +22,14 @@ export class PoseidonOperation extends FrameworkPoseidonOperation {
     @Property({ type: 'string', required: true, description: 'Explains what the operation does.' })
     override description!: string;
 
+    @Property({
+        type: 'array',
+        itemsType: 'string',
+        required: true,
+        description: 'Claims available while the operation runs.',
+    })
+    override permissions!: string[];
+
     @Property({ type: 'boolean', required: true, description: 'Whether the operation runs.' })
     override enabled!: boolean;
 }

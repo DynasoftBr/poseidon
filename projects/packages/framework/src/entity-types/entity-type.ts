@@ -48,29 +48,13 @@ export class EntityType extends Entity {
     queries?: PoseidonQuery[];
 
     /**
-     * Adds mandatory properties to an entity type.
-     * @template TResult - Action result.
-     * @param {object} payload - Entity type definition to prepare.
-     * @returns {Promise<TResult>} Resolves when mandatory properties are added.
-     * @throws If the action fails.
-     */
-    @Action({ description: 'Adds mandatory properties to an entity type.' })
-    protected static addMandatoryProperties<TResult = unknown>(payload: object): Promise<TResult> {
-        return currentContext().execute<TResult>({
-            entityType: entityTypeNameOf(this as EntityClass),
-            action: 'addMandatoryProperties',
-            payload,
-        });
-    }
-
-    /**
      * Applies EntityType definitions.
      * @template TResult - Action result.
      * @param {object} payload - Submitted EntityType definitions.
      * @returns {Promise<TResult>} Resolves to the action result.
      * @throws If the action fails.
      */
-    @Action({ description: 'Applies submitted entity type definitions.' })
+    @Action({ description: 'Applies submitted entity type definitions.', permissions: [] })
     static applyDefinitions<TResult = unknown>(payload: object): Promise<TResult> {
         return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -86,7 +70,7 @@ export class EntityType extends Entity {
      * @returns {Promise<TResult>} Resolves to the saved entity type definition.
      * @throws If the action fails.
      */
-    @Action({ description: 'Creates or updates an entity type.' })
+    @Action({ description: 'Creates or updates an entity type.', permissions: [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {
         return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),

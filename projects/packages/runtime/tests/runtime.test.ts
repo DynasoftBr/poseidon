@@ -71,6 +71,7 @@ function customer(): EntityTypeDefinition {
                 name: 'save',
                 label: 'save',
                 description: 'save operation.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -78,11 +79,19 @@ function customer(): EntityTypeDefinition {
                 name: 'delete',
                 label: 'delete',
                 description: 'delete operation.',
+                permissions: [],
                 enabled: true,
             },
         ],
         queries: [
-            { id: 'get', name: 'get', label: 'get', description: 'get operation.', enabled: true },
+            {
+                id: 'get',
+                name: 'get',
+                label: 'get',
+                description: 'get operation.',
+                permissions: [],
+                enabled: true,
+            },
         ],
     };
 }
@@ -141,6 +150,12 @@ describe('Runtime', () => {
 
 describe('runtime EntityType operations', () => {
     it('should add mandatory properties and validate submitted entity-type data', async () => {
+        class TestEntityType extends EntityType {
+            static prepare(context: object): Promise<EntityTypeDefinition> {
+                return this.addMandatoryProperties<EntityTypeDefinition>(context);
+            }
+        }
+
         const runtime = new Runtime(new MemoryMongo().client());
         await runtime.send(
             {
@@ -156,14 +171,18 @@ describe('runtime EntityType operations', () => {
             },
             undefined,
         );
-        const address = await runtime.send<EntityTypeDefinition>(
-            {
-                entityType: 'entity-type',
-                action: 'addMandatoryProperties',
-                payload: { _id: 'address', name: 'address', label: 'Address', properties: [] },
-            },
-            undefined,
-        );
+        const address: EntityTypeDefinition = {
+            _id: 'address',
+            name: 'address',
+            label: 'Address',
+            properties: [],
+        };
+        await TestEntityType.prepare({
+            runtime,
+            entityType: definitionOf(EntityType),
+            input: address,
+            outputs: {},
+        });
         await runtime.send(
             { entityType: 'entity-type', action: 'save', payload: address },
             undefined,
@@ -233,6 +252,7 @@ describe('runtime EntityType operations', () => {
             name: 'off',
             label: 'off',
             description: 'off operation.',
+            permissions: [],
             enabled: false,
         });
         definition.actions?.push({
@@ -240,6 +260,7 @@ describe('runtime EntityType operations', () => {
             name: 'onboard',
             label: 'onboard',
             description: 'onboard operation.',
+            permissions: [],
             enabled: true,
         });
         await runtime.send(

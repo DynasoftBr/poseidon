@@ -28,7 +28,7 @@ describe('decorated model declarations', () => {
     it('should declare actions without runtime steps', () => {
         @EntityTypeDef()
         class Customer extends Entity {
-            @Action({ description: 'Performs this action.' })
+            @Action({ description: 'Performs this action.', permissions: [] })
             static list(): Promise<unknown> {
                 return Promise.resolve(undefined);
             }
@@ -40,6 +40,7 @@ describe('decorated model declarations', () => {
                 name: 'save',
                 label: 'save',
                 description: 'Creates or updates an entity.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -47,6 +48,7 @@ describe('decorated model declarations', () => {
                 name: 'applyDefaults',
                 label: 'applyDefaults',
                 description: 'Applies declared property defaults.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -54,6 +56,7 @@ describe('decorated model declarations', () => {
                 name: 'applyConventions',
                 label: 'applyConventions',
                 description: 'Applies declared property conventions.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -61,6 +64,7 @@ describe('decorated model declarations', () => {
                 name: 'validate',
                 label: 'validate',
                 description: 'Validates entity data against declared properties.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -68,6 +72,7 @@ describe('decorated model declarations', () => {
                 name: 'delete',
                 label: 'delete',
                 description: 'Deletes an entity.',
+                permissions: [],
                 enabled: true,
             },
             {
@@ -75,24 +80,53 @@ describe('decorated model declarations', () => {
                 name: 'list',
                 label: 'list',
                 description: 'Performs this action.',
+                permissions: [],
                 enabled: true,
             },
         ]);
     });
 
+    it('should persist declared action and query permissions', () => {
+        @EntityTypeDef()
+        class Customer {
+            @Action({ description: 'Updates a customer.', permissions: ['customer:write'] })
+            static update(): Promise<void> {
+                return Promise.resolve();
+            }
+
+            @Query({ description: 'Reads a customer.', permissions: ['customer:read'] })
+            static get(): Promise<void> {
+                return Promise.resolve();
+            }
+        }
+
+        expect(definitionOf(Customer)).toMatchObject({
+            actions: [expect.objectContaining({ name: 'update', permissions: ['customer:write'] })],
+            queries: [expect.objectContaining({ name: 'get', permissions: ['customer:read'] })],
+        });
+    });
+
     it('should reject symbol-named action methods', () => {
         class Customer {}
         expect(() =>
-            Action({ description: 'Performs this action.' })(Customer.prototype, Symbol('run'), {
-                value: () => Promise.resolve(undefined),
-            }),
+            Action({ description: 'Performs this action.', permissions: [] })(
+                Customer.prototype,
+                Symbol('run'),
+                {
+                    value: () => Promise.resolve(undefined),
+                },
+            ),
         ).toThrow('string names');
     });
 
     it('should reject actions that do not decorate methods', () => {
         class Customer {}
         expect(() =>
-            Action({ description: 'Performs this action.' })(Customer.prototype, 'run', {}),
+            Action({ description: 'Performs this action.', permissions: [] })(
+                Customer.prototype,
+                'run',
+                {},
+            ),
         ).toThrow('decorate methods');
     });
 
@@ -270,22 +304,26 @@ describe('decorated model declarations', () => {
 describe('decorator error paths', () => {
     it('should reject invalid queries and resolve decorated operations', () => {
         class Customer {
-            @Action({ description: 'Performs this action.' })
+            @Action({ description: 'Performs this action.', permissions: [] })
             async create(): Promise<void> {}
 
-            @Query({ description: 'Reads data.' })
+            @Query({ description: 'Reads data.', permissions: [] })
             async list(): Promise<void> {}
         }
         expect(operationMethodOf(Customer, 'create')).not.toBe(Customer.prototype.create);
         expect(operationMethodOf(Customer, 'list')).not.toBe(Customer.prototype.list);
         expect(() =>
-            Query({ description: 'Reads data.' })(Customer.prototype, Symbol('list'), {
-                value: () => Promise.resolve(undefined),
-            }),
+            Query({ description: 'Reads data.', permissions: [] })(
+                Customer.prototype,
+                Symbol('list'),
+                {
+                    value: () => Promise.resolve(undefined),
+                },
+            ),
         ).toThrow('string names');
-        expect(() => Query({ description: 'Reads data.' })(Customer.prototype, 'list', {})).toThrow(
-            'decorate methods',
-        );
+        expect(() =>
+            Query({ description: 'Reads data.', permissions: [] })(Customer.prototype, 'list', {}),
+        ).toThrow('decorate methods');
     });
 
     it('should resolve an explicit static entity type name', () => {
@@ -298,7 +336,7 @@ describe('decorator error paths', () => {
 
 it('should record static queries', () => {
     class Customer {
-        @Query({ description: 'Reads data.' })
+        @Query({ description: 'Reads data.', permissions: [] })
         static list(): Promise<void> {
             return Promise.resolve();
         }

@@ -64,9 +64,6 @@ describe('entity actions', () => {
         const transport = new TestTransport();
         initialize(transport);
 
-        await Reflect.apply(operationMethodOf(EntityType, 'addMandatoryProperties')!, EntityType, [
-            { name: 'customer' },
-        ]);
         await EntityType.applyDefinitions({ definitions: [] });
         await Reflect.apply(operationMethodOf(EntityType, 'applyDefinitions')!, EntityType, [
             { definitions: [] },
@@ -83,7 +80,6 @@ describe('entity actions', () => {
         ]);
 
         expect(transport.requests.map((request) => request.action)).toEqual([
-            'addMandatoryProperties',
             'applyDefinitions',
             'applyDefinitions',
             'save',
@@ -120,7 +116,7 @@ describe('entity actions', () => {
 
 @EntityTypeDef({ name: 'instance-customer' })
 class InstanceCustomer {
-    @Action({ description: 'Onboards a customer.' })
+    @Action({ description: 'Onboards a customer.', permissions: [] })
     onboard(_payload: object): Promise<unknown> {
         return Promise.resolve('handler');
     }

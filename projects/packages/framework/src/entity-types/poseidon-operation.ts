@@ -15,6 +15,9 @@ export class PoseidonOperation extends Structure {
     /** Explains what this operation does. */
     description!: string;
 
+    /** Claims available while this operation runs. */
+    permissions!: string[];
+
     /** Whether this operation runs when invoked. */
     enabled!: boolean;
 }

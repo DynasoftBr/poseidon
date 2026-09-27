@@ -26,12 +26,13 @@ export type PropertyOptions = Omit<EntityProperty, 'name' | 'itemsType'> & {
 };
 
 export type ActionMethod = (...args: never[]) => Promise<unknown>;
-export type ActionOptions = {
+type OperationOptions = {
     description: string;
     name?: string;
+    permissions: string[];
 };
-export type QueryOptions = { description: string; name?: string };
-type OperationOptions = { description: string; name?: string };
+export type ActionOptions = OperationOptions;
+export type QueryOptions = OperationOptions;
 
 const entityOptions = new WeakMap<object, EntityTypeOptions>();
 const propertyOptions = new WeakMap<object, Map<string, PropertyOptions>>();
@@ -78,7 +79,7 @@ export function Property(options: PropertyOptions): PropertyDecorator {
 
 /**
  * Declares a method as an action; the method forwards execution to Poseidon.
- * @param {ActionOptions} options - Action description and optional API name.
+ * @param {ActionOptions} options - Action description, permissions, and optional API name.
  * @returns {MethodDecorator} A method decorator that records action metadata.
  * @throws If the method name is a symbol.
  */
@@ -157,6 +158,7 @@ function operationDefinition(operation: OperationMetadata<OperationOptions>): Po
         name: operation.name,
         label: operation.name,
         description: operation.description,
+        permissions: operation.permissions,
         enabled: true,
     };
 }
