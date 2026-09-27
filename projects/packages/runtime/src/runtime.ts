@@ -15,9 +15,11 @@ import type { ActionContext } from './actions/action-context';
 import type { RuntimeOperationContext } from './actions/runtime-operation-context';
 import { applyConventions, applyDefaults } from './actions/entity-preparation';
 import { EntityType as RuntimeEntityType } from './entity-types/entity-type';
+import { Identity as RuntimeIdentity } from './entity-types/identity';
 import { EntityProperty as RuntimeEntityProperty } from './entity-types/entity-property';
 import { PoseidonAction as RuntimePoseidonAction } from './entity-types/poseidon-action';
 import { PoseidonQuery as RuntimePoseidonQuery } from './entity-types/poseidon-query';
+import { User as RuntimeUser } from './entity-types/user';
 import { EntityNotFoundError, ValidationError } from './poseidon-error';
 import { validateEntity } from './validation/entity-validator';
 
@@ -30,9 +32,11 @@ export class Runtime implements PoseidonTransport {
     private transactionDepth = 0;
     private readonly runtimeEntityTypes = new Map<string, EntityClass>([
         [definitionOf(RuntimeEntityType).name, RuntimeEntityType],
+        [definitionOf(RuntimeIdentity).name, RuntimeIdentity],
         [definitionOf(RuntimeEntityProperty).name, RuntimeEntityProperty],
         [definitionOf(RuntimePoseidonAction).name, RuntimePoseidonAction],
         [definitionOf(RuntimePoseidonQuery).name, RuntimePoseidonQuery],
+        [definitionOf(RuntimeUser).name, RuntimeUser],
     ]);
 
     /**
@@ -145,6 +149,19 @@ export class Runtime implements PoseidonTransport {
         operation: DeclaredOperation,
         state: ActionContext,
     ): Promise<unknown> {
+        const entityClass = this.runtimeEntityTypes.get(entityType.name);
+        const handler = entityClass && operationMethodOf(entityClass, operation.name);
+        if (handler) {
+            return Promise.resolve(
+                (handler as (context: RuntimeOperationContext) => unknown)({
+                    runtime: this,
+                    entityType,
+                    input: state.input,
+                    outputs: state.outputs,
+                }),
+            );
+        }
+
         switch (operation.name) {
             case 'get':
                 return this.get(entityType.name, String(state.input._id), true);
@@ -160,18 +177,7 @@ export class Runtime implements PoseidonTransport {
                 return this.validate(entityType, state.input);
         }
 
-        const entityClass = this.runtimeEntityTypes.get(entityType.name);
-        const handler = entityClass && operationMethodOf(entityClass, operation.name);
-        if (!handler) throw new Error(`Operation '${operation.name}' has no implementation.`);
-
-        return Promise.resolve(
-            (handler as (context: RuntimeOperationContext) => unknown)({
-                runtime: this,
-                entityType,
-                input: state.input,
-                outputs: state.outputs,
-            }),
-        );
+        throw new Error(`Operation '${operation.name}' has no implementation.`);
     }
 
     public async save(

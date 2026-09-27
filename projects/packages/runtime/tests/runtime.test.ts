@@ -146,6 +146,20 @@ describe('Runtime', () => {
             ),
         ).rejects.toMatchObject({ code: 'entity-not-found' });
     });
+
+    it('should create a user with a user identity', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        const user = await runtime.send<Record<string, unknown>>(
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            undefined,
+        );
+
+        expect(user).toMatchObject({ _id: 'ada', _version: 1 });
+        expect(user.identityId).toEqual(expect.any(String));
+        await expect(runtime.get('identity', String(user.identityId), true)).resolves.toMatchObject(
+            { _id: user.identityId, kind: 'user', _version: 1 },
+        );
+    });
 });
 
 describe('runtime EntityType operations', () => {

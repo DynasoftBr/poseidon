@@ -1,7 +1,6 @@
 import { definitionOf, type EntityClass } from './decorators';
-import type { PoseidonContext } from '../context/poseidon-context';
-import { applyDefinitions } from './apply-definitions';
 import type { EntityTypeDefinition } from './entity-type-definition';
+import { EntityType } from '../entity-types/entity-type';
 
 /**
  * Collects decorated definitions for one execution context.
@@ -11,12 +10,6 @@ export class ModelBuilder {
         string,
         { entityClass: EntityClass; definition: EntityTypeDefinition }
     >();
-
-    /**
-     * Captures the context required by apply().
-     * @param {PoseidonContext} [context] - Context retained by this builder.
-     */
-    public constructor(private readonly context?: PoseidonContext) {}
 
     /**
      * Adds a decorated class and returns this builder; repeated classes are ignored.
@@ -40,15 +33,12 @@ export class ModelBuilder {
     /**
      * Applies collected definitions through one EntityType action.
      * @returns {Promise<void>} Resolves when the action finishes.
-     * @throws If no context is configured or an operation fails.
+     * @throws If the current operation fails.
      */
     public async apply(): Promise<void> {
-        if (!this.context) {
-            throw new Error('Initialize Poseidon with a context before creating a model.');
-        }
-        await applyDefinitions(
-            this.context,
-            [...this.entities.values()].map(({ definition }) => definition),
-        );
+        if (this.entities.size === 0) return;
+        await EntityType.applyDefinitions({
+            definitions: [...this.entities.values()].map(({ definition }) => definition),
+        });
     }
 }

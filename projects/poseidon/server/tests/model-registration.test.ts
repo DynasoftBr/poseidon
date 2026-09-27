@@ -1,5 +1,7 @@
 import {
     Entity,
+    ModelBuilder,
+    EntityTypeFactory,
     EntityTypeDef,
     HttpPoseidonTransport,
     PoseidonContext,
@@ -75,6 +77,7 @@ describe('model registration', () => {
         const server = createServer(
             createApp({
                 createContext: () => new PoseidonContext(runtime, () => undefined),
+                entityTypeFactory: new EntityTypeFactory(),
             }),
         );
         await listen(server);
@@ -88,13 +91,26 @@ describe('model registration', () => {
                 ),
             });
 
-            await poseidon.model().entity(Customer).apply();
+            await new ModelBuilder().entity(Customer).apply();
 
             expect(memory.records('entity-type').get('customer')).toMatchObject({
                 _id: 'customer',
                 name: 'customer',
                 label: 'Customer',
-                properties: [{ name: 'name', type: 'string', required: true }],
+                properties: [
+                    {
+                        name: '_id',
+                        type: 'string',
+                        required: true,
+                        description: 'Identifier of the entity.',
+                    },
+                    {
+                        name: '_version',
+                        type: 'integer',
+                        description: 'Version of the persisted entity.',
+                    },
+                    { name: 'name', type: 'string', required: true },
+                ],
             });
         } finally {
             await close(server);

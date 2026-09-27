@@ -1,0 +1,72 @@
+import {
+    Action,
+    EntityTypeDef,
+    Property,
+    entityTypeNameOf,
+    type EntityClass,
+} from '../model/decorators';
+import { currentContext } from '../poseidon';
+import { Entity, type EntityId } from './entity';
+
+export type IdentityKind = 'user' | 'application' | 'group';
+
+export type AuthenticateInput = {
+    identityId: EntityId;
+    secret: string;
+};
+
+/**
+ * Authorization principal for a user, application, or group.
+ * @extends {Entity}
+ */
+@EntityTypeDef({
+    label: 'Identity',
+    description: 'Authorizes a user, application, or group.',
+})
+export class Identity extends Entity {
+    /**
+     * Classifies the principal.
+     */
+    @Property({
+        type: 'string',
+        required: true,
+        enum: ['user', 'application', 'group'],
+        description: 'Classifies the identity.',
+    })
+    kind!: IdentityKind;
+
+    /**
+     * Hash of the credential used to authenticate this identity.
+     */
+    @Property({
+        type: 'string',
+        description: 'Hash of the credential used to authenticate this identity.',
+    })
+    credentialHash?: string;
+
+    /**
+     * Identities included when this identity is a group.
+     */
+    @Property({
+        type: 'array',
+        itemsType: 'string',
+        description: 'Identities included when this identity is a group.',
+    })
+    members?: EntityId[];
+
+    /**
+     * Authenticates a user or application identity.
+     * @template TResult - Authentication result.
+     * @param {AuthenticateInput} payload - Identity credential supplied by the caller.
+     * @returns {Promise<TResult>} Resolves to the authentication result.
+     * @throws If authentication fails.
+     */
+    @Action({ description: 'Authenticates a user or application identity.', permissions: [] })
+    static authenticate<TResult = unknown>(payload: AuthenticateInput): Promise<TResult> {
+        return currentContext().execute<TResult>({
+            entityType: entityTypeNameOf(this as EntityClass),
+            action: 'authenticate',
+            payload,
+        });
+    }
+}

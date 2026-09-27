@@ -1,5 +1,5 @@
-import { Action, Query, entityTypeNameOf, type EntityClass } from '../model/decorators';
-import { poseidon } from '../index';
+import { Action, Property, Query, entityTypeNameOf, type EntityClass } from '../model/decorators';
+import { currentContext } from '../poseidon';
 import { Structure } from './structure';
 
 export type EntityId = string;
@@ -11,7 +11,10 @@ export type EntityId = string;
 export class Entity extends Structure {
     static entityTypeName?: string;
 
+    @Property({ type: 'string', required: true, description: 'Identifier of the entity.' })
     _id!: EntityId;
+
+    @Property({ type: 'integer', description: 'Version of the persisted entity.' })
     _version!: number;
 
     /**
@@ -23,7 +26,7 @@ export class Entity extends Structure {
      */
     @Query({ description: 'Reads an entity by ID.', permissions: [] })
     static get<TResult = unknown>(payload: { _id: EntityId }): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'get',
             payload,
@@ -39,7 +42,7 @@ export class Entity extends Structure {
      */
     @Action({ description: 'Creates or updates an entity.', permissions: [] })
     static save<TResult = unknown>(payload: object): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'save',
             payload,
@@ -55,7 +58,7 @@ export class Entity extends Structure {
      */
     @Action({ description: 'Applies declared property defaults.', permissions: [] })
     protected static applyDefaults<TResult = unknown>(payload: object): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'applyDefaults',
             payload,
@@ -71,7 +74,7 @@ export class Entity extends Structure {
      */
     @Action({ description: 'Applies declared property conventions.', permissions: [] })
     protected static applyConventions<TResult = unknown>(payload: object): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'applyConventions',
             payload,
@@ -87,7 +90,7 @@ export class Entity extends Structure {
      */
     @Action({ description: 'Validates entity data against declared properties.', permissions: [] })
     static validate<TResult = unknown>(payload: object): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'validate',
             payload,
@@ -106,7 +109,7 @@ export class Entity extends Structure {
         _id: EntityId;
         _version: number;
     }): Promise<TResult> {
-        return poseidon.context().execute<TResult>({
+        return currentContext().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'delete',
             payload,

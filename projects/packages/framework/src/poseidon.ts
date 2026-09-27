@@ -1,6 +1,5 @@
 import type { ContextStore } from './context/context-store';
 import type { PoseidonContext } from './context/poseidon-context';
-import { ModelBuilder } from './model/model-builder';
 
 let getCurrentContext: () => PoseidonContext = () => {
     throw new Error('Initialize Poseidon before invoking an operation.');
@@ -17,7 +16,7 @@ export function currentContext(): PoseidonContext {
 }
 
 /**
- * Framework initialization, context access, and model declarations.
+ * Framework initialization, context access, and scoped execution.
  */
 export function createPoseidon(contexts: ContextStore) {
     const poseidon = {
@@ -52,15 +51,6 @@ export function createPoseidon(contexts: ContextStore) {
             operation: () => Promise<TResult>,
         ): Promise<TResult> {
             return contexts.run(context, operation);
-        },
-
-        /**
-         * Creates a builder using the current context.
-         * @returns {ModelBuilder} A new model builder.
-         * @throws If Poseidon has not been initialized.
-         */
-        model(): ModelBuilder {
-            return new ModelBuilder(contexts.context());
         },
     };
 

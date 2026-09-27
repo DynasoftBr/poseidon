@@ -2,13 +2,18 @@ import {
     PoseidonAction,
     Action,
     Entity,
+    ModelBuilder,
     EntityProperty,
     EntityTypeDef,
+    EntityTypeFactory,
+    Identity,
     Property,
     Query,
     Structure,
+    User,
     poseidon,
     PoseidonContext,
+    type PoseidonRequest,
     type PropertyOptions,
 } from '../index';
 import { definitionOf, entityTypeNameOf, operationMethodOf } from '../model/decorators';
@@ -146,6 +151,59 @@ describe('decorated model declarations', () => {
         expect(entityType).toBeInstanceOf(Entity);
     });
 
+    it('should expose user and identity data shapes', () => {
+        const identity = new Identity();
+        identity.kind = 'user';
+        identity.members = ['support'];
+        const user = new User();
+        user.identityId = 'user-identity';
+
+        expect(identity).toMatchObject({ kind: 'user', members: ['support'] });
+        expect(user.identityId).toBe('user-identity');
+    });
+
+    it('should invoke known and dynamic entity-type actions', async () => {
+        const requests: PoseidonRequest[] = [];
+        const context = new PoseidonContext(
+            {
+                send<TResult>(request: PoseidonRequest): Promise<TResult> {
+                    requests.push(request);
+                    return Promise.resolve(undefined as TResult);
+                },
+            },
+            () => undefined,
+        );
+        const factory = new EntityTypeFactory();
+        const customer = factory.create('customer');
+
+        await poseidon.run(context, async () => {
+            await Identity.authenticate({ identityId: 'ada-identity', secret: 'secret' });
+            await User.save({ _id: 'ada' });
+            await Reflect.apply(operationMethodOf(Identity, 'authenticate')!, Identity, [
+                { identityId: 'ada-identity', secret: 'secret' },
+            ]);
+            await Reflect.apply(operationMethodOf(User, 'save')!, User, [{ _id: 'ada' }]);
+            await Reflect.apply(Reflect.get(customer, 'save'), customer, [{ name: 'Ada' }]);
+        });
+
+        expect(Reflect.get(customer, 'onboard')).toBeUndefined();
+        expect(requests).toEqual([
+            {
+                entityType: 'identity',
+                action: 'authenticate',
+                payload: { identityId: 'ada-identity', secret: 'secret' },
+            },
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            {
+                entityType: 'identity',
+                action: 'authenticate',
+                payload: { identityId: 'ada-identity', secret: 'secret' },
+            },
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            { entityType: 'customer', action: 'save', payload: { name: 'Ada' } },
+        ]);
+    });
+
     it('should restrict item declarations to supported types and classes', () => {
         expectTypeOf<string>().not.toExtend<NonNullable<PropertyOptions['itemsType']>>();
         expectTypeOf<'string'>().toExtend<NonNullable<PropertyOptions['itemsType']>>();
@@ -199,7 +257,7 @@ describe('decorated model declarations', () => {
             }
         }
 
-        const model = poseidon.model();
+        const model = new ModelBuilder();
         expect(model.entity(Customer)).toBe(model);
         expect(definitionOf(Customer)).toEqual({
             _id: 'customer',
@@ -261,15 +319,15 @@ describe('decorated model declarations', () => {
         @EntityTypeDef({ name: 'customer' })
         class OtherCustomer {}
 
-        const model = poseidon.model();
+        const model = new ModelBuilder();
         expect(model.entity(Customer).entity(Customer)).toBe(model);
         expect(() => model.entity(OtherCustomer)).toThrow('already declared by another class');
-        expect(() => poseidon.model().entity(OtherCustomer)).not.toThrow();
+        expect(() => new ModelBuilder().entity(OtherCustomer)).not.toThrow();
     });
 
     it('should reject classes without entity metadata', () => {
         class Customer {}
-        expect(() => poseidon.model().entity(Customer)).toThrow('must declare @EntityTypeDef()');
+        expect(() => new ModelBuilder().entity(Customer)).toThrow('must declare @EntityTypeDef()');
     });
 
     it('should include inherited properties without changing the base definition', () => {

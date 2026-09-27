@@ -267,7 +267,8 @@ export function entityTypeNameOf(entityClass: EntityClass): string {
  * @throws If the class lacks EntityType metadata.
  */
 function optionsOf(entityClass: EntityClass): EntityTypeOptions & { name: string } {
-    const options = entityOptions.get(entityClass);
+    const options =
+        entityOptions.get(entityClass) ?? entityOptions.get(Object.getPrototypeOf(entityClass));
     if (!options) throw new Error(`${entityClass.name} must declare @EntityTypeDef().`);
 
     const name =

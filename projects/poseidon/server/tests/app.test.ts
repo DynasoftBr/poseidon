@@ -1,4 +1,9 @@
-import { PoseidonContext, type PoseidonRequest, type PoseidonTransport } from '@poseidon/framework';
+import {
+    EntityTypeFactory,
+    PoseidonContext,
+    type PoseidonRequest,
+    type PoseidonTransport,
+} from '@poseidon/framework';
 import request from 'supertest';
 import { createApp } from '../src/app';
 
@@ -16,16 +21,17 @@ describe('action endpoint', () => {
         const transport = new TestTransport();
         const app = createApp({
             createContext: () => new PoseidonContext(transport, () => undefined),
+            entityTypeFactory: new EntityTypeFactory(),
         });
 
         await expect(
             request(app)
                 .post('/')
-                .send({ entityType: 'customer', action: 'onboard', payload: { name: 'Ada' } }),
+                .send({ entityType: 'customer', action: 'save', payload: { name: 'Ada' } }),
         ).resolves.toMatchObject({ status: 200, body: { _id: 'ada' } });
         expect(transport.request).toEqual({
             entityType: 'customer',
-            action: 'onboard',
+            action: 'save',
             payload: { name: 'Ada' },
         });
     });
@@ -33,6 +39,7 @@ describe('action endpoint', () => {
     it('should reject requests without an entity type or action', async () => {
         const app = createApp({
             createContext: () => new PoseidonContext(new TestTransport(), () => undefined),
+            entityTypeFactory: new EntityTypeFactory(),
         });
         await expect(request(app).post('/').send({ payload: {} })).resolves.toMatchObject({
             status: 422,
@@ -48,6 +55,7 @@ describe('action endpoint', () => {
     it('should keep health available', async () => {
         const app = createApp({
             createContext: () => new PoseidonContext(new TestTransport(), () => undefined),
+            entityTypeFactory: new EntityTypeFactory(),
         });
         await expect(request(app).get('/health')).resolves.toMatchObject({ status: 200 });
     });
@@ -59,7 +67,10 @@ it('should forward transport failures to error middleware', async () => {
             return Promise.reject(new Error('Unavailable'));
         },
     };
-    const app = createApp({ createContext: () => new PoseidonContext(transport, () => undefined) });
+    const app = createApp({
+        createContext: () => new PoseidonContext(transport, () => undefined),
+        entityTypeFactory: new EntityTypeFactory(),
+    });
     await expect(
         request(app).post('/').send({ entityType: 'customer', action: 'get', payload: {} }),
     ).resolves.toMatchObject({ status: 500 });
@@ -71,7 +82,10 @@ it('should return null for an undefined operation result and reject an empty bod
             return Promise.resolve(undefined as TResult);
         },
     };
-    const app = createApp({ createContext: () => new PoseidonContext(transport, () => undefined) });
+    const app = createApp({
+        createContext: () => new PoseidonContext(transport, () => undefined),
+        entityTypeFactory: new EntityTypeFactory(),
+    });
     await expect(
         request(app).post('/').send({ entityType: 'customer', action: 'delete', payload: {} }),
     ).resolves.toMatchObject({ status: 200, body: null });

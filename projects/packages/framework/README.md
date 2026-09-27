@@ -5,7 +5,7 @@ Declare Poseidon model definitions with decorated classes and apply them through
 Enable `experimentalDecorators: true` in the consuming TypeScript project's compiler options. Decorators collect metadata at runtime, without constructing entity instances or requiring a compiler plugin. Property types and constraints must be explicit; TypeScript field types alone are not runtime metadata.
 
 ```ts
-import { Entity, EntityTypeDef, Property, poseidon } from '@poseidon/framework';
+import { Entity, EntityTypeDef, ModelBuilder, Property } from '@poseidon/framework';
 
 @EntityTypeDef({ label: 'Customer' })
 class Customer extends Entity {
@@ -16,12 +16,12 @@ class Customer extends Entity {
     age!: number;
 }
 
-const model = poseidon.model();
+const model = new ModelBuilder();
 model.entity(Customer);
 await model.apply();
 ```
 
-`entity()` is chainable and accepts decorated classes only. Each `model()` call starts an independent builder. Registering the same class twice is a no-op; declaring different classes with the same entity name fails.
+`entity()` is chainable and accepts decorated classes only. Each `new ModelBuilder()` call starts an independent builder. Registering the same class twice is a no-op; declaring different classes with the same entity name fails.
 
 Both `@EntityTypeDef` and `@Property` accept an optional `description` explaining the type or field; it is included in the persisted definition.
 
@@ -33,10 +33,10 @@ Array item types can reference a decorated class, for example `@Property({ type:
 
 ## Applying definitions
 
-Initialize the framework before creating the model. On the server, use the existing runtime context:
+Initialize the framework before applying a model. On the server, use the existing runtime context:
 
 ```ts
-import { PoseidonContext, poseidon } from '@poseidon/framework';
+import { ModelBuilder, PoseidonContext, poseidon } from '@poseidon/framework';
 import { Runtime } from '@poseidon/runtime';
 import { MongoClient } from 'mongodb';
 
@@ -50,12 +50,12 @@ poseidon.initialize({
     ),
 });
 
-const model = poseidon.model();
+const model = new ModelBuilder();
 model.entity(Customer);
 await model.apply();
 ```
 
-`Runtime` executes actions and persists them through MongoDB. `PoseidonContext.execute(request)` dispatches actions through its transport. A model retains the context configured when it was created. Initialization is application setup, not a mechanism for switching between concurrent request identities.
+`Runtime` executes actions and persists them through MongoDB. `PoseidonContext.execute(request)` dispatches actions through its transport. ModelBuilder resolves the current context when `apply()` runs. Initialization is application setup, not a mechanism for switching between concurrent request identities.
 
 `apply()` derives the collected EntityType definitions and sends one `entity-type` `applyDefinitions` action. Only the classes explicitly added to the builder are included; this does not automatically seed every system type.
 

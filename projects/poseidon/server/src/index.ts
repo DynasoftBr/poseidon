@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PoseidonContext } from '@poseidon/framework';
+import { EntityTypeFactory, PoseidonContext } from '@poseidon/framework';
 import { Runtime } from '@poseidon/runtime';
 import { getLogger } from '@poseidon/service-utils';
 import { MongoClient } from 'mongodb';
@@ -19,6 +19,7 @@ async function start(): Promise<void> {
     const port = Number(process.env.PORT ?? 3000);
     const app = createApp({
         createContext: () => new PoseidonContext(new Runtime(client), () => undefined),
+        entityTypeFactory: new EntityTypeFactory(),
     });
 
     app.listen(port, '127.0.0.1', () => {

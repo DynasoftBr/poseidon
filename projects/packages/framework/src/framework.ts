@@ -17,6 +17,8 @@ export type {
 export type { EntityTypeDefinition } from './model/entity-type-definition';
 export { Entity } from './entity-types/entity';
 export type { EntityId } from './entity-types/entity';
+export { Identity } from './entity-types/identity';
+export type { AuthenticateInput, IdentityKind } from './entity-types/identity';
 export { HttpPoseidonTransport } from './transport/http-poseidon-transport';
 export { PoseidonOperation } from './entity-types/poseidon-operation';
 export { PoseidonAction } from './entity-types/poseidon-action';
@@ -24,6 +26,8 @@ export { PoseidonQuery } from './entity-types/poseidon-query';
 export { EntityProperty, propertyTypes, propertyConventions } from './entity-types/entity-property';
 export type { PropertyType, PropertyConvention } from './entity-types/entity-property';
 export { EntityType } from './entity-types/entity-type';
+export { EntityTypeFactory } from './entity-types/entity-type-factory';
+export { User } from './entity-types/user';
 export { ModelBuilder } from './model/model-builder';
 export { createPoseidon } from './poseidon';
 export { PoseidonContext } from './context/poseidon-context';

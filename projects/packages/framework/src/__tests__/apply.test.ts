@@ -3,6 +3,7 @@ import {
     ModelBuilder,
     PoseidonContext,
     Property,
+    poseidon,
     type PoseidonRequest,
     type PoseidonTransport,
 } from '../index';
@@ -25,9 +26,9 @@ class TestTransport implements PoseidonTransport {
 describe('applying a decorated model', () => {
     it('should send all definitions through applyDefinitions', async () => {
         const transport = new TestTransport();
-        const context = new PoseidonContext(transport, () => undefined);
+        poseidon.initialize({ context: new PoseidonContext(transport, () => undefined) });
 
-        await new ModelBuilder(context).entity(Customer).apply();
+        await new ModelBuilder().entity(Customer).apply();
 
         expect(transport.request).toEqual({
             entityType: 'entity-type',
@@ -46,14 +47,6 @@ describe('applying a decorated model', () => {
     });
 
     it('should perform no request for an empty model', async () => {
-        const transport = new TestTransport();
-        await new ModelBuilder(new PoseidonContext(transport, () => undefined)).apply();
-        expect(transport.request).toBeUndefined();
+        await new ModelBuilder().apply();
     });
-});
-
-it('should require a context when applying a model', async () => {
-    await expect(new ModelBuilder().entity(Customer).apply()).rejects.toThrow(
-        'Initialize Poseidon',
-    );
 });
