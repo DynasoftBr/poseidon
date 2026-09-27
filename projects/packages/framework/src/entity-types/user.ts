@@ -5,7 +5,7 @@ import {
     entityTypeNameOf,
     type EntityClass,
 } from '../model/decorators';
-import { currentContext } from '../poseidon';
+import { poseidon } from '../poseidon';
 import { Entity, type EntityId } from './entity';
 
 /**
@@ -33,7 +33,7 @@ export class User extends Entity {
      */
     @Action({ description: 'Creates or updates a user.', permissions: [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {
-        return currentContext().execute<TResult>({
+        return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'save',
             payload,

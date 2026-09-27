@@ -1,9 +1,7 @@
 import { BrowserContextStore } from './context-store';
-import { createPoseidon } from '../poseidon';
+import { configurePoseidon } from '../poseidon';
+
+configurePoseidon(new BrowserContextStore());
 
 export * from '../framework';
-
-/**
- * Poseidon API with one browser session context.
- */
-export const poseidon = createPoseidon(new BrowserContextStore());
+export { poseidon } from '../poseidon';

@@ -1,6 +1,6 @@
 import { BrowserContextStore } from '../browser/context-store';
 import { NodeContextStore } from '../node/context-store';
-import { createPoseidon } from '../poseidon';
+import { configurePoseidon, poseidon } from '../poseidon';
 import { PoseidonContext } from '../context/poseidon-context';
 import { HttpPoseidonTransport } from '../transport/http-poseidon-transport';
 import type { PoseidonTransport } from '../transport/poseidon-transport';
@@ -40,7 +40,7 @@ describe('transports and context stores', () => {
         );
     });
 
-    it('should isolate node contexts and create Poseidon facades', async () => {
+    it('should isolate node contexts through the shared Poseidon API', async () => {
         const store = new NodeContextStore();
         const first = context();
         const second = context();
@@ -49,7 +49,7 @@ describe('transports and context stores', () => {
         expect(store.context()).toBe(first);
         await store.run(second, () => Promise.resolve(expect(store.context()).toBe(second)));
         expect(store.context()).toBe(first);
-        const poseidon = createPoseidon(store);
+        configurePoseidon(store);
         poseidon.initialize({ context: first });
         expect(poseidon.context()).toBe(first);
         await poseidon.run(second, () => Promise.resolve(expect(poseidon.context()).toBe(second)));
@@ -63,9 +63,11 @@ it('should expose browser and node entry points', async () => {
     expect(node.poseidon).toBeDefined();
 });
 
-it('should require Poseidon initialization before resolving an operation context', async () => {
+it('should require a configured context store before resolving a context', async () => {
     vi.resetModules();
-    const { currentContext } = await import('../poseidon');
+    const { poseidon: unconfiguredPoseidon } = await import('../poseidon');
 
-    expect(() => currentContext()).toThrow('Initialize Poseidon before invoking an operation.');
+    expect(() => unconfiguredPoseidon.context()).toThrow(
+        'Initialize Poseidon before calling an action.',
+    );
 });

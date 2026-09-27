@@ -1,9 +1,7 @@
 import { NodeContextStore } from './context-store';
-import { createPoseidon } from '../poseidon';
+import { configurePoseidon } from '../poseidon';
+
+configurePoseidon(new NodeContextStore());
 
 export * from '../framework';
-
-/**
- * Poseidon API with request-scoped Node.js contexts.
- */
-export const poseidon = createPoseidon(new NodeContextStore());
+export { poseidon } from '../poseidon';

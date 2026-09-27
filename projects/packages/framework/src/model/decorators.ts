@@ -4,7 +4,7 @@ import type { PoseidonQuery } from '../entity-types/poseidon-query';
 import type { EntityType } from '../entity-types/entity-type';
 import type { EntityProperty, PropertyType } from '../entity-types/entity-property';
 import type { EntityTypeDefinition } from './entity-type-definition';
-import { currentContext } from '../poseidon';
+import { poseidon } from '../poseidon';
 
 /**
  * A class used to collect decorator metadata without instantiation.
@@ -144,7 +144,7 @@ function operationDecorator<TOptions extends OperationOptions>(
 function operationWrapper(metadata: OperationMetadata<OperationOptions>): ActionMethod {
     return function (this: object, payload: object): Promise<unknown> {
         const entityClass = (typeof this === 'function' ? this : this.constructor) as EntityClass;
-        return currentContext().execute({
+        return poseidon.context().execute({
             entityType: entityTypeNameOf(entityClass),
             action: metadata.name,
             payload,

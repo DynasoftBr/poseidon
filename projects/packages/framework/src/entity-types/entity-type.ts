@@ -1,7 +1,7 @@
 import type { PoseidonAction } from './poseidon-action';
 import type { PoseidonQuery } from './poseidon-query';
 import { Action, entityTypeNameOf, type EntityClass } from '../model/decorators';
-import { currentContext } from '../poseidon';
+import { poseidon } from '../poseidon';
 import { Entity } from './entity';
 import type { EntityProperty } from './entity-property';
 
@@ -56,7 +56,7 @@ export class EntityType extends Entity {
      */
     @Action({ description: 'Applies submitted entity type definitions.', permissions: [] })
     static applyDefinitions<TResult = unknown>(payload: object): Promise<TResult> {
-        return currentContext().execute<TResult>({
+        return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'applyDefinitions',
             payload,
@@ -72,7 +72,7 @@ export class EntityType extends Entity {
      */
     @Action({ description: 'Creates or updates an entity type.', permissions: [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {
-        return currentContext().execute<TResult>({
+        return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'save',
             payload,

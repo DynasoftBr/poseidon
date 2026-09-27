@@ -29,7 +29,7 @@ export { EntityType } from './entity-types/entity-type';
 export { EntityTypeFactory } from './entity-types/entity-type-factory';
 export { User } from './entity-types/user';
 export { ModelBuilder } from './model/model-builder';
-export { createPoseidon } from './poseidon';
+
 export { PoseidonContext } from './context/poseidon-context';
 export type { PoseidonRequest } from './transport/poseidon-request';
 export type { PoseidonTransport } from './transport/poseidon-transport';
