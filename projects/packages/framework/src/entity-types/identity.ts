@@ -15,6 +15,10 @@ export type AuthenticateInput = {
     secret: string;
 };
 
+export type AuthenticateResult = {
+    token: string;
+};
+
 /**
  * Authorization principal for a user, application, or group.
  * @extends {Entity}
@@ -36,13 +40,25 @@ export class Identity extends Entity {
     kind!: IdentityKind;
 
     /**
-     * Hash of the credential used to authenticate this identity.
+     * Hash of the secret credential (password or application secret) used to authenticate this identity.
      */
     @Property({
         type: 'string',
-        description: 'Hash of the credential used to authenticate this identity.',
+        description:
+            'Hash of the secret credential (password or application secret) used to authenticate this identity.',
     })
     credentialHash?: string;
+
+    /**
+     * Direct permissions granted to this identity.
+     */
+    @Property({
+        type: 'array',
+        itemsType: 'string',
+        required: true,
+        description: 'Direct permissions granted to this identity.',
+    })
+    permissions!: string[];
 
     /**
      * Identities included when this identity is a group.
@@ -62,7 +78,9 @@ export class Identity extends Entity {
      * @throws If authentication fails.
      */
     @Action({ description: 'Authenticates a user or application identity.', permissions: [] })
-    static authenticate<TResult = unknown>(payload: AuthenticateInput): Promise<TResult> {
+    static authenticate<TResult = AuthenticateResult>(
+        payload: AuthenticateInput,
+    ): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'authenticate',

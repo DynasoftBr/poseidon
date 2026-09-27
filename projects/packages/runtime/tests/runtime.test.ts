@@ -147,6 +147,60 @@ describe('Runtime', () => {
         ).rejects.toMatchObject({ code: 'entity-not-found' });
     });
 
+    it('should issue a signed token containing identity permissions', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        await runtime.send(
+            {
+                entityType: 'identity',
+                action: 'save',
+                payload: {
+                    _id: 'ada-identity',
+                    kind: 'user',
+                    permissions: ['customer:onboard'],
+                },
+            },
+            undefined,
+        );
+
+        const result = await runtime.send<{ token: string }>(
+            {
+                entityType: 'identity',
+                action: 'authenticate',
+                payload: { identityId: 'ada-identity', secret: 'development-secret' },
+            },
+            undefined,
+        );
+        const payload = JSON.parse(
+            Buffer.from(result.token.split('.')[1]!, 'base64url').toString(),
+        ) as { sub: string; permissions: string[] };
+
+        expect(result.token.split('.')).toHaveLength(3);
+        expect(payload).toEqual({ sub: 'ada-identity', permissions: ['customer:onboard'] });
+    });
+
+    it('should reject authentication by a group identity', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        await runtime.send(
+            {
+                entityType: 'identity',
+                action: 'save',
+                payload: { _id: 'staff', kind: 'group', permissions: [] },
+            },
+            undefined,
+        );
+
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'identity',
+                    action: 'authenticate',
+                    payload: { identityId: 'staff', secret: 'development-secret' },
+                },
+                undefined,
+            ),
+        ).rejects.toThrow('Group identities cannot authenticate.');
+    });
+
     it('should create a user with a user identity', async () => {
         const runtime = new Runtime(new MemoryMongo().client());
         const user = await runtime.send<Record<string, unknown>>(

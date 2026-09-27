@@ -8,6 +8,7 @@ export class User extends FrameworkUser {
         const runtimeContext = context as RuntimeOperationContext;
         const identity = await runtimeContext.runtime.save(definitionOf(Identity), {
             kind: 'user',
+            permissions: [],
         });
         const user = await runtimeContext.runtime.save(runtimeContext.entityType, {
             ...runtimeContext.input,
