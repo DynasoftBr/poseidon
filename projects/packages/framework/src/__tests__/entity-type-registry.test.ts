@@ -28,11 +28,11 @@ describe('EntityTypeRegistry', () => {
             _id: 'customer-id',
             actions: definitionOf(Customer).actions?.map((action) => ({
                 ...action,
-                id: `${action.name}-id`,
+                _id: `customer:${action.name}`,
             })),
             queries: definitionOf(Customer).queries?.map((query) => ({
                 ...query,
-                id: `${query.name}-id`,
+                _id: `customer:${query.name}`,
             })),
         };
         const registry = new EntityTypeRegistry();
@@ -41,11 +41,11 @@ describe('EntityTypeRegistry', () => {
 
         expect(registry.operationOf(Customer, 'onboard')).toEqual({
             entityTypeId: 'customer-id',
-            operationId: 'onboard-id',
+            operationId: 'customer:onboard',
         });
         expect(registry.operationOf(Customer, 'list')).toEqual({
             entityTypeId: 'customer-id',
-            operationId: 'list-id',
+            operationId: 'customer:list',
         });
     });
 

@@ -53,23 +53,31 @@ it('should apply an external service model after initialization', async () => {
     const definition = definitions[0] as { actions: object[]; properties: object[] };
     expect(definition.properties).toEqual(
         expect.arrayContaining([
-            {
+            expect.objectContaining({
+                _id: 'customer:_id',
                 name: '_id',
                 type: 'string',
                 required: true,
                 description: 'Identifier of the entity.',
-            },
-            {
+            }),
+            expect.objectContaining({
+                _id: 'customer:_version',
                 name: '_version',
                 type: 'integer',
                 description: 'Version of the persisted entity.',
-            },
-            { name: 'name', type: 'string', required: true, description: 'Customer name.' },
+            }),
+            expect.objectContaining({
+                _id: 'customer:name',
+                name: 'name',
+                type: 'string',
+                required: true,
+                description: 'Customer name.',
+            }),
         ]),
     );
     expect(definition.actions).toContainEqual(
         expect.objectContaining({
-            id: 'onboard',
+            _id: 'customer:onboard',
             name: 'onboard',
             description: 'Onboards a customer.',
             permissions: [],

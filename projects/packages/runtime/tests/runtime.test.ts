@@ -1,5 +1,8 @@
 import {
     definitionOf,
+    EntityAction as Action,
+    EntityProperty,
+    EntityQuery as Query,
     PoseidonContext,
     poseidon,
     type EntityTypeDefinition,
@@ -8,9 +11,6 @@ import {
 } from '@poseidon/framework';
 import type { MongoClient } from 'mongodb';
 import { EntityType } from '../src/entity-types/entity-type';
-import { EntityProperty } from '../src/entity-types/entity-property';
-import { PoseidonAction } from '../src/entity-types/poseidon-action';
-import { PoseidonQuery } from '../src/entity-types/poseidon-query';
 import { Runtime } from '../src/runtime';
 
 class MemoryMongo {
@@ -25,7 +25,54 @@ class MemoryMongo {
                             null) as T | null,
                     insertOne: (value: T) => {
                         const records = this.records(name);
-                        records.set(String(value._id), { ...value });
+                        const id = typeof value._id === 'string' ? value._id : String(records.size);
+                        records.set(id, { ...value });
+                    },
+                    createIndex: () => Promise.resolve(name),
+                    find: (filter: { endpoints?: { $elemMatch?: Record<string, unknown> } }) => ({
+                        toArray: () => {
+                            const endpoint = filter.endpoints?.$elemMatch;
+                            return [...this.records(name).values()].filter(
+                                (record) =>
+                                    Array.isArray(record.endpoints) &&
+                                    record.endpoints.some(
+                                        (candidate) =>
+                                            typeof candidate === 'object' &&
+                                            candidate !== null &&
+                                            Object.entries(endpoint ?? {}).every(
+                                                ([key, value]) =>
+                                                    (candidate as Record<string, unknown>)[key] ===
+                                                    value,
+                                            ),
+                                    ),
+                            ) as T[];
+                        },
+                    }),
+                    deleteMany: (filter: {
+                        endpoints?: { $elemMatch?: Record<string, unknown> };
+                    }) => {
+                        const records = this.records(name);
+                        const endpoint = filter.endpoints?.$elemMatch;
+                        let deletedCount = 0;
+                        for (const [id, record] of records) {
+                            if (
+                                Array.isArray(record.endpoints) &&
+                                record.endpoints.some(
+                                    (candidate) =>
+                                        typeof candidate === 'object' &&
+                                        candidate !== null &&
+                                        Object.entries(endpoint ?? {}).every(
+                                            ([key, value]) =>
+                                                (candidate as Record<string, unknown>)[key] ===
+                                                value,
+                                        ),
+                                )
+                            ) {
+                                records.delete(id);
+                                deletedCount += 1;
+                            }
+                        }
+                        return Promise.resolve({ deletedCount });
                     },
                     replaceOne: (filter: Record<string, unknown>, value: T) => {
                         const records = this.records(name);
@@ -67,7 +114,7 @@ function customer(): EntityTypeDefinition {
         ],
         actions: [
             {
-                id: 'save',
+                _id: 'save',
                 name: 'save',
                 label: 'save',
                 description: 'save operation.',
@@ -75,7 +122,7 @@ function customer(): EntityTypeDefinition {
                 enabled: true,
             },
             {
-                id: 'delete',
+                _id: 'delete',
                 name: 'delete',
                 label: 'delete',
                 description: 'delete operation.',
@@ -85,7 +132,7 @@ function customer(): EntityTypeDefinition {
         ],
         queries: [
             {
-                id: 'get',
+                _id: 'get',
                 name: 'get',
                 label: 'get',
                 description: 'get operation.',
@@ -94,6 +141,62 @@ function customer(): EntityTypeDefinition {
             },
         ],
     };
+}
+
+function relationshipDefinitions(): EntityTypeDefinition[] {
+    const operations = [
+        {
+            _id: 'save',
+            name: 'save',
+            label: 'save',
+            description: 'save operation.',
+            permissions: [],
+            enabled: true,
+        },
+        {
+            _id: 'delete',
+            name: 'delete',
+            label: 'delete',
+            description: 'delete operation.',
+            permissions: [],
+            enabled: true,
+        },
+    ];
+    return [
+        {
+            _id: 'user',
+            name: 'user',
+            label: 'User',
+            properties: [
+                {
+                    _id: 'user:createdTickets',
+                    name: 'createdTickets',
+                    type: 'reference',
+                    cardinality: 'many',
+                    targetEntityType: { _id: 'ticket' },
+                    inverseProperty: { _id: 'ticket:creator' },
+                },
+            ],
+            actions: operations,
+        },
+        {
+            _id: 'ticket',
+            name: 'ticket',
+            label: 'Ticket',
+            properties: [
+                {
+                    _id: 'ticket:creator',
+                    name: 'creator',
+                    type: 'reference',
+                    cardinality: 'one',
+                    onDelete: 'detach',
+                    targetEntityType: { _id: 'user' },
+                    inverseProperty: { _id: 'user:createdTickets' },
+                },
+            ],
+            actions: operations,
+        },
+    ];
 }
 
 describe('Runtime', () => {
@@ -131,6 +234,56 @@ describe('Runtime', () => {
                 undefined,
             ),
         ).rejects.toMatchObject({ code: 'entity-not-found' });
+    });
+
+    it('should persist references separately from entity records', async () => {
+        const memory = new MemoryMongo();
+        const runtime = new Runtime(memory.client());
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: relationshipDefinitions() },
+            },
+            undefined,
+        );
+        await runtime.send(
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            undefined,
+        );
+        await runtime.send(
+            {
+                entityType: 'ticket',
+                action: 'save',
+                payload: { _id: 'ticket-1', creator: { _id: 'ada' } },
+            },
+            undefined,
+        );
+
+        expect(memory.records('ticket').get('ticket-1')).toEqual({ _id: 'ticket-1', _version: 1 });
+        expect([...memory.records('relationship').values()]).toEqual([
+            {
+                endpoints: [
+                    { entityPropertyId: 'ticket:creator', entityId: 'ticket-1' },
+                    { entityPropertyId: 'user:createdTickets', entityId: 'ada' },
+                ],
+                uniqueEndpointKeys: ['ticket:creator:ticket-1'],
+            },
+        ]);
+
+        await expect(
+            runtime.send(
+                { entityType: 'user', action: 'delete', payload: { _id: 'ada', _version: 1 } },
+                undefined,
+            ),
+        ).rejects.toThrow("Relationship 'createdTickets' prevents deleting 'ada'.");
+
+        await runtime.send(
+            { entityType: 'ticket', action: 'delete', payload: { _id: 'ticket-1', _version: 1 } },
+            undefined,
+        );
+        expect(memory.records('relationship')).toHaveLength(0);
+        await expect(runtime.get('user', 'ada', true)).resolves.toMatchObject({ _id: 'ada' });
     });
 
     it('should expose the runtime EntityType definition during bootstrap', async () => {
@@ -232,8 +385,8 @@ describe('runtime EntityType operations', () => {
                 payload: {
                     definitions: [
                         definitionOf(EntityProperty),
-                        definitionOf(PoseidonAction),
-                        definitionOf(PoseidonQuery),
+                        definitionOf(Action),
+                        definitionOf(Query),
                     ],
                 },
             },
@@ -316,7 +469,7 @@ describe('runtime EntityType operations', () => {
         const runtime = new Runtime(memory.client());
         const definition = customer();
         definition.actions?.push({
-            id: 'off',
+            _id: 'off',
             name: 'off',
             label: 'off',
             description: 'off operation.',
@@ -324,7 +477,7 @@ describe('runtime EntityType operations', () => {
             enabled: false,
         });
         definition.actions?.push({
-            id: 'onboard',
+            _id: 'onboard',
             name: 'onboard',
             label: 'onboard',
             description: 'onboard operation.',
@@ -461,8 +614,8 @@ it('should cover runtime entity-type facades and update paths', async () => {
 
 it('should instantiate runtime structures', () => {
     expect(new EntityProperty()).toBeInstanceOf(EntityProperty);
-    expect(new PoseidonAction()).toBeInstanceOf(PoseidonAction);
-    expect(new PoseidonQuery()).toBeInstanceOf(PoseidonQuery);
+    expect(new Action()).toBeInstanceOf(Action);
+    expect(new Query()).toBeInstanceOf(Query);
 });
 
 it('should retain mandatory properties from an existing entity type', async () => {
@@ -489,8 +642,8 @@ it('should retain mandatory properties from an existing entity type', async () =
     await addMandatoryProperties({ input, outputs: {} }, runtime);
     expect(input.properties).toEqual(
         expect.arrayContaining([
-            { name: '_id', type: 'string' },
-            { name: '_version', type: 'integer' },
+            expect.objectContaining({ name: '_id', type: 'string' }),
+            expect.objectContaining({ name: '_version', type: 'integer' }),
         ]),
     );
 });

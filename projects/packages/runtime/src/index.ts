@@ -5,8 +5,4 @@ export * from './poseidon-error';
 export type { ActionContext } from './actions/action-context';
 export { EntityType } from './entity-types/entity-type';
 export { Identity } from './entity-types/identity';
-export { EntityProperty } from './entity-types/entity-property';
-export { PoseidonAction } from './entity-types/poseidon-action';
-export { PoseidonOperation } from './entity-types/poseidon-operation';
-export { PoseidonQuery } from './entity-types/poseidon-query';
 export { User } from './entity-types/user';

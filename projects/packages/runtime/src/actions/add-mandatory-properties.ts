@@ -1,5 +1,5 @@
 import type { ActionContext } from './action-context';
-import type { EntityProperty, EntityTypeDefinition } from '@poseidon/framework';
+import type { EntityPropertyDefinition, EntityTypeDefinition } from '@poseidon/framework';
 import { ValidationError } from '../poseidon-error';
 import type { Runtime } from '../runtime';
 
@@ -11,9 +11,9 @@ export async function addMandatoryProperties(
     if (typeof input._id !== 'string') {
         throw new ValidationError([{ property: '_id', message: 'Entity type ID is required.' }]);
     }
-    const current = await runtime.get<EntityTypeDefinition>('entity-type', input._id);
+    const current = await runtime.getEntityType<EntityTypeDefinition>(input._id);
     if ((input.structure ?? current?.structure) === true) return null;
-    const properties = input.properties as EntityProperty[];
+    const properties = input.properties as EntityPropertyDefinition[];
     const supplied = new Set(properties.map((property) => property.name));
     const mandatory = current
         ? current.properties.filter((property) => property.name.startsWith('_'))

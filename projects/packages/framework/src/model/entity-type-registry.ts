@@ -23,13 +23,13 @@ export class EntityTypeRegistry {
         for (const operation of definition.actions ?? []) {
             operations.set(operation.name, {
                 entityTypeId: definition._id,
-                operationId: operation.id,
+                operationId: operation._id,
             });
         }
         for (const operation of definition.queries ?? []) {
             operations.set(operation.name, {
                 entityTypeId: definition._id,
-                operationId: operation.id,
+                operationId: operation._id,
             });
         }
         this.operations.set(entityClass, operations);

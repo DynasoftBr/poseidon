@@ -23,5 +23,8 @@
         "lint": "eslint .",
         "test": "vitest run",
         "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@poseidon/utilities": "1.0.0"
     }
 }

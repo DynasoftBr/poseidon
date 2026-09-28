@@ -1,5 +1,5 @@
 import {
-    PoseidonAction,
+    EntityAction,
     Action,
     Entity,
     ModelBuilder,
@@ -41,7 +41,7 @@ describe('decorated model declarations', () => {
 
         expect(definitionOf(Customer).actions).toEqual([
             {
-                id: 'save',
+                _id: 'customer:save',
                 name: 'save',
                 label: 'save',
                 description: 'Creates or updates an entity.',
@@ -49,7 +49,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                id: 'applyDefaults',
+                _id: 'customer:applyDefaults',
                 name: 'applyDefaults',
                 label: 'applyDefaults',
                 description: 'Applies declared property defaults.',
@@ -57,7 +57,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                id: 'applyConventions',
+                _id: 'customer:applyConventions',
                 name: 'applyConventions',
                 label: 'applyConventions',
                 description: 'Applies declared property conventions.',
@@ -65,7 +65,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                id: 'validate',
+                _id: 'customer:validate',
                 name: 'validate',
                 label: 'validate',
                 description: 'Validates entity data against declared properties.',
@@ -73,7 +73,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                id: 'delete',
+                _id: 'customer:delete',
                 name: 'delete',
                 label: 'delete',
                 description: 'Deletes an entity.',
@@ -81,7 +81,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                id: 'list',
+                _id: 'customer:list',
                 name: 'list',
                 label: 'list',
                 description: 'Performs this action.',
@@ -135,13 +135,12 @@ describe('decorated model declarations', () => {
         ).toThrow('decorate methods');
     });
 
-    it('should declare PoseidonAction as a structure', () => {
+    it('should declare EntityAction as an entity', () => {
         expect(new Structure()).toBeInstanceOf(Structure);
-        const action = new PoseidonAction();
-        action.id = 'create';
-        expect(action).not.toBeInstanceOf(Entity);
-        expect(action).toBeInstanceOf(Structure);
-        expect(action.id).toBe('create');
+        const action = new EntityAction();
+        action._id = 'create';
+        expect(action).toBeInstanceOf(Entity);
+        expect(action._id).toBe('create');
     });
 
     it('should inherit the entity identifier for EntityType records', () => {
@@ -231,7 +230,12 @@ describe('decorated model declarations', () => {
         }
         const definition = JSON.parse(JSON.stringify(definitionOf(Customer)));
         expect(definition.properties).toEqual([
-            { name: 'addresses', type: 'array', itemsType: 'postal-address' },
+            {
+                _id: 'customer:addresses',
+                name: 'addresses',
+                type: 'array',
+                itemsType: 'postal-address',
+            },
         ]);
     });
 
@@ -266,14 +270,16 @@ describe('decorated model declarations', () => {
             description: 'A person buying our products.',
             properties: [
                 {
+                    _id: 'customer:name',
                     name: 'name',
                     type: 'string',
                     required: true,
                     minLength: 1,
                     description: 'Customer display name.',
                 },
-                { name: 'age', type: 'integer', minimum: 0, maximum: 120 },
+                { _id: 'customer:age', name: 'age', type: 'integer', minimum: 0, maximum: 120 },
                 {
+                    _id: 'customer:tags',
                     name: 'tags',
                     type: 'array',
                     itemsType: 'string',
@@ -296,7 +302,7 @@ describe('decorated model declarations', () => {
             name: 'postal-address',
             label: 'Postal address',
             structure: true,
-            properties: [{ name: 'city', type: 'string' }],
+            properties: [{ _id: 'postal-address:city', name: 'city', type: 'string' }],
         });
     });
 
@@ -344,9 +350,11 @@ describe('decorated model declarations', () => {
         }
 
         expect(definitionOf(Customer).properties).toEqual([
-            { name: 'name', type: 'string', required: true },
+            { _id: 'customer:name', name: 'name', type: 'string', required: true },
         ]);
-        expect(definitionOf(Contact).properties).toEqual([{ name: 'name', type: 'string' }]);
+        expect(definitionOf(Contact).properties).toEqual([
+            { _id: 'contact:name', name: 'name', type: 'string' },
+        ]);
     });
 
     it('should reject static and symbol properties', () => {

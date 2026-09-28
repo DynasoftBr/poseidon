@@ -1,4 +1,8 @@
-import { propertyTypes, type EntityProperty, type EntityTypeDefinition } from '@poseidon/framework';
+import {
+    propertyTypes,
+    type EntityPropertyDefinition,
+    type EntityTypeDefinition,
+} from '@poseidon/framework';
 
 export interface JsonSchema {
     type: 'object';
@@ -21,23 +25,26 @@ interface PropertySchema {
     multipleOf?: number;
     uniqueItems?: boolean;
     items?: PropertySchema;
+    properties?: Record<string, PropertySchema>;
+    required?: string[];
+    additionalProperties?: boolean;
 }
 
 /**
  * Builds JSON Schema, resolving array item references through the supplied loader.
- * @param {EntityProperty[]} properties - Root property definitions.
+ * @param {EntityPropertyDefinition[]} properties - Root property definitions.
  * @param {(id: string) => Promise<EntityType>} loadEntityType - Loads referenced definitions.
  * @returns {Promise<JsonSchema>} Resolves to the schema with referenced definitions.
  * @throws If a referenced definition cannot be loaded.
  */
 export async function buildEntitySchema(
-    properties: EntityProperty[],
+    properties: EntityPropertyDefinition[],
     loadEntityType: (id: string) => Promise<EntityTypeDefinition>,
 ): Promise<JsonSchema> {
     const definitions: Record<string, JsonSchema> = {};
     const visited = new Set<string>();
 
-    async function includeReferences(fields: EntityProperty[]): Promise<void> {
+    async function includeReferences(fields: EntityPropertyDefinition[]): Promise<void> {
         for (const field of fields) {
             const id = field.itemsType;
             if (field.type !== 'array' || id === undefined || isPrimitive(id) || visited.has(id)) {
@@ -54,7 +61,7 @@ export async function buildEntitySchema(
     return { ...buildObjectSchema(properties), $defs: definitions };
 }
 
-function buildObjectSchema(properties: EntityProperty[]): JsonSchema {
+function buildObjectSchema(properties: EntityPropertyDefinition[]): JsonSchema {
     const required = properties
         .filter((property) => property.required)
         .map((property) => property.name);
@@ -73,7 +80,7 @@ function isPrimitive(type: string): boolean {
     return propertyTypes.some((primitive) => primitive === type);
 }
 
-function buildPropertySchema(property: EntityProperty): PropertySchema {
+function buildPropertySchema(property: EntityPropertyDefinition): PropertySchema {
     const schema = {
         ...buildTypeSchema(property),
         ...(property.minimum === undefined ? {} : { minimum: property.minimum }),
@@ -94,13 +101,14 @@ function buildPropertySchema(property: EntityProperty): PropertySchema {
     };
 }
 
-function buildTypeSchema(property: EntityProperty): Pick<PropertySchema, 'type' | 'format'> {
+function buildTypeSchema(property: EntityPropertyDefinition): PropertySchema {
     if (property.type === 'date-time') return { type: 'string', format: 'date-time' };
     if (property.type === 'json') return {};
+    if (property.type === 'reference') return referenceSchema();
     return { type: toJsonSchemaType(property.type) };
 }
 
-function toJsonSchemaType(type: EntityProperty['type']): string {
+function toJsonSchemaType(type: EntityPropertyDefinition['type']): string {
     if (type === 'array') return 'array';
     return type;
 }
@@ -109,7 +117,17 @@ function buildItemSchema(type: string): PropertySchema {
     if (isPrimitive(type)) {
         if (type === 'json') return {};
         if (type === 'date-time') return { type: 'string', format: 'date-time' };
+        if (type === 'reference') return referenceSchema();
         return { type };
     }
     return { $ref: `#/$defs/${encodeURIComponent(type.replace(/~/g, '~0').replace(/\//g, '~1'))}` };
+}
+
+function referenceSchema(): PropertySchema {
+    return {
+        type: 'object',
+        properties: { _id: { type: 'string' } },
+        required: ['_id'],
+        additionalProperties: false,
+    };
 }

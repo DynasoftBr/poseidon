@@ -2,6 +2,7 @@ export {
     Action,
     EntityTypeDef,
     Property,
+    References,
     Query,
     definitionOf,
     operationMethodOf,
@@ -12,19 +13,35 @@ export type {
     EntityClass,
     EntityTypeOptions,
     PropertyOptions,
+    ReferencesOptions,
     QueryOptions,
 } from './model/decorators';
-export type { EntityTypeDefinition } from './model/entity-type-definition';
+export type {
+    ActionDefinition,
+    EntityPropertyDefinition,
+    EntityTypeDefinition,
+    QueryDefinition,
+} from './model/entity-type-definition';
 export { Entity } from './entity-types/entity';
 export type { EntityId } from './entity-types/entity';
 export { Identity } from './entity-types/identity';
 export type { AuthenticateInput, AuthenticateResult, IdentityKind } from './entity-types/identity';
 export { HttpPoseidonTransport } from './transport/http-poseidon-transport';
-export { PoseidonOperation } from './entity-types/poseidon-operation';
-export { PoseidonAction } from './entity-types/poseidon-action';
-export { PoseidonQuery } from './entity-types/poseidon-query';
-export { EntityProperty, propertyTypes, propertyConventions } from './entity-types/entity-property';
-export type { PropertyType, PropertyConvention } from './entity-types/entity-property';
+export { Operation } from './entity-types/operation';
+export { Action as EntityAction } from './entity-types/action';
+export { Query as EntityQuery } from './entity-types/query';
+export {
+    EntityProperty,
+    onDeleteBehaviors,
+    propertyTypes,
+    propertyConventions,
+} from './entity-types/entity-property';
+export type {
+    OnDeleteBehavior,
+    PropertyType,
+    PropertyConvention,
+    RelationshipCardinality,
+} from './entity-types/entity-property';
 export { EntityType } from './entity-types/entity-type';
 export { EntityTypeFactory } from './entity-types/entity-type-factory';
 export { User } from './entity-types/user';

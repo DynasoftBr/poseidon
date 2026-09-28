@@ -1,9 +1,9 @@
-import type { EntityProperty } from '@poseidon/framework';
+import type { EntityPropertyDefinition } from '@poseidon/framework';
 import type { ActionContext } from './action-context';
 
 export function applyDefaults(
     { input }: ActionContext,
-    properties: EntityProperty[],
+    properties: EntityPropertyDefinition[],
 ): Promise<null> {
     for (const property of properties) {
         if (input[property.name] === undefined && property.default !== undefined) {
@@ -15,7 +15,7 @@ export function applyDefaults(
 
 export function applyConventions(
     { input }: ActionContext,
-    properties: EntityProperty[],
+    properties: EntityPropertyDefinition[],
 ): Promise<null> {
     for (const property of properties) {
         const value = input[property.name];
@@ -30,7 +30,10 @@ function resolveDefault(value: unknown): unknown {
     return value === '[[NOW]]' ? new Date().toISOString() : value;
 }
 
-function applyConvention(value: string, convention: EntityProperty['convention']): string {
+function applyConvention(
+    value: string,
+    convention: EntityPropertyDefinition['convention'],
+): string {
     if (convention === 'lower-case') return value.toLowerCase();
     if (convention === 'upper-case') return value.toUpperCase();
     if (convention === 'capitalize-first-letter') {

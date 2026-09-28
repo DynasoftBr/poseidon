@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import type { ClientSession, MongoClient } from 'mongodb';
+import type { MongoClient } from 'mongodb';
 import {
     definitionOf,
     operationMethodOf,
     type EntityClass,
-    type EntityId,
+    EntityAction as FrameworkAction,
+    EntityProperty as FrameworkEntityProperty,
+    EntityQuery as FrameworkQuery,
     type EntityTypeDefinition,
-    type PoseidonAction,
-    type PoseidonQuery,
+    type ActionDefinition,
+    type QueryDefinition,
     type PoseidonRequest,
     type PoseidonTransport,
 } from '@poseidon/framework';
@@ -16,26 +18,31 @@ import type { RuntimeOperationContext } from './actions/runtime-operation-contex
 import { applyConventions, applyDefaults } from './actions/entity-preparation';
 import { EntityType as RuntimeEntityType } from './entity-types/entity-type';
 import { Identity as RuntimeIdentity } from './entity-types/identity';
-import { EntityProperty as RuntimeEntityProperty } from './entity-types/entity-property';
-import { PoseidonAction as RuntimePoseidonAction } from './entity-types/poseidon-action';
-import { PoseidonQuery as RuntimePoseidonQuery } from './entity-types/poseidon-query';
+import {
+    EntityTypeStore,
+    type EntityRecord,
+    type LoadedEntityTypeDefinition,
+    type StoredEntityType,
+} from './entity-types/entity-type-store';
 import { User as RuntimeUser } from './entity-types/user';
 import { EntityNotFoundError, ValidationError } from './poseidon-error';
+import { RuntimeTransaction } from './runtime-transaction';
+import { RelationshipManager } from './relationships/relationship-manager';
+import { RelationshipStore } from './relationships/relationship-store';
 import { validateEntity } from './validation/entity-validator';
 
-type EntityRecord = Record<string, unknown> & { _id: EntityId };
-type DeclaredOperation = PoseidonAction | PoseidonQuery;
-
+type DeclaredOperation = ActionDefinition | QueryDefinition;
 /** Executes declared actions against MongoDB. */
 export class Runtime implements PoseidonTransport {
-    private session?: ClientSession;
-    private transactionDepth = 0;
+    private readonly transaction: RuntimeTransaction;
+    private readonly entityTypeStore: EntityTypeStore;
+    private readonly relationships: RelationshipManager;
     private readonly runtimeEntityTypes = new Map<string, EntityClass>([
         [definitionOf(RuntimeEntityType).name, RuntimeEntityType],
         [definitionOf(RuntimeIdentity).name, RuntimeIdentity],
-        [definitionOf(RuntimeEntityProperty).name, RuntimeEntityProperty],
-        [definitionOf(RuntimePoseidonAction).name, RuntimePoseidonAction],
-        [definitionOf(RuntimePoseidonQuery).name, RuntimePoseidonQuery],
+        [definitionOf(FrameworkEntityProperty).name, FrameworkEntityProperty],
+        [definitionOf(FrameworkAction).name, FrameworkAction],
+        [definitionOf(FrameworkQuery).name, FrameworkQuery],
         [definitionOf(RuntimeUser).name, RuntimeUser],
     ]);
 
@@ -43,7 +50,20 @@ export class Runtime implements PoseidonTransport {
      * Creates the runtime.
      * @param {MongoClient} client - MongoDB client used by the runtime.
      */
-    public constructor(private readonly client: MongoClient) {}
+    public constructor(private readonly client: MongoClient) {
+        this.transaction = new RuntimeTransaction(client);
+        this.entityTypeStore = new EntityTypeStore({
+            getEntityType: (name) => this.getEntityType<LoadedEntityTypeDefinition>(name),
+            get: (entityTypeName, id) => this.get(entityTypeName, id, true),
+            save: (entityType, data) => this.save(entityType, data),
+            validate: (entityType, data) => this.validate(entityType, data),
+        });
+        this.relationships = new RelationshipManager(
+            new RelationshipStore(client, () => this.transaction.currentSession()),
+            (entityTypeName, id) => this.get(entityTypeName, id, true),
+            (entityTypeName, id) => this.delete(entityTypeName, id),
+        );
+    }
 
     /**
      * Sends a request to the runtime.
@@ -73,7 +93,7 @@ export class Runtime implements PoseidonTransport {
             input: { ...request.payload },
             outputs: {},
         });
-        return result.outputs[operation.id] as TResult;
+        return result.outputs[operation._id] as TResult;
     }
 
     /**
@@ -89,6 +109,14 @@ export class Runtime implements PoseidonTransport {
         id: string,
         shouldThrow: true,
     ): Promise<TEntity>;
+    /**
+     * Reads an entity by type and ID.
+     * @template TEntity - Stored entity shape.
+     * @param {string} entityTypeName - Entity type collection name.
+     * @param {string} id - Entity ID.
+     * @param {boolean} [shouldThrow=false] - Whether a missing entity throws an error.
+     * @returns {Promise<TEntity | null>} The entity, or null when it is missing.
+     */
     public get<TEntity extends EntityRecord = EntityRecord>(
         entityTypeName: string,
         id: string,
@@ -102,7 +130,7 @@ export class Runtime implements PoseidonTransport {
         const entity = (await this.client
             .db()
             .collection<EntityRecord>(entityTypeName)
-            .findOne({ _id: id }, this.options())) as TEntity | null;
+            .findOne({ _id: id }, this.transaction.options())) as TEntity | null;
         if (!entity && shouldThrow) throw new EntityNotFoundError(id);
         return entity;
     }
@@ -119,8 +147,9 @@ export class Runtime implements PoseidonTransport {
         const stored = (await this.client
             .db()
             .collection<EntityRecord>('entity-type')
-            .findOne({ name }, this.options())) as TEntityType | null;
-        return stored ?? (this.runtimeDefinition(name) as TEntityType | null);
+            .findOne({ name }, this.transaction.options())) as StoredEntityType | null;
+        if (stored) return (await this.entityTypeStore.hydrate(stored)) as unknown as TEntityType;
+        return this.runtimeDefinition(name) as TEntityType | null;
     }
 
     private async runOperation(
@@ -132,14 +161,18 @@ export class Runtime implements PoseidonTransport {
         if (operation.name === 'save') state.input._id ??= randomUUID();
 
         try {
-            this.beginTransaction();
+            this.transaction.begin();
 
-            state.outputs[operation.id] = await this.executeOperation(entityType, operation, state);
-            await this.commitTransaction();
+            state.outputs[operation._id] = await this.executeOperation(
+                entityType,
+                operation,
+                state,
+            );
+            await this.transaction.commit();
 
             return state;
         } catch (error: unknown) {
-            await this.abortTransaction();
+            await this.transaction.abort();
             throw error;
         }
     }
@@ -184,17 +217,18 @@ export class Runtime implements PoseidonTransport {
         entityType: EntityTypeDefinition,
         data: Record<string, unknown>,
     ): Promise<EntityRecord> {
-        if (data._version !== undefined) {
-            await this.update(entityType.name, data as EntityRecord);
-            return data as EntityRecord;
-        }
-
         const entity = {
             ...data,
             _id: typeof data._id === 'string' ? data._id : randomUUID(),
-            _version: 1,
+            _version: data._version === undefined ? 1 : data._version,
         } as EntityRecord;
-        await this.create(entityType.name, entity);
+        const persistent = this.relationships.dataWithoutRelationships(
+            entityType,
+            entity,
+        ) as EntityRecord;
+        if (data._version === undefined) await this.create(entityType.name, persistent);
+        else await this.update(entityType.name, persistent);
+        await this.relationships.save(entityType, entity, data);
         return entity;
     }
 
@@ -205,16 +239,11 @@ export class Runtime implements PoseidonTransport {
      * @returns {Promise<void>} Resolves after every definition is persisted.
      * @throws If a definition cannot be persisted.
      */
-    public async applyDefinitions(
+    public applyDefinitions(
         entityType: EntityTypeDefinition,
         definitions: EntityTypeDefinition[],
     ): Promise<void> {
-        for (const definition of definitions) {
-            const current = await this.getEntityType<EntityTypeDefinition>(definition.name);
-            const data = { ...current, ...definition };
-            await this.validate(entityType, data);
-            await this.save(entityType, data);
-        }
+        return this.entityTypeStore.applyDefinitions(entityType, definitions);
     }
 
     private async validate(
@@ -234,7 +263,7 @@ export class Runtime implements PoseidonTransport {
         await this.client
             .db()
             .collection<EntityRecord>(entityTypeName)
-            .insertOne(entity, this.options());
+            .insertOne(entity, this.transaction.options());
     }
 
     private async update(entityTypeName: string, entity: EntityRecord): Promise<void> {
@@ -242,55 +271,20 @@ export class Runtime implements PoseidonTransport {
         const result = await this.client
             .db()
             .collection<EntityRecord>(entityTypeName)
-            .replaceOne({ _id: entity._id }, entity, this.options());
+            .replaceOne({ _id: entity._id }, entity, this.transaction.options());
         if (result.matchedCount !== 1) throw new Error(`Entity '${entity._id}' does not exist.`);
     }
 
     public async delete(entityTypeName: string, id: string): Promise<void> {
+        const entityType = await this.getEntityType<EntityTypeDefinition>(entityTypeName);
+        if (!entityType) throw new EntityNotFoundError(entityTypeName);
         await this.requireConcreteType(entityTypeName);
+        await this.relationships.delete(entityType, id);
         const result = await this.client
             .db()
             .collection<EntityRecord>(entityTypeName)
-            .deleteOne({ _id: id }, this.options());
+            .deleteOne({ _id: id }, this.transaction.options());
         if (result.deletedCount !== 1) throw new Error(`Entity '${id}' does not exist.`);
-    }
-
-    private beginTransaction(): void {
-        if (this.session) {
-            this.transactionDepth += 1;
-            return;
-        }
-        this.session = this.client.startSession();
-        this.session.startTransaction();
-        this.transactionDepth = 1;
-    }
-
-    private async commitTransaction(): Promise<void> {
-        this.transactionDepth -= 1;
-        if (this.transactionDepth > 0) return;
-        try {
-            await this.session?.commitTransaction();
-        } finally {
-            await this.endSession();
-        }
-    }
-
-    private async abortTransaction(): Promise<void> {
-        try {
-            await this.session?.abortTransaction();
-        } finally {
-            await this.endSession();
-        }
-    }
-
-    private async endSession(): Promise<void> {
-        await this.session?.endSession();
-        this.session = undefined;
-        this.transactionDepth = 0;
-    }
-
-    private options(): { session: ClientSession } | undefined {
-        return this.session ? { session: this.session } : undefined;
     }
 
     private async requireConcreteType(name: string): Promise<void> {

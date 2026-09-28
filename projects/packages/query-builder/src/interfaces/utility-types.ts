@@ -1,5 +1,10 @@
-import type { PaginatedList } from '@poseidon/utilities';
-import type { EntityReferenceTarget } from '../entity-reference';
+import type { EntityRef, entityRefTarget, PaginatedList } from '@poseidon/utilities';
+
+type EntityRefTarget<R> = typeof entityRefTarget extends keyof R
+    ? R extends EntityRef<infer T>
+        ? T
+        : never
+    : never;
 import type { Query } from './query';
 
 export type KnownKeys<T, TType = unknown> = keyof {
@@ -16,7 +21,7 @@ export type KnownKeys<T, TType = unknown> = keyof {
     string;
 
 export type SimpleKeys<T> = KnownKeys<T, number | string | boolean | Date>;
-type IncludedItem<T> = T extends PaginatedList<infer I> ? I : EntityReferenceTarget<T>;
+type IncludedItem<T> = T extends PaginatedList<infer I> ? I : EntityRefTarget<T>;
 export type IncludableKeys<T> = keyof {
     [K in keyof T as [IncludedItem<NonNullable<T[K]>>] extends [never] ? never : K]: T[K];
 } &
@@ -103,7 +108,7 @@ type IncludedShape<T, R> = T extends null | undefined
     ? T
     : T extends PaginatedList<infer I>
       ? PaginatedList<IncludedResult<I, R>>
-      : IncludedResult<EntityReferenceTarget<T>, R>;
+      : IncludedResult<EntityRefTarget<T>, R>;
 
 export type SingleOrSet<T, K extends IncludableKeys<T>, TIncludeResult = null> = IncludedShape<
     T[K],

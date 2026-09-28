@@ -1,6 +1,6 @@
-import { specification, type PaginatedList } from '@poseidon/utilities';
+import { specification, type EntityRef, type PaginatedList } from '@poseidon/utilities';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { IncludedQueryable, Queryable, type EntityReference } from '../src';
+import { IncludedQueryable, Queryable } from '../src';
 import type { Query } from '../src/interfaces/query';
 import type { Resolver } from '../src/interfaces/utility-types';
 
@@ -8,7 +8,7 @@ interface Customer {
     _id: string;
     name: string;
     status: string;
-    parent: EntityReference<Customer>;
+    parent: EntityRef<Customer>;
 }
 
 interface Order {
@@ -16,8 +16,8 @@ interface Order {
     amount: number;
     active: boolean;
     createdAt: Date;
-    customer: EntityReference<Customer>;
-    approver: EntityReference<Customer>;
+    customer: EntityRef<Customer>;
+    approver: EntityRef<Customer>;
     customers: PaginatedList<Customer>;
 }
 

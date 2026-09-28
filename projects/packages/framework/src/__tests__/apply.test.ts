@@ -39,7 +39,9 @@ describe('applying a decorated model', () => {
                         _id: 'customer',
                         name: 'customer',
                         label: 'Customer',
-                        properties: [{ name: 'name', type: 'string', required: true }],
+                        properties: [
+                            { _id: 'customer:name', name: 'name', type: 'string', required: true },
+                        ],
                     },
                 ],
             },

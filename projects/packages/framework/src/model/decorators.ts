@@ -1,15 +1,29 @@
-import type { PoseidonAction } from '../entity-types/poseidon-action';
-import type { PoseidonOperation } from '../entity-types/poseidon-operation';
-import type { PoseidonQuery } from '../entity-types/poseidon-query';
+import type { Operation } from '../entity-types/operation';
 import type { EntityType } from '../entity-types/entity-type';
-import type { EntityProperty, PropertyType } from '../entity-types/entity-property';
-import type { EntityTypeDefinition } from './entity-type-definition';
+import type {
+    EntityProperty,
+    OnDeleteBehavior,
+    PropertyType,
+    RelationshipCardinality,
+} from '../entity-types/entity-property';
+import {
+    captureRelationshipPath,
+    resolveRelationshipDefinition,
+    type RelationshipMetadata,
+    type RelationshipPath,
+    type RelationshipSelector,
+} from './relationship-metadata';
+import type {
+    ActionDefinition,
+    EntityTypeDefinition,
+    QueryDefinition,
+} from './entity-type-definition';
 import { poseidon } from '../poseidon';
 
 /**
  * A class used to collect decorator metadata without instantiation.
  */
-export type EntityClass = abstract new (...args: never[]) => object;
+export type EntityClass<T = object> = abstract new (...args: never[]) => T;
 
 /**
  * Name defaults to kebab-case; label defaults to the class name. Structure marks an embedded type.
@@ -21,7 +35,7 @@ export type EntityTypeOptions = Partial<
 /**
  * Explicit property type and constraints; the decorated member supplies its name.
  */
-export type PropertyOptions = Omit<EntityProperty, 'name' | 'itemsType'> & {
+export type PropertyOptions = Omit<EntityProperty, '_id' | '_version' | 'name' | 'itemsType'> & {
     itemsType?: PropertyType | EntityClass;
 };
 
@@ -34,8 +48,15 @@ type OperationOptions = {
 export type ActionOptions = OperationOptions;
 export type QueryOptions = OperationOptions;
 
+export type ReferencesOptions = {
+    cardinality: RelationshipCardinality;
+    onDelete?: OnDeleteBehavior;
+};
+type DecoratedRelationshipMetadata = ReferencesOptions & RelationshipMetadata;
+
 const entityOptions = new WeakMap<object, EntityTypeOptions>();
 const propertyOptions = new WeakMap<object, Map<string, PropertyOptions>>();
+const relationshipOptions = new WeakMap<object, Map<string, DecoratedRelationshipMetadata>>();
 type OperationMetadata<TOptions extends OperationOptions> = TOptions & {
     method: ActionMethod;
     name: string;
@@ -74,6 +95,36 @@ export function Property(options: PropertyOptions): PropertyDecorator {
         const properties = propertyOptions.get(target) ?? new Map<string, PropertyOptions>();
         properties.set(key, options);
         propertyOptions.set(target, properties);
+    };
+}
+
+/**
+ * Declares a reciprocal relationship property.
+ * @param {() => EntityClass} target - Entity type at the opposite endpoint.
+ * @param {(selector: RelationshipSelector<TTarget>) => unknown} inverse - Reciprocal property selector.
+ * @param {ReferencesOptions} options - Relationship cardinality and deletion behavior.
+ * @returns {PropertyDecorator} A relationship-property decorator.
+ */
+export function References<TTarget extends object>(
+    target: () => EntityClass<TTarget>,
+    inverse: (selector: RelationshipSelector<TTarget>) => RelationshipPath,
+    options: ReferencesOptions,
+): PropertyDecorator {
+    return (owner, key) => {
+        if (typeof owner === 'function' || typeof key !== 'string') {
+            throw new Error('Relationship properties must be named instance properties.');
+        }
+        const onDelete = options.onDelete ?? 'restrict';
+        Property({ type: 'reference', cardinality: options.cardinality, onDelete })(owner, key);
+        const relationships =
+            relationshipOptions.get(owner) ?? new Map<string, DecoratedRelationshipMetadata>();
+        relationships.set(key, {
+            ...options,
+            onDelete,
+            target,
+            inversePath: captureRelationshipPath(inverse),
+        });
+        relationshipOptions.set(owner, relationships);
     };
 }
 
@@ -152,9 +203,12 @@ function operationWrapper(metadata: OperationMetadata<OperationOptions>): Action
     };
 }
 
-function operationDefinition(operation: OperationMetadata<OperationOptions>): PoseidonOperation {
+function operationDefinition(
+    entityTypeName: string,
+    operation: OperationMetadata<OperationOptions>,
+): Omit<Operation, '_version'> {
     return {
-        id: operation.name,
+        _id: `${entityTypeName}:${operation.name}`,
         name: operation.name,
         label: operation.name,
         description: operation.description,
@@ -163,40 +217,39 @@ function operationDefinition(operation: OperationMetadata<OperationOptions>): Po
     };
 }
 
-function actionDefinition(action: ActionMetadata): PoseidonAction {
-    return operationDefinition(action);
+function actionDefinition(entityTypeName: string, action: ActionMetadata): ActionDefinition {
+    return operationDefinition(entityTypeName, action);
 }
 
-function queryDefinition(query: QueryMetadata): PoseidonQuery {
-    return operationDefinition(query);
+function queryDefinition(entityTypeName: string, query: QueryMetadata): QueryDefinition {
+    return operationDefinition(entityTypeName, query);
 }
 
-function operationsOf<TMetadata, TOperation extends { name: string }>(
+function operationsOf<TMetadata extends { name: string }, TOperation extends { name: string }>(
     entityClass: EntityClass,
     metadataByOwner: WeakMap<object, Map<string, TMetadata>>,
-    definitionOf: (metadata: TMetadata) => TOperation,
+    definitionOf: (entityTypeName: string, metadata: TMetadata) => TOperation,
 ): TOperation[] {
-    const parent = Object.getPrototypeOf(entityClass) as EntityClass | null;
-    const operations = new Map(
-        parent && parent !== Function.prototype
-            ? operationsOf(parent, metadataByOwner, definitionOf).map((operation) => [
-                  operation.name,
-                  operation,
-              ])
-            : [],
+    const entityTypeName = optionsOf(entityClass).name;
+    return [...operationMetadataOf(entityClass, metadataByOwner).values()].map((metadata) =>
+        definitionOf(entityTypeName, metadata),
     );
-    for (const [, metadata] of metadataByOwner.get(entityClass) ?? []) {
-        const operation = definitionOf(metadata);
-        operations.set(operation.name, operation);
-    }
-    return [...operations.values()];
 }
 
-/**
- * Collects inherited properties, preferring subclass declarations.
- * @param {object} prototype - Prototype to inspect.
- * @returns {Map<string, PropertyOptions>} Property metadata keyed by member name.
- */
+function operationMetadataOf<TMetadata extends { name: string }>(
+    entityClass: EntityClass,
+    metadataByOwner: WeakMap<object, Map<string, TMetadata>>,
+): Map<string, TMetadata> {
+    const parent = Object.getPrototypeOf(entityClass) as EntityClass | null;
+    const operations = new Map(
+        parent && parent !== Function.prototype ? operationMetadataOf(parent, metadataByOwner) : [],
+    );
+    for (const [, metadata] of metadataByOwner.get(entityClass) ?? []) {
+        operations.set(metadata.name, metadata);
+    }
+    return operations;
+}
+
 function propertiesOf(prototype: object): Map<string, PropertyOptions> {
     const parent: object | null = Object.getPrototypeOf(prototype);
     const properties = parent ? propertiesOf(parent) : new Map<string, PropertyOptions>();
@@ -208,18 +261,27 @@ function propertiesOf(prototype: object): Map<string, PropertyOptions> {
     return properties;
 }
 
-/**
- * Converts decorated members into an EntityType definition.
- * @param {EntityClass} entityClass - Decorated entity class.
- * @returns {EntityType} The entity definition with its property metadata.
- * @throws If the class lacks EntityType metadata.
- * @internal
- */
+function relationshipsOf(prototype: object): Map<string, DecoratedRelationshipMetadata> {
+    const parent: object | null = Object.getPrototypeOf(prototype);
+    const relationships = parent
+        ? relationshipsOf(parent)
+        : new Map<string, DecoratedRelationshipMetadata>();
+    const ownRelationships =
+        relationshipOptions.get(prototype) ?? new Map<string, DecoratedRelationshipMetadata>();
+    for (const name of propertyOptions.get(prototype)?.keys() ?? []) {
+        const relationship = ownRelationships.get(name);
+        if (relationship) relationships.set(name, relationship);
+        else relationships.delete(name);
+    }
+    return relationships;
+}
+
 export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
     const options = optionsOf(entityClass);
     const name = options.name;
     const actions = operationsOf(entityClass, actionOptions, actionDefinition);
     const queries = operationsOf(entityClass, queryOptions, queryDefinition);
+    const relationships = relationshipsOf(entityClass.prototype);
 
     return {
         _id: name,
@@ -238,6 +300,19 @@ export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
                                   ? optionsOf(itemsType).name
                                   : itemsType,
                       }),
+                ...(relationships.has(propertyName)
+                    ? resolveRelationshipDefinition(
+                          entityClass,
+                          propertyName,
+                          relationships.get(propertyName)!,
+                          {
+                              entityTypeOptionsOf: optionsOf,
+                              propertiesOf,
+                              relationshipsOf,
+                          },
+                      )
+                    : {}),
+                _id: `${name}:${propertyName}`,
                 name: propertyName,
             }),
         ),
