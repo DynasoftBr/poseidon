@@ -2,7 +2,8 @@ export {
     Action,
     EntityTypeDef,
     Property,
-    References,
+    HasMany,
+    HasOne,
     Query,
     definitionOf,
     operationMethodOf,
@@ -13,7 +14,7 @@ export type {
     EntityClass,
     EntityTypeOptions,
     PropertyOptions,
-    ReferencesOptions,
+    RelationshipOptions,
     QueryOptions,
 } from './model/decorators';
 export type {

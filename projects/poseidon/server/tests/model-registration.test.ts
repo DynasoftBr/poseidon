@@ -98,19 +98,16 @@ describe('model registration', () => {
                 name: 'customer',
                 label: 'Customer',
                 properties: [
-                    {
-                        name: '_id',
-                        type: 'string',
-                        required: true,
-                        description: 'Identifier of the entity.',
-                    },
-                    {
-                        name: '_version',
-                        type: 'integer',
-                        description: 'Version of the persisted entity.',
-                    },
-                    { name: 'name', type: 'string', required: true },
+                    { _id: 'customer:_id' },
+                    { _id: 'customer:_version' },
+                    { _id: 'customer:name' },
                 ],
+            });
+            expect(memory.records('entity-property').get('customer:name')).toMatchObject({
+                _id: 'customer:name',
+                name: 'name',
+                type: 'string',
+                required: true,
             });
         } finally {
             await close(server);

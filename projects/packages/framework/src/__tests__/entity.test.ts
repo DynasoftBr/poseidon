@@ -117,16 +117,16 @@ describe('entity actions', () => {
 @EntityTypeDef({ name: 'instance-customer' })
 class InstanceCustomer {
     @Action({ description: 'Onboards a customer.', permissions: [] })
-    onboard(_payload: object): Promise<unknown> {
+    static onboard(_payload: object): Promise<unknown> {
         return Promise.resolve('handler');
     }
 }
 
-it('should dispatch instance actions through the active context', async () => {
+it('should dispatch static actions through the active context', async () => {
     const transport = new TestTransport();
     initialize(transport);
 
-    await new InstanceCustomer().onboard({ name: 'Ada' });
+    await InstanceCustomer.onboard({ name: 'Ada' });
 
     expect(transport.requests).toEqual([
         {

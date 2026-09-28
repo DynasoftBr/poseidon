@@ -111,28 +111,16 @@ describe('decorated model declarations', () => {
         });
     });
 
-    it('should reject symbol-named action methods', () => {
-        class Customer {}
-        expect(() =>
-            Action({ description: 'Performs this action.', permissions: [] })(
-                Customer.prototype,
-                Symbol('run'),
-                {
-                    value: () => Promise.resolve(undefined),
-                },
-            ),
-        ).toThrow('string names');
-    });
-
-    it('should reject actions that do not decorate methods', () => {
-        class Customer {}
-        expect(() =>
-            Action({ description: 'Performs this action.', permissions: [] })(
-                Customer.prototype,
-                'run',
-                {},
-            ),
-        ).toThrow('decorate methods');
+    it('should reject non-static actions', () => {
+        expect(() => {
+            class Customer {
+                @Action({ description: 'Performs this action.', permissions: [] })
+                create(): Promise<void> {
+                    return Promise.resolve();
+                }
+            }
+            return Customer;
+        }).toThrow('named static methods');
     });
 
     it('should declare EntityAction as an entity', () => {
@@ -358,38 +346,53 @@ describe('decorated model declarations', () => {
     });
 
     it('should reject static and symbol properties', () => {
-        class Customer {}
-        const property = Property({ type: 'string' });
-        expect(() => property(Customer, 'name')).toThrow('named instance properties');
-        expect(() => property(Customer.prototype, Symbol('name'))).toThrow(
-            'named instance properties',
-        );
+        expect(() => {
+            class Customer {
+                @Property({ type: 'string' })
+                static name = '';
+            }
+            return Customer;
+        }).toThrow('named instance properties');
+
+        const propertyName = Symbol('name');
+        expect(() => {
+            class Customer {
+                @Property({ type: 'string' })
+                [propertyName] = '';
+            }
+            return Customer;
+        }).toThrow('named instance properties');
     });
 });
 
 describe('decorator error paths', () => {
-    it('should reject invalid queries and resolve decorated operations', () => {
+    it('should reject non-static queries', () => {
+        expect(() => {
+            class Customer {
+                @Query({ description: 'Reads data.', permissions: [] })
+                list(): Promise<void> {
+                    return Promise.resolve();
+                }
+            }
+            return Customer;
+        }).toThrow('named static methods');
+    });
+
+    it('should resolve decorated operations', () => {
+        @EntityTypeDef()
         class Customer {
             @Action({ description: 'Performs this action.', permissions: [] })
-            async create(): Promise<void> {}
+            static create(): Promise<void> {
+                return Promise.resolve();
+            }
 
             @Query({ description: 'Reads data.', permissions: [] })
-            async list(): Promise<void> {}
+            static list(): Promise<void> {
+                return Promise.resolve();
+            }
         }
-        expect(operationMethodOf(Customer, 'create')).not.toBe(Customer.prototype.create);
-        expect(operationMethodOf(Customer, 'list')).not.toBe(Customer.prototype.list);
-        expect(() =>
-            Query({ description: 'Reads data.', permissions: [] })(
-                Customer.prototype,
-                Symbol('list'),
-                {
-                    value: () => Promise.resolve(undefined),
-                },
-            ),
-        ).toThrow('string names');
-        expect(() =>
-            Query({ description: 'Reads data.', permissions: [] })(Customer.prototype, 'list', {}),
-        ).toThrow('decorate methods');
+        expect(operationMethodOf(Customer, 'create')).not.toBe(Customer.create);
+        expect(operationMethodOf(Customer, 'list')).not.toBe(Customer.list);
     });
 
     it('should resolve an explicit static entity type name', () => {

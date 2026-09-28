@@ -7,7 +7,7 @@ import {
 
 interface User {
     _id: string;
-    createdTickets: AsyncIterable<Ticket>;
+    createdTickets: PaginatedList<Ticket>;
 }
 
 interface Ticket {
@@ -31,24 +31,29 @@ describe('relationship metadata', () => {
     });
 });
 
-import { Entity, EntityTypeDef, Property, References, Structure, definitionOf } from '../index';
+import {
+    Entity,
+    EntityTypeDef,
+    HasMany,
+    HasOne,
+    Property,
+    Structure,
+    definitionOf,
+} from '../index';
 
 @EntityTypeDef()
 class RelationshipUser extends Entity {
-    @References(() => RelationshipTicket, (ticket) => ticket.creator, { cardinality: 'many' })
+    @HasMany(() => RelationshipTicket, (ticket) => ticket.creator)
     createdTickets!: PaginatedList<RelationshipTicket>;
 }
 
 @EntityTypeDef()
 class RelationshipTicket extends Entity {
-    @References(() => RelationshipUser, (user) => user.createdTickets, {
-        cardinality: 'one',
-        onDelete: 'detach',
-    })
+    @HasOne(() => RelationshipUser, (user) => user.createdTickets, { onDelete: 'detach' })
     creator!: EntityRef<RelationshipUser>;
 }
 
-describe('@References', () => {
+describe('@HasOne and @HasMany', () => {
     it('should serialize reciprocal reference metadata', () => {
         const definition = definitionOf(RelationshipTicket);
 
@@ -78,17 +83,15 @@ describe('@References', () => {
     });
 });
 
-describe('@References validation', () => {
+describe('relationship decorator validation', () => {
     it('should reject relationship metadata on unsupported members', () => {
-        expect(() =>
-            References(
-                () => RelationshipTicket,
-                (ticket) => ticket.creator,
-                {
-                    cardinality: 'one',
-                },
-            )(RelationshipTicket, 'invalid'),
-        ).toThrow('Relationship properties must be named instance properties.');
+        expect(() => {
+            class InvalidRelationship {
+                @HasOne(() => RelationshipTicket, (ticket) => ticket.creator)
+                static relationship: EntityRef<RelationshipTicket> = { _id: '' };
+            }
+            return InvalidRelationship;
+        }).toThrow('Entity properties must be named instance properties.');
     });
 
     it('should reject an empty inverse path', () => {
@@ -115,9 +118,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class StructureSource extends Entity {
-            @References(() => RelationshipStructure, (structure) => structure.related, {
-                cardinality: 'one',
-            })
+            @HasOne(() => RelationshipStructure, (structure) => structure.related)
             related!: EntityRef<RelationshipStructure>;
         }
 
@@ -132,9 +133,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class MissingInverseSource extends Entity {
-            @References(() => MissingInverseTarget, (target) => target.related, {
-                cardinality: 'one',
-            })
+            @HasOne(() => MissingInverseTarget, (target) => target.related)
             related!: EntityRef<MissingInverseTarget>;
         }
 
@@ -150,14 +149,12 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class MismatchedTarget extends Entity {
-            @References(() => OtherEntity, (other) => other.related, { cardinality: 'one' })
+            @HasOne(() => OtherEntity, (other) => other.related)
             related!: EntityRef<OtherEntity>;
         }
         @EntityTypeDef()
         class MismatchedSource extends Entity {
-            @References(() => MismatchedTarget, (target) => target.related, {
-                cardinality: 'one',
-            })
+            @HasOne(() => MismatchedTarget, (target) => target.related)
             related!: EntityRef<MismatchedTarget>;
         }
 
@@ -167,7 +164,7 @@ describe('@References validation', () => {
     it('should reject an inverse relationship that points to another property', () => {
         @EntityTypeDef()
         class WrongSource extends Entity {
-            @References(() => WrongTarget, (target) => target.related, { cardinality: 'one' })
+            @HasOne(() => WrongTarget, (target) => target.related)
             first!: EntityRef<WrongTarget>;
 
             @Property({ type: 'reference' })
@@ -175,7 +172,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class WrongTarget extends Entity {
-            @References(() => WrongSource, (source) => source.second, { cardinality: 'one' })
+            @HasOne(() => WrongSource, (source) => source.second)
             related!: EntityRef<WrongSource>;
         }
 
@@ -192,9 +189,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class InvalidPathSource extends Entity {
-            @References(() => InvalidPathTarget, (target) => target.assignment.creator, {
-                cardinality: 'one',
-            })
+            @HasOne(() => InvalidPathTarget, (target) => target.assignment.creator)
             related!: EntityRef<InvalidPathTarget>;
         }
 
@@ -204,7 +199,7 @@ describe('@References validation', () => {
     it('should resolve a nested inverse relationship property', () => {
         @EntityTypeDef({ structure: true })
         class Assignment extends Structure {
-            @References(() => NestedSource, (source) => source.related, { cardinality: 'one' })
+            @HasOne(() => NestedSource, (source) => source.related)
             creator!: EntityRef<NestedSource>;
         }
         @EntityTypeDef()
@@ -214,9 +209,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class NestedSource extends Entity {
-            @References(() => NestedTarget, (target) => target.assignment.creator, {
-                cardinality: 'one',
-            })
+            @HasOne(() => NestedTarget, (target) => target.assignment.creator)
             related!: EntityRef<NestedTarget>;
         }
 
@@ -240,9 +233,7 @@ describe('@References validation', () => {
         }
         @EntityTypeDef()
         class UndeclaredSource extends Entity {
-            @References(() => UndeclaredTarget, (target) => target.related, {
-                cardinality: 'one',
-            })
+            @HasOne(() => UndeclaredTarget, (target) => target.related)
             related!: EntityRef<UndeclaredTarget>;
         }
 

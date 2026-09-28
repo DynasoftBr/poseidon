@@ -1,4 +1,4 @@
-import type { EntityRef } from '@poseidon/utilities';
+import type { EntityRef, PaginatedList } from '@poseidon/utilities';
 
 const relationshipPath = Symbol('relationship-path');
 
@@ -11,7 +11,7 @@ export type RelationshipPath = {
 export type RelationshipSelector<T> = {
     readonly [K in keyof T]: T[K] extends EntityRef<infer _Target>
         ? RelationshipPath
-        : T[K] extends AsyncIterable<infer _Item>
+        : T[K] extends PaginatedList<infer _Item>
           ? RelationshipPath
           : T[K] extends object
             ? RelationshipSelector<T[K]>

@@ -2,7 +2,7 @@
 
 Declare Poseidon model definitions with decorated classes and apply them through a configured `PoseidonContext` using ordinary entity operations.
 
-Enable `experimentalDecorators: true` in the consuming TypeScript project's compiler options. Decorators collect metadata at runtime, without constructing entity instances or requiring a compiler plugin. Property types and constraints must be explicit; TypeScript field types alone are not runtime metadata.
+Decorators collect metadata at runtime, without constructing entity instances or requiring a compiler plugin. Property types and constraints must be explicit; TypeScript field types alone are not runtime metadata.
 
 ```ts
 import { Entity, EntityTypeDef, ModelBuilder, Property } from '@poseidon/framework';
@@ -29,7 +29,7 @@ Entity names default to the kebab-case class name and can be set with `@EntityTy
 
 Array item types can reference a decorated class, for example `@Property({ type: 'array', itemsType: EntityProperty })`. The builder stores the referenced entity-type ID, and runtime validation loads that definition to validate each item. Add referenced classes to the model explicitly, such as `model.entity(EntityProperty).entity(Customer)`, unless their definitions already exist.
 
-`Structure` is the base for embedded values. `Entity` extends it with `_id`, `_version`, `save()`, and `delete()`; `EntityType` extends `Entity`. Entity definitions inherit the `save` and `delete` actions. `@Action()` records additional methods and their ordered `before` actions.
+`Structure` is the base for embedded values. `Entity` extends it with `_id`, `_version`, `save()`, and `delete()`; `EntityType` extends `Entity`. Entity definitions inherit the `save` and `delete` actions. `@Action()` records additional static methods.
 
 ## Applying definitions
 
@@ -64,3 +64,20 @@ The runtime owns comparison, merging, validation, and transactional persistence.
 Action failures propagate. The context/runtime determines authorization, validation, and concurrency guarantees; this package does not add those guarantees.
 
 The same contract can be implemented by a transport context, but an HTTP implementation is not included here. Rule decorators and build-time type extraction remain outside this version.
+
+## Relationships
+
+Use `@HasOne` for an `EntityRef<T>` and `@HasMany` for a `PaginatedList<T>`. Each declaration names the reciprocal property, and both ends are required:
+
+```ts
+import type { EntityRef, PaginatedList } from '@poseidon/utilities';
+import { HasMany, HasOne } from '@poseidon/framework';
+
+@HasOne(() => User, (user) => user.tickets, { onDelete: 'detach' })
+creator!: EntityRef<User>;
+
+@HasMany(() => Ticket, (ticket) => ticket.creator)
+tickets!: PaginatedList<Ticket>;
+```
+
+The decorator fixes cardinality from the field shape and records the reciprocal relationship metadata.
