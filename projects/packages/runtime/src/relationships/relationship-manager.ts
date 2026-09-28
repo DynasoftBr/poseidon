@@ -7,7 +7,11 @@ import type {
     RelationshipStore,
 } from './relationship-store';
 
-type EntityReader = (entityTypeName: string, id: string) => Promise<EntityRecord>;
+type EntityReader = <TEntity extends EntityRecord>(
+    entityTypeName: string,
+    id: string,
+) => Promise<TEntity>;
+type StoredEntityProperty = EntityRecord & EntityPropertyDefinition;
 type EntityDeleter = (entityTypeName: string, id: string) => Promise<void>;
 
 /** Keeps relationship values outside business-record documents. */
@@ -49,8 +53,10 @@ export class RelationshipManager {
                 );
             }
             const targetEntityType = entityTypeIdOf(property);
-            const inverse = await this.getEntity('entity-property', inversePropertyIdOf(property));
-            const inverseProperty = inverse as EntityPropertyDefinition;
+            const inverseProperty = await this.getEntity<StoredEntityProperty>(
+                'entity-property',
+                inversePropertyIdOf(property),
+            );
             await this.getEntity(targetEntityType, value._id);
             await this.store.replace(endpoint, endpointOf(inverseProperty, value._id));
         }
@@ -75,16 +81,13 @@ export class RelationshipManager {
     }
 }
 
-function relationshipProperties(entityType: EntityTypeDefinition): EntityPropertyDefinition[] {
+function relationshipProperties(entityType: EntityTypeDefinition): StoredEntityProperty[] {
     return entityType.properties.filter(
         (property) => property.type === 'reference' && property.cardinality !== undefined,
-    );
+    ) as StoredEntityProperty[];
 }
 
-function endpointOf(
-    property: EntityPropertyDefinition,
-    entityId: string,
-): RelationshipEndpointInput {
+function endpointOf(property: StoredEntityProperty, entityId: string): RelationshipEndpointInput {
     if (!property._id) throw new Error(`Relationship '${property.name}' must have an identifier.`);
     if (!property.cardinality) {
         throw new Error(`Relationship '${property.name}' must declare cardinality.`);

@@ -1,4 +1,8 @@
-import type { EntityProperty, EntityTypeDefinition } from '@poseidon/framework';
+import type {
+    EntityProperty,
+    EntityPropertyDefinition,
+    EntityTypeDefinition,
+} from '@poseidon/framework';
 import { validateEntity } from '../src/validation/entity-validator';
 
 describe('validateEntity', () => {
@@ -33,7 +37,7 @@ describe('validateEntity', () => {
         ).toEqual([expect.objectContaining({ property: '/roots/0/children/0' })]);
     });
 
-    const properties: EntityProperty[] = [
+    const properties: EntityPropertyDefinition[] = [
         property({ name: 'name', type: 'string', required: true, minLength: 2 }),
         property({ name: 'age', type: 'integer', minimum: 0 }),
         property({
@@ -94,6 +98,6 @@ describe('validateEntity', () => {
 
 function property(
     input: Pick<EntityProperty, 'name' | 'type'> & Partial<EntityProperty>,
-): EntityProperty {
+): EntityPropertyDefinition {
     return input;
 }

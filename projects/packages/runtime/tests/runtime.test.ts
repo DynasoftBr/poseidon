@@ -143,7 +143,9 @@ function customer(): EntityTypeDefinition {
     };
 }
 
-function relationshipDefinitions(): EntityTypeDefinition[] {
+function relationshipDefinitions(
+    onDelete: 'detach' | 'cascade' = 'detach',
+): EntityTypeDefinition[] {
     const operations = [
         {
             _id: 'save',
@@ -189,7 +191,7 @@ function relationshipDefinitions(): EntityTypeDefinition[] {
                     name: 'creator',
                     type: 'reference',
                     cardinality: 'one',
-                    onDelete: 'detach',
+                    onDelete,
                     targetEntityType: { _id: 'user' },
                     inverseProperty: { _id: 'user:createdTickets' },
                 },
@@ -284,6 +286,143 @@ describe('Runtime', () => {
         );
         expect(memory.records('relationship')).toHaveLength(0);
         await expect(runtime.get('user', 'ada', true)).resolves.toMatchObject({ _id: 'ada' });
+    });
+
+    it('should replace and clear a direct relationship', async () => {
+        const memory = new MemoryMongo();
+        const runtime = new Runtime(memory.client());
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: relationshipDefinitions() },
+            },
+            undefined,
+        );
+        await runtime.send(
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            undefined,
+        );
+        await runtime.send(
+            {
+                entityType: 'ticket',
+                action: 'save',
+                payload: { _id: 'ticket-1', creator: { _id: 'ada' } },
+            },
+            undefined,
+        );
+        await runtime.send(
+            {
+                entityType: 'ticket',
+                action: 'save',
+                payload: { _id: 'ticket-1', _version: 1, creator: null },
+            },
+            undefined,
+        );
+
+        expect(memory.records('relationship')).toHaveLength(0);
+    });
+
+    it('should reject a relationship value that is not an entity reference', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: relationshipDefinitions() },
+            },
+            undefined,
+        );
+
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'ticket',
+                    action: 'save',
+                    payload: { _id: 'ticket-1', creator: 'ada' },
+                },
+                undefined,
+            ),
+        ).rejects.toThrow("Relationship 'creator' must provide an entity reference.");
+    });
+
+    it('should require relationship endpoint metadata', async () => {
+        const missingTarget = relationshipDefinitions();
+        missingTarget[1]!.properties[0]!.targetEntityType = undefined;
+        const targetRuntime = new Runtime(new MemoryMongo().client());
+        await targetRuntime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: missingTarget },
+            },
+            undefined,
+        );
+        await expect(
+            targetRuntime.send(
+                {
+                    entityType: 'ticket',
+                    action: 'save',
+                    payload: { _id: 'ticket-1', creator: { _id: 'ada' } },
+                },
+                undefined,
+            ),
+        ).rejects.toThrow("Relationship 'creator' must declare a target entity type.");
+
+        const missingInverse = relationshipDefinitions();
+        missingInverse[1]!.properties[0]!.inverseProperty = undefined;
+        const inverseRuntime = new Runtime(new MemoryMongo().client());
+        await inverseRuntime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: missingInverse },
+            },
+            undefined,
+        );
+        await expect(
+            inverseRuntime.send(
+                {
+                    entityType: 'ticket',
+                    action: 'save',
+                    payload: { _id: 'ticket-1', creator: { _id: 'ada' } },
+                },
+                undefined,
+            ),
+        ).rejects.toThrow("Relationship 'creator' must declare an inverse property.");
+    });
+
+    it('should cascade deletion through a relationship', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: relationshipDefinitions('cascade') },
+            },
+            undefined,
+        );
+        await runtime.send(
+            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            undefined,
+        );
+        await runtime.send(
+            {
+                entityType: 'ticket',
+                action: 'save',
+                payload: { _id: 'ticket-1', creator: { _id: 'ada' } },
+            },
+            undefined,
+        );
+
+        await runtime.send(
+            { entityType: 'ticket', action: 'delete', payload: { _id: 'ticket-1', _version: 1 } },
+            undefined,
+        );
+
+        await expect(runtime.get('user', 'ada', true)).rejects.toMatchObject({
+            code: 'entity-not-found',
+        });
     });
 
     it('should expose the runtime EntityType definition during bootstrap', async () => {

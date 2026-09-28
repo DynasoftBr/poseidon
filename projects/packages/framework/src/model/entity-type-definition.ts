@@ -3,7 +3,9 @@ import type { Action } from '../entity-types/action';
 import type { Query } from '../entity-types/query';
 import type { EntityProperty } from '../entity-types/entity-property';
 
-export type EntityPropertyDefinition = Omit<EntityProperty, '_version'>;
+export type EntityPropertyDefinition = Omit<EntityProperty, '_id' | '_version'> & {
+    _id?: EntityProperty['_id'];
+};
 export type ActionDefinition = Omit<Action, '_version'>;
 export type QueryDefinition = Omit<Query, '_version'>;
 
