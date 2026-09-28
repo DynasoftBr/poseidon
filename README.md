@@ -8,7 +8,7 @@ A record that describes Customer, Order, or another type is an `EntityType defin
 
 ## Local development
 
-Use Node 20 and install the workspace dependencies once:
+Use Node 26 with npm 11.19.1 and install the workspace dependencies once:
 
 ```bash
 npm install
