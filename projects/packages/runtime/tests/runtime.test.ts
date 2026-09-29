@@ -1,5 +1,6 @@
 import {
     definitionOf,
+    verifyDevelopmentToken,
     EntityAction as Action,
     EntityProperty,
     EntityQuery as Query,
@@ -12,6 +13,10 @@ import {
 import type { MongoClient } from 'mongodb';
 import { EntityType } from '../src/entity-types/entity-type';
 import { Runtime } from '../src/runtime';
+import {
+    issueDevelopmentInvocationToken,
+    issueDevelopmentToken,
+} from '../src/authentication/development-token';
 
 class MemoryMongo {
     readonly data = new Map<string, Map<string, Record<string, unknown>>>();
@@ -441,6 +446,23 @@ describe('Runtime', () => {
 
     it('should issue a signed token containing identity permissions', async () => {
         const runtime = new Runtime(new MemoryMongo().client());
+        const definition = customer();
+        definition.actions?.push({
+            _id: 'action:customer:onboard',
+            name: 'onboard',
+            label: 'onboard',
+            description: 'Onboards a customer.',
+            permissions: [],
+            enabled: true,
+        });
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: [definition] },
+            },
+            undefined,
+        );
         await runtime.send(
             {
                 entityType: 'identity',
@@ -448,7 +470,12 @@ describe('Runtime', () => {
                 payload: {
                     _id: 'ada-identity',
                     kind: 'user',
-                    permissions: ['customer:onboard'],
+                    permissions: [
+                        {
+                            entityTypeId: 'customer',
+                            operationId: 'action:customer:onboard',
+                        },
+                    ],
                 },
             },
             undefined,
@@ -467,7 +494,11 @@ describe('Runtime', () => {
         ) as { sub: string; permissions: string[] };
 
         expect(result.token.split('.')).toHaveLength(3);
-        expect(payload).toEqual({ sub: 'ada-identity', permissions: ['customer:onboard'] });
+        expect(payload).toMatchObject({
+            sub: 'ada-identity',
+            permissions: ['action:customer:onboard'],
+            exp: expect.any(Number),
+        });
     });
 
     it('should reject authentication by a group identity', async () => {
@@ -641,6 +672,272 @@ describe('runtime EntityType operations', () => {
             runtime.send({ entityType: 'customer', action: 'missing', payload: {} }, undefined),
         ).rejects.toThrow('does not exist');
     });
+
+    it('should authorize direct and delegated operations from a signed token', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        const definition: EntityTypeDefinition = {
+            _id: 'customer',
+            name: 'customer',
+            label: 'Customer',
+            properties: [],
+            actions: [
+                {
+                    _id: 'action:customer:save',
+                    name: 'save',
+                    label: 'save',
+                    description: 'Saves a customer.',
+                    permissions: [{ entityTypeId: 'customer', operationId: 'query:customer:get' }],
+                    enabled: true,
+                },
+                {
+                    _id: 'action:customer:onboard',
+                    name: 'onboard',
+                    label: 'onboard',
+                    description: 'Onboards a customer.',
+                    permissions: [
+                        { entityTypeId: 'customer', operationId: 'action:customer:save' },
+                    ],
+                    enabled: true,
+                },
+            ],
+            queries: [
+                {
+                    _id: 'query:customer:get',
+                    name: 'get',
+                    label: 'get',
+                    description: 'Gets a customer.',
+                    permissions: [
+                        { entityTypeId: 'customer', operationId: 'action:customer:save' },
+                    ],
+                    enabled: true,
+                },
+                {
+                    _id: 'query:customer:project',
+                    name: 'project',
+                    label: 'project',
+                    description: 'Projects a customer.',
+                    permissions: [{ entityTypeId: 'customer', operationId: 'query:customer:get' }],
+                    enabled: true,
+                },
+            ],
+        };
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: [definition] },
+            },
+            undefined,
+        );
+
+        const direct = issueDevelopmentToken({
+            sub: 'ada',
+            permissions: ['action:customer:save', 'query:customer:get'],
+        });
+        await expect(
+            runtime.send(
+                { entityType: 'customer', action: 'save', payload: { _id: 'ada' } },
+                direct,
+            ),
+        ).resolves.toMatchObject({ _id: 'ada' });
+        await expect(
+            runtime.send(
+                { entityType: 'customer', action: 'get', payload: { _id: 'ada' } },
+                direct,
+            ),
+        ).resolves.toMatchObject({ _id: 'ada' });
+
+        const delegated = await runtime.send<{ token: string }>(
+            {
+                entityType: 'identity',
+                action: 'authorize',
+                payload: { operation: 'action:customer:onboard' },
+            },
+            issueDevelopmentToken({
+                sub: 'ada',
+                permissions: ['action:customer:onboard'],
+            }),
+        );
+        await expect(verifyDevelopmentToken(delegated.token)).resolves.toMatchObject({
+            kind: 'invocation',
+            origin: 'action:customer:onboard',
+            permissions: ['action:customer:onboard', 'action:customer:save', 'query:customer:get'],
+        });
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'customer',
+                    action: 'save',
+                    payload: { _id: 'grace' },
+                },
+                delegated.token,
+            ),
+        ).resolves.toMatchObject({ _id: 'grace' });
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'customer',
+                    action: 'get',
+                    payload: { _id: 'grace' },
+                },
+                delegated.token,
+            ),
+        ).resolves.toMatchObject({ _id: 'grace' });
+
+        const queryDelegated = issueDevelopmentInvocationToken({
+            sub: 'ada',
+            origin: 'query:customer:project',
+            permissions: ['query:customer:get', 'action:customer:save'],
+        });
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'customer',
+                    action: 'get',
+                    payload: { _id: 'ada' },
+                },
+                queryDelegated,
+            ),
+        ).resolves.toMatchObject({ _id: 'ada' });
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'customer',
+                    action: 'save',
+                    payload: { _id: 'lin' },
+                },
+                queryDelegated,
+            ),
+        ).resolves.toMatchObject({ _id: 'lin' });
+        await expect(
+            runtime.operationAddress({
+                entityTypeId: 'customer',
+                operationId: 'query:customer:get',
+            }),
+        ).resolves.toBe('query:customer:get');
+        await expect(
+            runtime.operationAddress({ entityTypeId: 'customer', operationId: 'missing' }),
+        ).rejects.toMatchObject({ code: 'entity-not-found' });
+    });
+
+    it('should reject a delegated operation reference that does not exist', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: {
+                    definitions: [
+                        {
+                            _id: 'customer',
+                            name: 'customer',
+                            label: 'Customer',
+                            properties: [],
+                            actions: [
+                                {
+                                    _id: 'action:customer:onboard',
+                                    name: 'onboard',
+                                    label: 'onboard',
+                                    description: 'Onboards a customer.',
+                                    permissions: [
+                                        {
+                                            entityTypeId: 'customer',
+                                            operationId: 'action:customer:missing',
+                                        },
+                                    ],
+                                    enabled: true,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            undefined,
+        );
+
+        await expect(
+            runtime.resolveAllOperationPermissions('action:customer:onboard'),
+        ).rejects.toMatchObject({ code: 'entity-not-found' });
+        await expect(runtime.resolveAllOperationPermissions('invalid')).rejects.toThrow(
+            "Operation 'invalid' does not exist.",
+        );
+    });
+
+    it('should reject insufficient and invalid runtime authorization', async () => {
+        const runtime = new Runtime(new MemoryMongo().client());
+        const definition: EntityTypeDefinition = {
+            _id: 'customer',
+            name: 'customer',
+            label: 'Customer',
+            properties: [],
+            actions: [
+                {
+                    _id: 'action:customer:save',
+                    name: 'save',
+                    label: 'save',
+                    description: 'Saves a customer.',
+                    permissions: [],
+                    enabled: true,
+                },
+                {
+                    _id: 'action:customer:onboard',
+                    name: 'onboard',
+                    label: 'onboard',
+                    description: 'Onboards a customer.',
+                    permissions: [],
+                    enabled: true,
+                },
+            ],
+        };
+        await runtime.send(
+            {
+                entityType: 'entity-type',
+                action: 'applyDefinitions',
+                payload: { definitions: [definition] },
+            },
+            undefined,
+        );
+        await expect(
+            runtime.send(
+                { entityType: 'customer', action: 'save', payload: {} },
+                issueDevelopmentToken({ sub: 'ada', permissions: [] }),
+            ),
+        ).rejects.toThrow('not authorized');
+        await expect(
+            runtime.send(
+                { entityType: 'customer', action: 'save', payload: {} },
+                issueDevelopmentInvocationToken({
+                    sub: 'ada',
+                    origin: 'action:customer:onboard',
+                    permissions: [],
+                }),
+            ),
+        ).rejects.toThrow('not authorized');
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'identity',
+                    action: 'authorize',
+                    payload: { operation: 'action:customer:onboard' },
+                },
+                issueDevelopmentInvocationToken({
+                    sub: 'ada',
+                    origin: 'action:customer:onboard',
+                    permissions: [],
+                }),
+            ),
+        ).rejects.toThrow('requires a user token');
+        await expect(
+            runtime.send(
+                {
+                    entityType: 'identity',
+                    action: 'authorize',
+                    payload: { operation: 'action:customer:onboard' },
+                },
+                issueDevelopmentToken({ sub: 'ada', permissions: [] }),
+            ),
+        ).rejects.toThrow('is not authorized');
+    });
 });
 
 import { applyConventions, applyDefaults } from '../src/actions/entity-preparation';
@@ -706,7 +1003,15 @@ class EmptyTransport implements PoseidonTransport {
 }
 
 it('should cover runtime entity-type facades and update paths', async () => {
-    poseidon.initialize({ context: new PoseidonContext(new EmptyTransport(), () => undefined) });
+    poseidon.initialize({
+        context: new PoseidonContext(new EmptyTransport(), () =>
+            issueDevelopmentInvocationToken({
+                sub: 'test',
+                origin: 'action:test:entry',
+                permissions: ['query:entity-type:get', 'action:entity-type:save'],
+            }),
+        ),
+    });
     await EntityType.get({ _id: 'customer' });
     await EntityType.save({
         _id: 'customer',

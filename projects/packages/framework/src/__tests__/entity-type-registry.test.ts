@@ -10,12 +10,12 @@ import { definitionOf } from '../model/decorators';
 
 @EntityTypeDef()
 class Customer extends Entity {
-    @Action({ description: 'Onboards a customer.', permissions: [] })
+    @Action({ description: 'Onboards a customer.', permissions: () => [] })
     static onboard(): Promise<unknown> {
         return Promise.resolve(undefined);
     }
 
-    @Query({ description: 'Lists customers.', permissions: [] })
+    @Query({ description: 'Lists customers.', permissions: () => [] })
     static list(): Promise<unknown> {
         return Promise.resolve(undefined);
     }

@@ -1,3 +1,4 @@
+import { invocationToken } from './development-token';
 import {
     EntityTypeDef,
     ModelBuilder,
@@ -26,7 +27,11 @@ class TestTransport implements PoseidonTransport {
 describe('applying a decorated model', () => {
     it('should send all definitions through applyDefinitions', async () => {
         const transport = new TestTransport();
-        poseidon.initialize({ context: new PoseidonContext(transport, () => undefined) });
+        poseidon.initialize({
+            context: new PoseidonContext(transport, () =>
+                invocationToken(['action:entity-type:applyDefinitions']),
+            ),
+        });
 
         await new ModelBuilder().entity(Customer).apply();
 

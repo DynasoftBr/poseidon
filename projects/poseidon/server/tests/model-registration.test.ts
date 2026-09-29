@@ -12,6 +12,7 @@ import { Runtime } from '@poseidon/runtime';
 import type { MongoClient } from 'mongodb';
 import { createServer, type Server } from 'node:http';
 import { createApp } from '../src/app';
+import { developmentToken } from './development-token';
 
 @EntityTypeDef()
 class Customer extends Entity {
@@ -76,7 +77,7 @@ describe('model registration', () => {
         const runtime = new Runtime(memory.client());
         const server = createServer(
             createApp({
-                createContext: () => new PoseidonContext(runtime, () => undefined),
+                createContext: (token) => new PoseidonContext(runtime, () => token),
                 entityTypeFactory: new EntityTypeFactory(),
             }),
         );
@@ -87,7 +88,7 @@ describe('model registration', () => {
             poseidon.initialize({
                 context: new PoseidonContext(
                     new HttpPoseidonTransport(`http://127.0.0.1:${port}`),
-                    () => undefined,
+                    () => developmentToken(['action:entity-type:applyDefinitions']),
                 ),
             });
 

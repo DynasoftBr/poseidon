@@ -15,6 +15,16 @@ export class PoseidonContext {
         private readonly getToken: () => string | undefined,
     ) {}
 
+    /** Returns the caller token used by this context. */
+    public token(): string | undefined {
+        return this.getToken();
+    }
+
+    /** Creates a context that preserves this request transport with a scoped token. */
+    public withToken(token: string): PoseidonContext {
+        return new PoseidonContext(this.transport, () => token);
+    }
+
     /**
      * Invokes an action and returns its result.
      * @template TResult - Action result.

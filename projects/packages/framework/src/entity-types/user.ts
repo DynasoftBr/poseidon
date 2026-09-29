@@ -31,7 +31,7 @@ export class User extends Entity {
      * @returns {Promise<TResult>} Resolves to the saved user.
      * @throws If the action fails.
      */
-    @Action({ description: 'Creates or updates a user.', permissions: [] })
+    @Action({ description: 'Creates or updates a user.', permissions: () => [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),

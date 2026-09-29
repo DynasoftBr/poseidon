@@ -1,5 +1,6 @@
 import { Property } from '../model/decorators';
 import { Entity } from './entity';
+import { OperationReference } from './operation-reference';
 
 /** Base declaration shared by actions and queries. */
 export class Operation extends Entity {
@@ -18,11 +19,11 @@ export class Operation extends Entity {
     /** Permissions available while this operation runs. */
     @Property({
         type: 'array',
-        itemsType: 'string',
+        itemsType: OperationReference,
         required: true,
         description: 'Permissions available while the operation runs.',
     })
-    permissions!: string[];
+    permissions!: OperationReference[];
 
     /** Whether this operation runs when invoked. */
     @Property({ type: 'boolean', required: true, description: 'Whether the operation runs.' })

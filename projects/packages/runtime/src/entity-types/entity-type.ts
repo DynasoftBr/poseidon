@@ -7,7 +7,7 @@ import { addMandatoryProperties as addMandatoryPropertiesTo } from '../actions/a
 import type { RuntimeOperationContext } from '../actions/runtime-operation-context';
 
 export class EntityType extends FrameworkEntityType {
-    @Action({ description: 'Applies submitted entity type definitions.', permissions: [] })
+    @Action({ description: 'Applies submitted entity type definitions.', permissions: () => [] })
     static override async applyDefinitions<TResult = unknown>(context: object): Promise<TResult> {
         const runtimeContext = context as RuntimeOperationContext;
         await runtimeContext.runtime.applyDefinitions(

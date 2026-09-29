@@ -5,6 +5,7 @@ import type {
 } from '../entity-types/entity-property';
 import type { EntityType } from '../entity-types/entity-type';
 import type { RelationshipMetadata } from './relationship-metadata';
+import type { OperationKind } from './operation-address';
 
 /** A class used to collect decorator metadata without instantiation. */
 export type EntityClass<T = object> = abstract new (...args: never[]) => T;
@@ -24,7 +25,8 @@ export type ActionMethod = (...args: never[]) => Promise<unknown>;
 export type OperationOptions = {
     description: string;
     name?: string;
-    permissions: string[];
+    allows?: [];
+    permissions: () => ActionMethod[];
 };
 
 export type ActionOptions = OperationOptions;
@@ -37,6 +39,7 @@ export type RelationshipOptions = {
 export type DecoratedRelationshipMetadata = RelationshipOptions & RelationshipMetadata;
 
 export type OperationMetadata<TOptions extends OperationOptions = OperationOptions> = TOptions & {
+    kind: OperationKind;
     method: ActionMethod;
     name: string;
 };

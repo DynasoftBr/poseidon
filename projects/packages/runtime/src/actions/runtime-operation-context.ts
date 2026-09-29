@@ -1,4 +1,4 @@
-import type { EntityTypeDefinition } from '@poseidon/framework';
+import type { DevelopmentToken, EntityTypeDefinition } from '@poseidon/framework';
 import type { Runtime } from '../runtime';
 
 export type RuntimeOperationContext = {
@@ -6,4 +6,5 @@ export type RuntimeOperationContext = {
     entityType: EntityTypeDefinition;
     input: Record<string, unknown>;
     outputs: Record<string, unknown>;
+    token?: DevelopmentToken;
 };

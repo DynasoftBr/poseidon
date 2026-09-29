@@ -3,12 +3,12 @@ import type { RuntimeOperationContext } from '../actions/runtime-operation-conte
 import { Identity } from './identity';
 
 export class User extends FrameworkUser {
-    @Action({ description: 'Creates a user and its identity.', permissions: [] })
+    @Action({ description: 'Creates a user and its identity.', permissions: () => [] })
     static override async save<TResult = unknown>(context: object): Promise<TResult> {
         const runtimeContext = context as RuntimeOperationContext;
         const identity = await runtimeContext.runtime.save(definitionOf(Identity), {
             kind: 'user',
-            permissions: [],
+            permissions: () => [],
         });
         const user = await runtimeContext.runtime.save(runtimeContext.entityType, {
             ...runtimeContext.input,

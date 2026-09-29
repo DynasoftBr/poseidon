@@ -1,3 +1,4 @@
+import { invocationToken } from './development-token';
 import {
     Action,
     Entity,
@@ -15,7 +16,7 @@ class Customer extends Entity {
     @Property({ type: 'string', required: true, description: 'Customer name.' })
     name!: string;
 
-    @Action({ description: 'Onboards a customer.', permissions: [] })
+    @Action({ description: 'Onboards a customer.', permissions: () => [] })
     static onboard(): Promise<unknown> {
         return Promise.resolve(undefined);
     }
@@ -32,7 +33,11 @@ class RecordingTransport implements PoseidonTransport {
 
 it('should apply an external service model after initialization', async () => {
     const transport = new RecordingTransport();
-    poseidon.initialize({ context: new PoseidonContext(transport, () => undefined) });
+    poseidon.initialize({
+        context: new PoseidonContext(transport, () =>
+            invocationToken(['action:entity-type:applyDefinitions']),
+        ),
+    });
 
     const model = new ModelBuilder();
     model.entity(Customer);
@@ -77,7 +82,7 @@ it('should apply an external service model after initialization', async () => {
     );
     expect(definition.actions).toContainEqual(
         expect.objectContaining({
-            _id: 'customer:onboard',
+            _id: 'action:customer:onboard',
             name: 'onboard',
             description: 'Onboards a customer.',
             permissions: [],

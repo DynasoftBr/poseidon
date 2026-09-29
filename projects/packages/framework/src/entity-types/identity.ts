@@ -7,6 +7,7 @@ import {
 } from '../model/decorators';
 import { poseidon } from '../poseidon';
 import { Entity, type EntityId } from './entity';
+import { OperationReference } from './operation-reference';
 
 export type IdentityKind = 'user' | 'application' | 'group';
 
@@ -16,6 +17,14 @@ export type AuthenticateInput = {
 };
 
 export type AuthenticateResult = {
+    token: string;
+};
+
+export type AuthorizeInput = {
+    operation: string;
+};
+
+export type AuthorizeResult = {
     token: string;
 };
 
@@ -54,11 +63,11 @@ export class Identity extends Entity {
      */
     @Property({
         type: 'array',
-        itemsType: 'string',
+        itemsType: OperationReference,
         required: true,
         description: 'Direct permissions granted to this identity.',
     })
-    permissions!: string[];
+    permissions!: OperationReference[];
 
     /**
      * Identities included when this identity is a group.
@@ -77,13 +86,35 @@ export class Identity extends Entity {
      * @returns {Promise<TResult>} Resolves to the authentication result.
      * @throws If authentication fails.
      */
-    @Action({ description: 'Authenticates a user or application identity.', permissions: [] })
+    @Action({
+        description: 'Authenticates a user or application identity.',
+        allows: [],
+        permissions: () => [],
+    })
     static authenticate<TResult = AuthenticateResult>(
         payload: AuthenticateInput,
     ): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
             action: 'authenticate',
+            payload,
+        });
+    }
+    /**
+     * Authorizes one operation and returns its scoped invocation token.
+     * @template TResult - Authorization result.
+     * @param {AuthorizeInput} payload - Requested operation address.
+     * @returns {Promise<TResult>} Resolves to the invocation token.
+     */
+    @Action({
+        description: 'Authorizes an operation invocation.',
+        allows: [],
+        permissions: () => [],
+    })
+    static authorize<TResult = AuthorizeResult>(payload: AuthorizeInput): Promise<TResult> {
+        return poseidon.context().execute<TResult>({
+            entityType: entityTypeNameOf(this as EntityClass),
+            action: 'authorize',
             payload,
         });
     }

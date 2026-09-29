@@ -24,7 +24,7 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} The entity returned by the query.
      * @throws If the query fails.
      */
-    @Query({ description: 'Reads an entity by ID.', permissions: [] })
+    @Query({ description: 'Reads an entity by ID.', permissions: () => [] })
     static get<TResult = unknown>(payload: { _id: EntityId }): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -40,7 +40,7 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} Resolves to the saved entity.
      * @throws If the action fails.
      */
-    @Action({ description: 'Creates or updates an entity.', permissions: [] })
+    @Action({ description: 'Creates or updates an entity.', permissions: () => [] })
     static save<TResult = unknown>(payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -56,7 +56,7 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} Resolves when defaults are applied.
      * @throws If the action fails.
      */
-    @Action({ description: 'Applies declared property defaults.', permissions: [] })
+    @Action({ description: 'Applies declared property defaults.', permissions: () => [] })
     protected static applyDefaults<TResult = unknown>(payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -72,7 +72,7 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} Resolves when conventions are applied.
      * @throws If the action fails.
      */
-    @Action({ description: 'Applies declared property conventions.', permissions: [] })
+    @Action({ description: 'Applies declared property conventions.', permissions: () => [] })
     protected static applyConventions<TResult = unknown>(payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -88,7 +88,10 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} Resolves when the entity is valid.
      * @throws If validation fails.
      */
-    @Action({ description: 'Validates entity data against declared properties.', permissions: [] })
+    @Action({
+        description: 'Validates entity data against declared properties.',
+        permissions: () => [],
+    })
     static validate<TResult = unknown>(payload: object): Promise<TResult> {
         return poseidon.context().execute<TResult>({
             entityType: entityTypeNameOf(this as EntityClass),
@@ -104,7 +107,7 @@ export class Entity extends Structure {
      * @returns {Promise<TResult>} Resolves when deletion finishes.
      * @throws If the action fails.
      */
-    @Action({ description: 'Deletes an entity.', permissions: [] })
+    @Action({ description: 'Deletes an entity.', permissions: () => [] })
     static delete<TResult = unknown>(payload: {
         _id: EntityId;
         _version: number;

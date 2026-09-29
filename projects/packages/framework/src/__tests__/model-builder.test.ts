@@ -18,6 +18,7 @@ import {
 } from '../index';
 import { definitionOf, entityTypeNameOf, operationMethodOf } from '../model/decorators';
 import { EntityType as CoreEntityType } from '../entity-types/entity-type';
+import { invocationToken } from './development-token';
 
 const testContext = new PoseidonContext(
     {
@@ -25,7 +26,12 @@ const testContext = new PoseidonContext(
             return Promise.resolve(undefined as TResult);
         },
     },
-    () => undefined,
+    () =>
+        invocationToken([
+            'action:user:save',
+            'action:customer:save',
+            'action:entity-type:applyDefinitions',
+        ]),
 );
 poseidon.initialize({ context: testContext });
 
@@ -33,7 +39,7 @@ describe('decorated model declarations', () => {
     it('should declare actions without runtime steps', () => {
         @EntityTypeDef()
         class Customer extends Entity {
-            @Action({ description: 'Performs this action.', permissions: [] })
+            @Action({ description: 'Performs this action.', permissions: () => [] })
             static list(): Promise<unknown> {
                 return Promise.resolve(undefined);
             }
@@ -41,7 +47,7 @@ describe('decorated model declarations', () => {
 
         expect(definitionOf(Customer).actions).toEqual([
             {
-                _id: 'customer:save',
+                _id: 'action:customer:save',
                 name: 'save',
                 label: 'save',
                 description: 'Creates or updates an entity.',
@@ -49,7 +55,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                _id: 'customer:applyDefaults',
+                _id: 'action:customer:applyDefaults',
                 name: 'applyDefaults',
                 label: 'applyDefaults',
                 description: 'Applies declared property defaults.',
@@ -57,7 +63,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                _id: 'customer:applyConventions',
+                _id: 'action:customer:applyConventions',
                 name: 'applyConventions',
                 label: 'applyConventions',
                 description: 'Applies declared property conventions.',
@@ -65,7 +71,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                _id: 'customer:validate',
+                _id: 'action:customer:validate',
                 name: 'validate',
                 label: 'validate',
                 description: 'Validates entity data against declared properties.',
@@ -73,7 +79,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                _id: 'customer:delete',
+                _id: 'action:customer:delete',
                 name: 'delete',
                 label: 'delete',
                 description: 'Deletes an entity.',
@@ -81,7 +87,7 @@ describe('decorated model declarations', () => {
                 enabled: true,
             },
             {
-                _id: 'customer:list',
+                _id: 'action:customer:list',
                 name: 'list',
                 label: 'list',
                 description: 'Performs this action.',
@@ -94,27 +100,27 @@ describe('decorated model declarations', () => {
     it('should persist declared action and query permissions', () => {
         @EntityTypeDef()
         class Customer {
-            @Action({ description: 'Updates a customer.', permissions: ['customer:write'] })
+            @Action({ description: 'Updates a customer.', permissions: () => [] })
             static update(): Promise<void> {
                 return Promise.resolve();
             }
 
-            @Query({ description: 'Reads a customer.', permissions: ['customer:read'] })
+            @Query({ description: 'Reads a customer.', permissions: () => [] })
             static get(): Promise<void> {
                 return Promise.resolve();
             }
         }
 
         expect(definitionOf(Customer)).toMatchObject({
-            actions: [expect.objectContaining({ name: 'update', permissions: ['customer:write'] })],
-            queries: [expect.objectContaining({ name: 'get', permissions: ['customer:read'] })],
+            actions: [expect.objectContaining({ name: 'update', permissions: [] })],
+            queries: [expect.objectContaining({ name: 'get', permissions: [] })],
         });
     });
 
     it('should reject non-static actions', () => {
         expect(() => {
             class Customer {
-                @Action({ description: 'Performs this action.', permissions: [] })
+                @Action({ description: 'Performs this action.', permissions: () => [] })
                 create(): Promise<void> {
                     return Promise.resolve();
                 }
@@ -158,7 +164,7 @@ describe('decorated model declarations', () => {
                     return Promise.resolve(undefined as TResult);
                 },
             },
-            () => undefined,
+            () => invocationToken(['action:user:save', 'action:customer:save']),
         );
         const factory = new EntityTypeFactory();
         const customer = factory.create('customer');
@@ -180,14 +186,26 @@ describe('decorated model declarations', () => {
                 action: 'authenticate',
                 payload: { identityId: 'ada-identity', secret: 'secret' },
             },
-            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
+            {
+                entityType: 'user',
+                action: 'save',
+                payload: { _id: 'ada' },
+            },
             {
                 entityType: 'identity',
                 action: 'authenticate',
                 payload: { identityId: 'ada-identity', secret: 'secret' },
             },
-            { entityType: 'user', action: 'save', payload: { _id: 'ada' } },
-            { entityType: 'customer', action: 'save', payload: { name: 'Ada' } },
+            {
+                entityType: 'user',
+                action: 'save',
+                payload: { _id: 'ada' },
+            },
+            {
+                entityType: 'customer',
+                action: 'save',
+                payload: { name: 'Ada' },
+            },
         ]);
     });
 
@@ -369,7 +387,7 @@ describe('decorator error paths', () => {
     it('should reject non-static queries', () => {
         expect(() => {
             class Customer {
-                @Query({ description: 'Reads data.', permissions: [] })
+                @Query({ description: 'Reads data.', permissions: () => [] })
                 list(): Promise<void> {
                     return Promise.resolve();
                 }
@@ -381,12 +399,12 @@ describe('decorator error paths', () => {
     it('should resolve decorated operations', () => {
         @EntityTypeDef()
         class Customer {
-            @Action({ description: 'Performs this action.', permissions: [] })
+            @Action({ description: 'Performs this action.', permissions: () => [] })
             static create(): Promise<void> {
                 return Promise.resolve();
             }
 
-            @Query({ description: 'Reads data.', permissions: [] })
+            @Query({ description: 'Reads data.', permissions: () => [] })
             static list(): Promise<void> {
                 return Promise.resolve();
             }
@@ -405,7 +423,7 @@ describe('decorator error paths', () => {
 
 it('should record static queries', () => {
     class Customer {
-        @Query({ description: 'Reads data.', permissions: [] })
+        @Query({ description: 'Reads data.', permissions: () => [] })
         static list(): Promise<void> {
             return Promise.resolve();
         }

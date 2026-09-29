@@ -1,4 +1,5 @@
 import type { Operation } from '../entity-types/operation';
+import type { OperationReference } from '../entity-types/operation-reference';
 import type {
     ActionDefinition,
     EntityTypeDefinition,
@@ -20,6 +21,8 @@ import type {
     PropertyOptions,
 } from './decorator-types';
 import { resolveRelationshipDefinition } from './relationship-metadata';
+import { operationAddress } from './operation-address';
+import { operationMetadataOf } from './operation-decorator';
 
 export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
     const options = optionsOf(entityClass);
@@ -96,13 +99,24 @@ function operationDefinition(
     operation: OperationMetadata,
 ): Omit<Operation, '_version'> {
     return {
-        _id: `${entityTypeName}:${operation.name}`,
+        _id: operationAddress(operation.kind, entityTypeName, operation.name),
         name: operation.name,
         label: operation.name,
         description: operation.description,
-        permissions: operation.permissions,
+        permissions: operation
+            .permissions()
+            .map((permission) => permissionReference(entityTypeName, permission)),
         enabled: true,
     };
+}
+
+function permissionReference(entityTypeName: string, method: ActionMethod): OperationReference {
+    const operation = operationMetadataOf(method);
+    if (!operation) throw new Error('Operation permissions must reference decorated methods.');
+    return {
+        entityTypeId: entityTypeName,
+        operationId: operationAddress(operation.kind, entityTypeName, operation.name),
+    } as OperationReference;
 }
 
 function optionsOf(entityClass: EntityClass): EntityTypeOptions & {

@@ -1,3 +1,4 @@
+import { invocationToken } from './development-token';
 import {
     Action,
     Entity,
@@ -27,7 +28,21 @@ class TestTransport implements PoseidonTransport {
 }
 
 function initialize(transport: TestTransport): void {
-    poseidon.initialize({ context: new PoseidonContext(transport, () => undefined) });
+    poseidon.initialize({
+        context: new PoseidonContext(transport, () =>
+            invocationToken([
+                'query:customer:get',
+                'action:customer:save',
+                'action:customer:validate',
+                'action:customer:delete',
+                'action:entity-type:applyDefinitions',
+                'action:entity-type:save',
+                'action:instance-customer:onboard',
+                'action:lifecycle-customer:applyDefaults',
+                'action:lifecycle-customer:applyConventions',
+            ]),
+        ),
+    });
 }
 
 describe('entity actions', () => {
@@ -41,7 +56,11 @@ describe('entity actions', () => {
         await Customer.delete({ _id: 'customer-1', _version: 2 });
 
         expect(transport.requests).toEqual([
-            { entityType: 'customer', action: 'get', payload: { _id: 'customer-1' } },
+            {
+                entityType: 'customer',
+                action: 'get',
+                payload: { _id: 'customer-1' },
+            },
             {
                 entityType: 'customer',
                 action: 'save',
@@ -116,7 +135,7 @@ describe('entity actions', () => {
 
 @EntityTypeDef({ name: 'instance-customer' })
 class InstanceCustomer {
-    @Action({ description: 'Onboards a customer.', permissions: [] })
+    @Action({ description: 'Onboards a customer.', permissions: () => [] })
     static onboard(_payload: object): Promise<unknown> {
         return Promise.resolve('handler');
     }
@@ -126,15 +145,9 @@ it('should dispatch static actions through the active context', async () => {
     const transport = new TestTransport();
     initialize(transport);
 
-    await InstanceCustomer.onboard({ name: 'Ada' });
+    await expect(InstanceCustomer.onboard({ name: 'Ada' })).resolves.toBe('handler');
 
-    expect(transport.requests).toEqual([
-        {
-            entityType: 'instance-customer',
-            action: 'onboard',
-            payload: { name: 'Ada' },
-        },
-    ]);
+    expect(transport.requests).toEqual([]);
 });
 
 @EntityTypeDef({ name: 'lifecycle-customer' })

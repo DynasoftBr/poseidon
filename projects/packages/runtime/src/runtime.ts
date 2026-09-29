@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { MongoClient } from 'mongodb';
 import {
     definitionOf,
+    operationAddress,
     operationMethodOf,
     type EntityClass,
     EntityAction as FrameworkAction,
@@ -12,6 +13,8 @@ import {
     type QueryDefinition,
     type PoseidonRequest,
     type PoseidonTransport,
+    type OperationReference,
+    OperationReference as FrameworkOperationReference,
 } from '@poseidon/framework';
 import type { ActionContext } from './actions/action-context';
 import type { RuntimeOperationContext } from './actions/runtime-operation-context';
@@ -30,9 +33,10 @@ import { RuntimeTransaction } from './runtime-transaction';
 import { RelationshipManager } from './relationships/relationship-manager';
 import { RelationshipStore } from './relationships/relationship-store';
 import { validateEntity } from './validation/entity-validator';
+import { resolveAllOperationPermissions } from './operation-permissions';
+import { authorizeRuntimeRequest } from './runtime-authorization';
 
 type DeclaredOperation = ActionDefinition | QueryDefinition;
-/** Executes declared actions against MongoDB. */
 export class Runtime implements PoseidonTransport {
     private readonly transaction: RuntimeTransaction;
     private readonly entityTypeStore: EntityTypeStore;
@@ -44,6 +48,7 @@ export class Runtime implements PoseidonTransport {
         [definitionOf(FrameworkAction).name, FrameworkAction],
         [definitionOf(FrameworkQuery).name, FrameworkQuery],
         [definitionOf(RuntimeUser).name, RuntimeUser],
+        [definitionOf(FrameworkOperationReference).name, FrameworkOperationReference],
     ]);
 
     /**
@@ -69,13 +74,13 @@ export class Runtime implements PoseidonTransport {
      * Sends a request to the runtime.
      * @template TResult - Action result.
      * @param {PoseidonRequest} request - Action invocation.
-     * @param {string | undefined} _token - Authorization token, currently unused.
+     * @param {string | undefined} token - Authorization token for external requests.
      * @returns {Promise<TResult>} The action result.
      * @throws If the entity type or operation does not exist, or execution fails.
      */
     public async send<TResult>(
         request: PoseidonRequest,
-        _token: string | undefined,
+        token: string | undefined,
     ): Promise<TResult> {
         const entityType =
             (await this.getEntityType<EntityTypeDefinition>(request.entityType)) ??
@@ -89,11 +94,43 @@ export class Runtime implements PoseidonTransport {
             entityType.queries?.find((candidate) => candidate.name === request.action);
         if (!operation) throw new Error(`Operation '${request.action}' does not exist.`);
 
+        const authenticated = await authorizeRuntimeRequest({
+            entityType,
+            operation,
+            request,
+            token,
+        });
+
         const result = await this.runOperation(entityType, operation, {
             input: { ...request.payload },
             outputs: {},
+            token: authenticated,
         });
         return result.outputs[operation._id] as TResult;
+    }
+
+    /** Resolves every permission declared by one stored operation. */
+    public resolveAllOperationPermissions(address: string): Promise<string[]> {
+        return resolveAllOperationPermissions(address, (name) =>
+            this.getEntityType<EntityTypeDefinition>(name),
+        );
+    }
+
+    /** Resolves a persisted operation reference to its readable API address. */
+    public async operationAddress(reference: OperationReference): Promise<string> {
+        const entityType = await this.getEntityType<EntityTypeDefinition>(
+            String(reference.entityTypeId),
+        );
+        if (!entityType) throw new EntityNotFoundError(String(reference.entityTypeId));
+        const action = entityType.actions?.find(
+            (operation) => operation._id === reference.operationId,
+        );
+        if (action) return operationAddress('action', entityType.name, action.name);
+        const query = entityType.queries?.find(
+            (operation) => operation._id === reference.operationId,
+        );
+        if (query) return operationAddress('query', entityType.name, query.name);
+        throw new EntityNotFoundError(String(reference.operationId));
     }
 
     /**
@@ -191,6 +228,7 @@ export class Runtime implements PoseidonTransport {
                     entityType,
                     input: state.input,
                     outputs: state.outputs,
+                    token: state.token,
                 }),
             );
         }
