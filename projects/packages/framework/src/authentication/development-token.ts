@@ -4,24 +4,40 @@ const developmentVerificationKey = {
     x: 'amw6T4QUqQWdbzFWuejy_tg8D5UoEYG9X8e9YAXU4oI',
 } as const;
 
+/** Verified development claims for an authenticated identity. */
 export type DevelopmentUserToken = {
+    /** Discriminator identifying this variant. */
     kind: 'user';
+    /** Identifier of the authenticated identity. */
     sub: string;
+    /** Operation addresses granted by the token. */
     permissions: string[];
+    /** Expiration time in seconds since the Unix epoch. */
     exp: number;
 };
 
+/** Verified development claims scoped to an operation invocation. */
 export type DevelopmentInvocationToken = {
+    /** Discriminator identifying this variant. */
     kind: 'invocation';
+    /** Identifier of the authenticated identity. */
     sub: string;
+    /** Address of the operation that originated the invocation. */
     origin: string;
+    /** Operation addresses granted by the token. */
     permissions: string[];
+    /** Expiration time in seconds since the Unix epoch. */
     exp: number;
 };
 
+/** Development authentication or invocation claims. */
 export type DevelopmentToken = DevelopmentUserToken | DevelopmentInvocationToken;
 
-/** Verifies the fixed-key development token issued by the runtime. */
+/**
+ * Verifies the fixed-key development token issued by the runtime.
+ * @param {string} token - Signed development token to verify.
+ * @returns {Promise<DevelopmentToken>} Verified {@link DevelopmentToken} claims.
+ */
 export async function verifyDevelopmentToken(token: string): Promise<DevelopmentToken> {
     const [header, payload, signature] = tokenParts(token);
     const parsedPayload = validatedPayload(payload);

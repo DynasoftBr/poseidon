@@ -10,9 +10,9 @@ export class BrowserContextStore implements ContextStore {
 
     /**
      * Sets the browser session context.
-     * @param {PoseidonContext} context - Session context.
+     * @param {PoseidonContext} context - Session {@link PoseidonContext}.
      * @returns {void} Nothing.
-     * @throws If another context has already been initialized.
+     * @throws {@link Error} — If another context has already been initialized.
      */
     public initialize(context: PoseidonContext): void {
         if (this.initializedContext && this.initializedContext !== context) {
@@ -23,8 +23,8 @@ export class BrowserContextStore implements ContextStore {
 
     /**
      * Returns the browser session context.
-     * @returns {PoseidonContext} Initialized session context.
-     * @throws If Poseidon has not been initialized.
+     * @returns {PoseidonContext} Initialized session {@link PoseidonContext}.
+     * @throws {@link Error} — If Poseidon has not been initialized.
      */
     public context(): PoseidonContext {
         if (!this.initializedContext) {
@@ -36,10 +36,10 @@ export class BrowserContextStore implements ContextStore {
     /**
      * Runs only with the initialized browser session context.
      * @template TResult - Operation result.
-     * @param {PoseidonContext} context - Requested session context.
+     * @param {PoseidonContext} context - Requested session {@link PoseidonContext}.
      * @param {() => Promise<TResult>} operation - Operation to execute.
      * @returns {Promise<TResult>} Resolves to the operation result.
-     * @throws If the context differs from the initialized session context.
+     * @throws {@link Error} — If the context differs from the initialized session context.
      */
     public run<TResult>(
         context: PoseidonContext,

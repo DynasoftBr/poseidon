@@ -8,13 +8,25 @@ import {
 } from '@poseidon/framework';
 import type { EntityRef } from '@poseidon/utilities';
 
-export type EntityRecord = Record<string, unknown> & { _id: EntityId };
+/** Stored entity data identified by a persistent ID. */
+export type EntityRecord = Record<string, unknown> & {
+    /** Persistent {@link EntityId} of the entity. */
+    _id: EntityId;
+};
+/** Persisted EntityType definition record with references to its child records. */
 export type StoredEntityType = Omit<EntityTypeDefinition, 'properties' | 'actions' | 'queries'> & {
+    /** {@link EntityRef} values pointing to property definition records. */
     properties: EntityRef<{ _id: string }>[];
+    /** {@link EntityRef} values pointing to Action definition records. */
     actions?: EntityRef<{ _id: string }>[];
+    /** {@link EntityRef} values pointing to Query definition records. */
     queries?: EntityRef<{ _id: string }>[];
 };
-export type LoadedEntityTypeDefinition = EntityTypeDefinition & { _version?: number };
+/** Hydrated EntityType definition record with its persistence version. */
+export type LoadedEntityTypeDefinition = EntityTypeDefinition & {
+    /** Version of the persisted entity. */
+    _version?: number;
+};
 
 interface EntityTypeStorage {
     getEntityType(name: string): Promise<LoadedEntityTypeDefinition | null>;
@@ -25,8 +37,18 @@ interface EntityTypeStorage {
 
 /** Persists EntityType definitions and their referenced metadata records. */
 export class EntityTypeStore {
+    /**
+     * Creates a store using the supplied entity persistence operations.
+     * @param {EntityTypeStorage} storage - {@link EntityTypeStorage} used to read, validate, and persist definitions.
+     */
     public constructor(private readonly storage: EntityTypeStorage) {}
 
+    /**
+     * Persists each submitted definition and its referenced child records.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} governing persistence.
+     * @param {EntityTypeDefinition[]} definitions - {@link EntityTypeDefinition} records to create or update.
+     * @returns {Promise<void>} Promise resolving after all definitions have been persisted.
+     */
     public async applyDefinitions(
         entityType: EntityTypeDefinition,
         definitions: EntityTypeDefinition[],
@@ -34,6 +56,11 @@ export class EntityTypeStore {
         for (const definition of definitions) await this.applyDefinition(entityType, definition);
     }
 
+    /**
+     * Loads the property and operation records referenced by a stored definition.
+     * @param {StoredEntityType} stored - {@link StoredEntityType} with child references.
+     * @returns {Promise<EntityTypeDefinition>} Promise resolving to the {@link EntityTypeDefinition}.
+     */
     public async hydrate(stored: StoredEntityType): Promise<EntityTypeDefinition> {
         const [properties, actions, queries] = await Promise.all([
             this.loadReferences<FrameworkEntityProperty>('entity-property', stored.properties),

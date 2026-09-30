@@ -3,6 +3,13 @@ import type { EntityPropertyDefinition, EntityTypeDefinition } from '@poseidon/f
 import { ValidationError } from '../poseidon-error';
 import type { Runtime } from '../runtime';
 
+/**
+ * Preserves existing mandatory properties or adds an identifier to a new entity type.
+ * @param {ActionContext} context - {@link ActionContext} containing the input to prepare.
+ * @param {Runtime} runtime - {@link Runtime} used to persist the definition.
+ * @returns {Promise<null>} Promise resolving to null after preparing the property definitions.
+ * @throws {@link Error} — If property definitions are supplied without an entity type ID.
+ */
 export async function addMandatoryProperties(
     { input }: ActionContext,
     runtime: Runtime,

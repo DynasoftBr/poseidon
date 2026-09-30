@@ -4,7 +4,9 @@ import type { EntityTypeDefinition } from './entity-type-definition';
 
 /** Identifies an Action or Query within an EntityType definition. */
 export type OperationReference = {
+    /** {@link EntityId} of the owning entity type. */
     entityTypeId: EntityId;
+    /** {@link EntityId} of the referenced operation. */
     operationId: EntityId;
 };
 
@@ -14,8 +16,8 @@ export class EntityTypeRegistry {
 
     /**
      * Binds a decorated class to its loaded definition.
-     * @param {EntityClass} entityClass - Decorated entity class.
-     * @param {EntityTypeDefinition} definition - Registered EntityType definition.
+     * @param {EntityClass} entityClass - Decorated {@link EntityClass}.
+     * @param {EntityTypeDefinition} definition - Registered {@link EntityTypeDefinition}.
      * @returns {void} Nothing.
      */
     public register(entityClass: EntityClass, definition: EntityTypeDefinition): void {
@@ -37,9 +39,9 @@ export class EntityTypeRegistry {
 
     /**
      * Gets an operation reference for a decorated class.
-     * @param {EntityClass} entityClass - Decorated entity class.
+     * @param {EntityClass} entityClass - Decorated {@link EntityClass}.
      * @param {string} name - Declared Action or Query name.
-     * @returns {OperationReference | undefined} Registered reference, or undefined when missing.
+     * @returns {OperationReference | undefined} {@link OperationReference}, or undefined when missing.
      */
     public operationOf(entityClass: EntityClass, name: string): OperationReference | undefined {
         return this.operations.get(entityClass)?.get(name);

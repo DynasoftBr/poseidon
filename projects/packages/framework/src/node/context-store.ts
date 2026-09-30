@@ -13,7 +13,7 @@ export class NodeContextStore implements ContextStore {
 
     /**
      * Sets the default context used outside request scopes.
-     * @param {PoseidonContext} context - Default context.
+     * @param {PoseidonContext} context - Default {@link PoseidonContext}.
      * @returns {void} Nothing.
      */
     public initialize(context: PoseidonContext): void {
@@ -22,8 +22,8 @@ export class NodeContextStore implements ContextStore {
 
     /**
      * Returns the request context or the initialized default context.
-     * @returns {PoseidonContext} Current request or default context.
-     * @throws If Poseidon has not been initialized.
+     * @returns {PoseidonContext} Current request or default {@link PoseidonContext}.
+     * @throws {@link Error} — If Poseidon has not been initialized.
      */
     public context(): PoseidonContext {
         const context = this.contexts.getStore() ?? this.initializedContext;
@@ -34,7 +34,7 @@ export class NodeContextStore implements ContextStore {
     /**
      * Runs an operation with its context isolated from other requests.
      * @template TResult - Operation result.
-     * @param {PoseidonContext} context - Request context.
+     * @param {PoseidonContext} context - Request {@link PoseidonContext}.
      * @param {() => Promise<TResult>} operation - Operation to execute.
      * @returns {Promise<TResult>} Resolves to the operation result.
      */

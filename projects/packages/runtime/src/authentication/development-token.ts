@@ -13,12 +13,20 @@ type DevelopmentInvocationTokenPayload = DevelopmentTokenPayload & {
     origin: string;
 };
 
-/** Issues a fifteen-minute development token for an authenticated identity. */
+/**
+ * Issues a fifteen-minute development token for an authenticated identity.
+ * @param {DevelopmentTokenPayload} payload - {@link DevelopmentTokenPayload} to include in the token.
+ * @returns {string} Signed development user token.
+ */
 export function issueDevelopmentToken(payload: DevelopmentTokenPayload): string {
     return issueToken({ kind: 'user', ...payload }, 15 * 60);
 }
 
-/** Issues a short-lived token for one authorized operation invocation. */
+/**
+ * Issues a short-lived token for one authorized operation invocation.
+ * @param {DevelopmentInvocationTokenPayload} payload - {@link DevelopmentInvocationTokenPayload} to include in the token.
+ * @returns {string} Signed development invocation token.
+ */
 export function issueDevelopmentInvocationToken(
     payload: DevelopmentInvocationTokenPayload,
 ): string {

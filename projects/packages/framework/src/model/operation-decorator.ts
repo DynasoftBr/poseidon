@@ -23,14 +23,29 @@ type StandardMethod<This> = (this: This, ...args: any[]) => Promise<unknown>;
 
 const operationMetadata = new WeakMap<ActionMethod, OperationMetadata>();
 
+/**
+ * Declares an Action and records its permission dependencies.
+ * @param {ActionOptions} options - {@link ActionOptions} to register.
+ * @returns Decorator that registers the Action.
+ */
 export function Action(options: ActionOptions) {
     return registerOperation(options, actionsOf, 'Action', 'action');
 }
 
+/**
+ * Declares a Query and records its permission dependencies.
+ * @param {QueryOptions} options - {@link QueryOptions} to register.
+ * @returns Decorator that registers the Query.
+ */
 export function Query(options: QueryOptions) {
     return registerOperation(options, queriesOf, 'Query', 'query');
 }
 
+/**
+ * Reads metadata registered for a decorated operation method.
+ * @param {ActionMethod} method - Decorated {@link ActionMethod} to inspect.
+ * @returns {OperationMetadata | undefined} {@link OperationMetadata}, or undefined for an undecorated method.
+ */
 export function operationMetadataOf(method: ActionMethod): OperationMetadata | undefined {
     return operationMetadata.get(method);
 }

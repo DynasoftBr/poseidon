@@ -12,6 +12,13 @@ const statusByErrorCode = {
     [poseidonErrorCodes.accessDenied]: 403,
 } as const;
 
+/**
+ * Converts runtime failures to HTTP responses and logs unexpected errors.
+ * @param error - Failure passed to the HTTP error handler.
+ * @param _request - Request associated with the failure.
+ * @param response - Response used to send the error payload.
+ * @param _next - Express error-handler continuation.
+ */
 export const errorMiddleware: ErrorRequestHandler = (error, _request, response, _next) => {
     if (error instanceof PoseidonError) {
         const status = statusByErrorCode[error.code];

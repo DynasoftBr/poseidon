@@ -15,20 +15,24 @@ export const propertyTypes = [
     'reference',
 ] as const;
 
+/** Supported storage types for entity properties. */
 export type PropertyType = (typeof propertyTypes)[number];
 
 export const propertyConventions = ['lower-case', 'upper-case', 'capitalize-first-letter'] as const;
 
+/** Supported string transformations applied before persistence. */
 export type PropertyConvention = (typeof propertyConventions)[number];
 
 export const onDeleteBehaviors = ['restrict', 'detach', 'cascade'] as const;
 
+/** Behavior applied when a related entity is deleted. */
 export type OnDeleteBehavior = (typeof onDeleteBehaviors)[number];
 
+/** Number of entities allowed at a relationship endpoint. */
 export type RelationshipCardinality = 'one' | 'many';
 
 /**
- * Definition of a property declared by an EntityType.
+ * Definition of a property declared by an {@link EntityType}.
  * @extends {Entity}
  */
 @EntityTypeDef({
@@ -36,7 +40,7 @@ export type RelationshipCardinality = 'one' | 'many';
     description: 'Defines a property and its constraints within an entity type.',
 })
 export class EntityProperty extends Entity {
-    /** Name of this property within its EntityType. */
+    /** Name of this property within its {@link EntityType}. */
     @Property({
         type: 'string',
         required: true,
@@ -48,7 +52,7 @@ export class EntityProperty extends Entity {
     @Property({ type: 'string', description: 'Explains what this property represents.' })
     description?: string;
 
-    /** Type of value accepted by this property. */
+    /** {@link PropertyType} accepted by this property. */
     @Property({
         type: 'string',
         required: true,
@@ -89,7 +93,7 @@ export class EntityProperty extends Entity {
     @Property({ type: 'json', description: 'Value used when the property is omitted.' })
     default?: unknown;
 
-    /** Text normalization applied to this property's value. */
+    /** {@link PropertyConvention} applied to this property's value. */
     @Property({
         type: 'string',
         enum: [...propertyConventions],
@@ -101,7 +105,7 @@ export class EntityProperty extends Entity {
     @Property({ type: 'boolean', description: 'Whether the value is base64 encoded.' })
     base64Encoded?: boolean;
 
-    /** Primitive property type or EntityType ID accepted for each array item. */
+    /** Primitive property type or {@link EntityType} ID accepted for each array item. */
     @Property({
         type: 'string',
         description: 'Primitive type or entity-type ID accepted for each array item.',
@@ -116,11 +120,11 @@ export class EntityProperty extends Entity {
     @Property({ type: 'number', description: 'Number that numeric values must be a multiple of.' })
     multipleOf?: number;
 
-    /** Entity type referenced by this relationship property. */
+    /** {@link EntityRef} pointing to the target {@link EntityType}. */
     @Property({ type: 'reference', description: 'Entity type referenced by this relationship.' })
     targetEntityType?: EntityRef<EntityType>;
 
-    /** Reciprocal EntityProperty for this relationship. */
+    /** Reciprocal {@link EntityProperty} for this relationship. */
     @Property({ type: 'reference', description: 'Reciprocal property for this relationship.' })
     inverseProperty?: EntityRef<EntityProperty>;
 
@@ -132,7 +136,7 @@ export class EntityProperty extends Entity {
     })
     inversePath?: string[];
 
-    /** Whether this endpoint permits one or many relationship records. */
+    /** {@link RelationshipCardinality} indicating whether this endpoint permits one or many records. */
     @Property({
         type: 'string',
         enum: ['one', 'many'],
@@ -140,7 +144,7 @@ export class EntityProperty extends Entity {
     })
     cardinality?: RelationshipCardinality;
 
-    /** Behavior when the record at this endpoint is deleted. */
+    /** {@link OnDeleteBehavior} applied when the record at this endpoint is deleted. */
     @Property({
         type: 'string',
         enum: [...onDeleteBehaviors],

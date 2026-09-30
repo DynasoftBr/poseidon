@@ -4,11 +4,17 @@ import {
     type EntityTypeDefinition,
 } from '@poseidon/framework';
 
+/** Object validation schema generated from entity property definitions. */
 export interface JsonSchema {
+    /** JSON Schema object type discriminator. */
     type: 'object';
+    /** Disallows fields absent from the declared schema. */
     additionalProperties: false;
+    /** {@link PropertySchema} values keyed by property name. */
     properties: Record<string, PropertySchema>;
+    /** Names of properties that must be present. */
     required?: string[];
+    /** Referenced {@link JsonSchema} values keyed by entity type name. */
     $defs?: Record<string, JsonSchema>;
 }
 
@@ -32,10 +38,10 @@ interface PropertySchema {
 
 /**
  * Builds JSON Schema, resolving array item references through the supplied loader.
- * @param {EntityPropertyDefinition[]} properties - Root property definitions.
- * @param {(id: string) => Promise<EntityType>} loadEntityType - Loads referenced definitions.
- * @returns {Promise<JsonSchema>} Resolves to the schema with referenced definitions.
- * @throws If a referenced definition cannot be loaded.
+ * @param {EntityPropertyDefinition[]} properties - Root {@link EntityPropertyDefinition} entries.
+ * @param {(id: string) => Promise<EntityTypeDefinition>} loadEntityType - Loads referenced {@link EntityTypeDefinition} records.
+ * @returns {Promise<JsonSchema>} Resolves to the {@link JsonSchema} with referenced definitions.
+ * @throws {@link Error} — If a referenced definition cannot be loaded.
  */
 export async function buildEntitySchema(
     properties: EntityPropertyDefinition[],

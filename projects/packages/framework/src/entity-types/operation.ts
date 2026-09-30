@@ -2,7 +2,10 @@ import { Property } from '../model/decorators';
 import { Entity } from './entity';
 import { OperationReference } from './operation-reference';
 
-/** Base declaration shared by actions and queries. */
+/**
+ * Base declaration shared by actions and queries.
+ * @extends {Entity}
+ */
 export class Operation extends Entity {
     /** Name used to invoke this operation. */
     @Property({ type: 'string', required: true, description: 'Name of the operation to execute.' })
@@ -16,7 +19,7 @@ export class Operation extends Entity {
     @Property({ type: 'string', required: true, description: 'Explains what the operation does.' })
     description!: string;
 
-    /** Permissions available while this operation runs. */
+    /** {@link OperationReference} values identifying permissions available while this operation runs. */
     @Property({
         type: 'array',
         itemsType: OperationReference,

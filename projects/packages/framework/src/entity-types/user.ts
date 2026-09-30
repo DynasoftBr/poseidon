@@ -15,7 +15,7 @@ import { Entity, type EntityId } from './entity';
 @EntityTypeDef({ label: 'User', description: 'Represents a person with an identity.' })
 export class User extends Entity {
     /**
-     * Identity used to authorize this user.
+     * {@link EntityId} of the identity used to authorize this user.
      */
     @Property({
         type: 'string',
@@ -26,10 +26,10 @@ export class User extends Entity {
 
     /**
      * Creates or updates a user.
-     * @template TResult - Action result.
-     * @param {object} payload - User data to save.
+     * @template TResult - {@link Action} result.
+     * @param {object} payload - {@link User} data to save.
      * @returns {Promise<TResult>} Resolves to the saved user.
-     * @throws If the action fails.
+     * @throws {@link Error} — If the action fails.
      */
     @Action({ description: 'Creates or updates a user.', permissions: () => [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {

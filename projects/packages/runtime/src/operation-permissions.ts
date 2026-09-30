@@ -11,7 +11,12 @@ import { EntityNotFoundError } from './poseidon-error';
 type DeclaredOperation = ActionDefinition | QueryDefinition;
 type EntityTypeLoader = (name: string) => Promise<EntityTypeDefinition | null>;
 
-/** Resolves every permission declared by an operation, including nested permissions. */
+/**
+ * Resolves every permission declared by an operation, including nested permissions.
+ * @param {string} address - Readable address of the operation.
+ * @param {EntityTypeLoader} loadEntityType - Callback that loads an {@link EntityTypeDefinition} by name.
+ * @returns {Promise<string[]>} Promise resolving to all required operation addresses.
+ */
 export async function resolveAllOperationPermissions(
     address: string,
     loadEntityType: EntityTypeLoader,

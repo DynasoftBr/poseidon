@@ -10,7 +10,7 @@ function contextStore(): ContextStore {
 
 /**
  * Configures the context store used by the shared Poseidon API.
- * @param {ContextStore} contextStore - Context store for the current environment.
+ * @param {ContextStore} contextStore - {@link ContextStore} for the current environment.
  * @returns {void} Nothing.
  * @internal
  */
@@ -24,7 +24,7 @@ export function configurePoseidon(contextStore: ContextStore): void {
 export const poseidon = {
     /**
      * Sets the context used outside a request scope.
-     * @param {{ context: PoseidonContext }} options - Default runtime or transport context.
+     * @param {{ context: PoseidonContext }} options - Default runtime or transport {@link PoseidonContext}.
      * @returns {void} Nothing.
      */
     initialize(options: { context: PoseidonContext }): void {
@@ -33,8 +33,8 @@ export const poseidon = {
 
     /**
      * Returns the context for the current action.
-     * @returns {PoseidonContext} Current request or initialized context.
-     * @throws If Poseidon has not been initialized.
+     * @returns {PoseidonContext} Current request or initialized {@link PoseidonContext}.
+     * @throws {@link Error} — If Poseidon has not been initialized.
      */
     context(): PoseidonContext {
         return contextStore().context();
@@ -43,10 +43,10 @@ export const poseidon = {
     /**
      * Runs an operation in one context scope.
      * @template TResult - Operation result.
-     * @param {PoseidonContext} context - Context for the operation.
+     * @param {PoseidonContext} context - {@link PoseidonContext} for the operation.
      * @param {() => Promise<TResult>} operation - Operation to execute.
      * @returns {Promise<TResult>} Resolves to the operation result.
-     * @throws If the requested scope is unavailable.
+     * @throws {@link Error} — If the requested scope is unavailable.
      */
     run<TResult>(context: PoseidonContext, operation: () => Promise<TResult>): Promise<TResult> {
         return contextStore().run(context, operation);

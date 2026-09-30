@@ -37,6 +37,7 @@ import { resolveAllOperationPermissions } from './operation-permissions';
 import { authorizeRuntimeRequest } from './runtime-authorization';
 
 type DeclaredOperation = ActionDefinition | QueryDefinition;
+/** Executes model operations and persists entities through MongoDB. */
 export class Runtime implements PoseidonTransport {
     private readonly transaction: RuntimeTransaction;
     private readonly entityTypeStore: EntityTypeStore;
@@ -73,10 +74,10 @@ export class Runtime implements PoseidonTransport {
     /**
      * Sends a request to the runtime.
      * @template TResult - Action result.
-     * @param {PoseidonRequest} request - Action invocation.
+     * @param {PoseidonRequest} request - {@link PoseidonRequest}.
      * @param {string | undefined} token - Authorization token for external requests.
      * @returns {Promise<TResult>} The action result.
-     * @throws If the entity type or operation does not exist, or execution fails.
+     * @throws {@link Error} — If the entity type or operation does not exist, or execution fails.
      */
     public async send<TResult>(
         request: PoseidonRequest,
@@ -109,14 +110,22 @@ export class Runtime implements PoseidonTransport {
         return result.outputs[operation._id] as TResult;
     }
 
-    /** Resolves every permission declared by one stored operation. */
+    /**
+     * Resolves every permission declared by one stored operation.
+     * @param {string} address - Readable address of the operation.
+     * @returns {Promise<string[]>} Promise resolving to all required operation addresses.
+     */
     public resolveAllOperationPermissions(address: string): Promise<string[]> {
         return resolveAllOperationPermissions(address, (name) =>
             this.getEntityType<EntityTypeDefinition>(name),
         );
     }
 
-    /** Resolves a persisted operation reference to its readable API address. */
+    /**
+     * Resolves a persisted operation reference to its readable API address.
+     * @param {OperationReference} reference - Persisted {@link OperationReference} to the operation.
+     * @returns {Promise<string>} Promise resolving to the readable operation address.
+     */
     public async operationAddress(reference: OperationReference): Promise<string> {
         const entityType = await this.getEntityType<EntityTypeDefinition>(
             String(reference.entityTypeId),
@@ -138,8 +147,9 @@ export class Runtime implements PoseidonTransport {
      * @template TEntity - Stored entity shape.
      * @param {string} entityTypeName - Entity type collection name.
      * @param {string} id - Entity ID.
-     * @param {boolean} [shouldThrow=false] - Whether a missing entity throws an error.
-     * @returns {Promise<TEntity | null>} The entity, or null when it is missing.
+     * @param {true} shouldThrow - Requires the entity to exist.
+     * @returns {Promise<TEntity>} The stored entity.
+     * @throws {@link Error} — If the entity is missing.
      */
     public get<TEntity extends EntityRecord = EntityRecord>(
         entityTypeName: string,
@@ -151,7 +161,7 @@ export class Runtime implements PoseidonTransport {
      * @template TEntity - Stored entity shape.
      * @param {string} entityTypeName - Entity type collection name.
      * @param {string} id - Entity ID.
-     * @param {boolean} [shouldThrow=false] - Whether a missing entity throws an error.
+     * @param {false} [shouldThrow=false] - Whether a missing entity throws an error.
      * @returns {Promise<TEntity | null>} The entity, or null when it is missing.
      */
     public get<TEntity extends EntityRecord = EntityRecord>(
@@ -159,6 +169,15 @@ export class Runtime implements PoseidonTransport {
         id: string,
         shouldThrow?: false,
     ): Promise<TEntity | null>;
+    /**
+     * Reads a stored entity by its collection name and ID.
+     * @template TEntity - Shape of the stored entity.
+     * @param {string} entityTypeName - Name of the entity collection.
+     * @param {string} id - Identifier of the entity to read or delete.
+     * @param shouldThrow - Whether to throw when the entity is missing.
+     * @returns {Promise<TEntity | null>} Promise resolving to the entity, or null when missing and not required.
+     * @throws {@link Error} — If the entity is missing and shouldThrow is true.
+     */
     public async get<TEntity extends EntityRecord = EntityRecord>(
         entityTypeName: string,
         id: string,
@@ -251,6 +270,12 @@ export class Runtime implements PoseidonTransport {
         throw new Error(`Operation '${operation.name}' has no implementation.`);
     }
 
+    /**
+     * Persists entity data and its relationships.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} targeted by the operation.
+     * @param {Record<string, unknown>} data - Entity data to persist.
+     * @returns {Promise<EntityRecord>} Promise resolving to the {@link EntityRecord}.
+     */
     public async save(
         entityType: EntityTypeDefinition,
         data: Record<string, unknown>,
@@ -272,10 +297,10 @@ export class Runtime implements PoseidonTransport {
 
     /**
      * Applies submitted entity-type definitions.
-     * @param {EntityTypeDefinition} entityType - EntityType definition used to persist the records.
-     * @param {EntityTypeDefinition[]} definitions - Definitions to create or update.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} used to persist the records.
+     * @param {EntityTypeDefinition[]} definitions - {@link EntityTypeDefinition} records to create or update.
      * @returns {Promise<void>} Resolves after every definition is persisted.
-     * @throws If a definition cannot be persisted.
+     * @throws {@link Error} — If a definition cannot be persisted.
      */
     public applyDefinitions(
         entityType: EntityTypeDefinition,
@@ -313,6 +338,13 @@ export class Runtime implements PoseidonTransport {
         if (result.matchedCount !== 1) throw new Error(`Entity '${entity._id}' does not exist.`);
     }
 
+    /**
+     * Deletes an entity and applies its relationship deletion rules.
+     * @param {string} entityTypeName - Name of the entity collection.
+     * @param {string} id - Identifier of the entity to read or delete.
+     * @returns {Promise<void>} Promise resolving after the entity is deleted.
+     * @throws {@link Error} — If the entity type or entity does not exist, or a relationship prevents deletion.
+     */
     public async delete(entityTypeName: string, id: string): Promise<void> {
         const entityType = await this.getEntityType<EntityTypeDefinition>(entityTypeName);
         if (!entityType) throw new EntityNotFoundError(entityTypeName);

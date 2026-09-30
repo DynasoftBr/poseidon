@@ -4,10 +4,14 @@ const relationshipPath = Symbol('relationship-path');
 
 /** A proxy-backed path to a relationship property. */
 export type RelationshipPath = {
+    /** Selected property names forming the relationship path. */
     readonly [relationshipPath]: readonly string[];
 };
 
-/** Mirrors nested structures while exposing relationship properties as paths. */
+/**
+ * Mirrors nested structures while exposing relationship properties as paths.
+ * @template T - Entity or value shape represented by this declaration.
+ */
 export type RelationshipSelector<T> = {
     readonly [K in keyof T]: T[K] extends EntityRef<infer _Target>
         ? RelationshipPath
@@ -18,11 +22,15 @@ export type RelationshipSelector<T> = {
             : never;
 };
 
+/** Deferred relationship target and selected inverse path. */
 export type RelationshipMetadata = {
+    /** Deferred {@link RelationshipEntityClass} constructor of the related entity type. */
     target: () => RelationshipEntityClass;
+    /** Property path to the reciprocal relationship. */
     inversePath: string[];
 };
 
+/** Entity constructor inspected when resolving relationships. */
 export type RelationshipEntityClass = abstract new (...args: never[]) => object;
 
 type RelationshipDefinition = {
@@ -40,13 +48,27 @@ type RelationshipMetadataResolver = {
     relationshipsOf: (prototype: object) => Map<string, RelationshipMetadata>;
 };
 
-/** Captures the field path selected from a metadata proxy. */
+/**
+ * Captures the field path selected from a metadata proxy.
+ * @param {(selector: RelationshipSelector<T>) => RelationshipPath} selector - Selects a {@link RelationshipPath} from the target’s {@link RelationshipSelector}.
+ * @template T - Entity or value shape represented by this declaration.
+ * @returns {string[]} Selected property names in traversal order.
+ */
 export function captureRelationshipPath<T>(
     selector: (selector: RelationshipSelector<T>) => RelationshipPath,
 ): string[] {
     return [...selector(pathProxy([]))[relationshipPath]];
 }
 
+/**
+ * Resolves and validates the target and reciprocal property of a relationship.
+ * @param {RelationshipEntityClass} entityClass - Decorated {@link RelationshipEntityClass} to inspect.
+ * @param {string} propertyName - Name of the relationship property.
+ * @param {RelationshipMetadata} relationship - {@link RelationshipMetadata}.
+ * @param {RelationshipMetadataResolver} resolver - {@link RelationshipMetadataResolver} used to load metadata or execute the query.
+ * @returns {RelationshipDefinition} Resolved {@link RelationshipDefinition} with target and inverse property references.
+ * @throws {@link Error} — If the target is a structure or the inverse relationship is invalid.
+ */
 export function resolveRelationshipDefinition(
     entityClass: RelationshipEntityClass,
     propertyName: string,

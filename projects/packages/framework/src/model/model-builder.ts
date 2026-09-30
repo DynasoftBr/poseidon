@@ -13,9 +13,9 @@ export class ModelBuilder {
 
     /**
      * Adds a decorated class and returns this builder; repeated classes are ignored.
-     * @param {EntityClass} entityClass - Class containing entity and property decorators.
-     * @returns {this} This builder for chaining.
-     * @throws If metadata is missing or another class uses the same entity name.
+     * @param {EntityClass} entityClass - {@link EntityClass} containing entity and property decorators.
+     * @returns {this} This {@link ModelBuilder} for chaining.
+     * @throws {@link Error} — If metadata is missing or another class uses the same entity name.
      */
     public entity(entityClass: EntityClass): this {
         const definition = definitionOf(entityClass);
@@ -31,9 +31,9 @@ export class ModelBuilder {
     }
 
     /**
-     * Applies collected definitions through one EntityType action.
+     * Applies collected definitions through one {@link EntityType} action.
      * @returns {Promise<void>} Resolves when the action finishes.
-     * @throws If the current operation fails.
+     * @throws {@link Error} — If the current operation fails.
      */
     public async apply(): Promise<void> {
         if (this.entities.size === 0) return;

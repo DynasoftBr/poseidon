@@ -22,13 +22,17 @@ type StoredIdentity = Record<string, unknown> & {
     permissions: OperationReference[];
 };
 
+/**
+ * Authorization principal for a user, application, or group.
+ * @extends {FrameworkIdentity}
+ */
 export class Identity extends FrameworkIdentity {
     /**
      * Authenticates an identity and issues its development token.
      * @template TResult - Result type.
-     * @param {object} context - Runtime operation context.
+     * @param {object} context - {@link RuntimeOperationContext} for the operation.
      * @returns {Promise<TResult>} Resolves to the signed authentication result.
-     * @throws If the identity is a group.
+     * @throws {@link Error} — If the identity is a group.
      */
     @Action({
         description: 'Authenticates a user or application identity.',
@@ -62,7 +66,7 @@ export class Identity extends FrameworkIdentity {
     /**
      * Authorizes one user operation and issues its scoped invocation token.
      * @template TResult - Result type.
-     * @param {object} context - Runtime operation context.
+     * @param {object} context - {@link RuntimeOperationContext} for the operation.
      * @returns {Promise<TResult>} Resolves to the signed invocation token.
      */
     @Action({

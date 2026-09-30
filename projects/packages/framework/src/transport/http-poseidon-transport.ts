@@ -14,7 +14,7 @@ export class HttpPoseidonTransport implements PoseidonTransport {
     /**
      * Posts a request and reads its JSON result.
      * @template TResult - Action result.
-     * @param {PoseidonRequest} request - Action invocation.
+     * @param {PoseidonRequest} request - {@link PoseidonRequest}.
      * @param {string | undefined} token - Authorization token.
      * @returns {Promise<TResult>} Resolves to the response body.
      */

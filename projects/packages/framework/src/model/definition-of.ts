@@ -24,6 +24,11 @@ import { resolveRelationshipDefinition } from './relationship-metadata';
 import { operationAddress } from './operation-address';
 import { operationMetadataOf } from './operation-decorator';
 
+/**
+ * Builds an EntityType definition from a decorated class and its inherited metadata.
+ * @param {EntityClass} entityClass - Decorated {@link EntityClass} to inspect.
+ * @returns {EntityTypeDefinition} Resolved {@link EntityTypeDefinition} including inherited members.
+ */
 export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
     const options = optionsOf(entityClass);
     const name = options.name;
@@ -68,6 +73,12 @@ export function definitionOf(entityClass: EntityClass): EntityTypeDefinition {
     };
 }
 
+/**
+ * Finds an operation method declared or overridden by the entity class.
+ * @param {EntityClass} entityClass - Decorated {@link EntityClass} to inspect.
+ * @param {string} name - Name of the declared operation.
+ * @returns {ActionMethod | undefined} Declared {@link ActionMethod}, or undefined when no own declaration exists.
+ */
 export function operationMethodOf(
     entityClass: EntityClass,
     name: string,
@@ -78,6 +89,11 @@ export function operationMethodOf(
     );
 }
 
+/**
+ * Resolves the explicit or convention-based name of an entity class.
+ * @param {EntityClass} entityClass - Decorated {@link EntityClass} to inspect.
+ * @returns {string} Resolved entity type name.
+ */
 export function entityTypeNameOf(entityClass: EntityClass): string {
     if ('entityTypeName' in entityClass && typeof entityClass.entityTypeName === 'string') {
         return entityClass.entityTypeName;

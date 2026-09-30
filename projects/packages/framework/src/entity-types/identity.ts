@@ -9,22 +9,32 @@ import { poseidon } from '../poseidon';
 import { Entity, type EntityId } from './entity';
 import { OperationReference } from './operation-reference';
 
+/** Kinds of principals that can hold permissions. */
 export type IdentityKind = 'user' | 'application' | 'group';
 
+/** Credentials used to authenticate an identity. */
 export type AuthenticateInput = {
+    /** {@link Identity} to authenticate. */
     identityId: EntityId;
+    /** Plaintext credential supplied for authentication. */
     secret: string;
 };
 
+/** Token issued after successful authentication. */
 export type AuthenticateResult = {
+    /** Signed token returned to the caller. */
     token: string;
 };
 
+/** Operation for which an invocation token is requested. */
 export type AuthorizeInput = {
+    /** Operation address to authorize. */
     operation: string;
 };
 
+/** Token scoped to an authorized operation invocation. */
 export type AuthorizeResult = {
+    /** Signed token returned to the caller. */
     token: string;
 };
 
@@ -38,7 +48,7 @@ export type AuthorizeResult = {
 })
 export class Identity extends Entity {
     /**
-     * Classifies the principal.
+     * {@link IdentityKind} classifying the principal.
      */
     @Property({
         type: 'string',
@@ -59,7 +69,7 @@ export class Identity extends Entity {
     credentialHash?: string;
 
     /**
-     * Direct permissions granted to this identity.
+     * {@link OperationReference} values identifying the permissions granted to this identity.
      */
     @Property({
         type: 'array',
@@ -70,7 +80,7 @@ export class Identity extends Entity {
     permissions!: OperationReference[];
 
     /**
-     * Identities included when this identity is a group.
+     * {@link EntityId} values of identities included when this identity is a group.
      */
     @Property({
         type: 'array',
@@ -82,9 +92,9 @@ export class Identity extends Entity {
     /**
      * Authenticates a user or application identity.
      * @template TResult - Authentication result.
-     * @param {AuthenticateInput} payload - Identity credential supplied by the caller.
+     * @param {AuthenticateInput} payload - {@link AuthenticateInput} supplied by the caller.
      * @returns {Promise<TResult>} Resolves to the authentication result.
-     * @throws If authentication fails.
+     * @throws {@link Error} — If authentication fails.
      */
     @Action({
         description: 'Authenticates a user or application identity.',
@@ -103,7 +113,7 @@ export class Identity extends Entity {
     /**
      * Authorizes one operation and returns its scoped invocation token.
      * @template TResult - Authorization result.
-     * @param {AuthorizeInput} payload - Requested operation address.
+     * @param {AuthorizeInput} payload - {@link AuthorizeInput}.
      * @returns {Promise<TResult>} Resolves to the invocation token.
      */
     @Action({

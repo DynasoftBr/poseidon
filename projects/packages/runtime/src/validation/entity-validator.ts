@@ -9,11 +9,11 @@ addFormats(ajv);
 
 /**
  * Validates entity data, including referenced array item definitions.
- * @param {EntityPropertyDefinition[]} properties - Root property definitions.
+ * @param {EntityPropertyDefinition[]} properties - Root {@link EntityPropertyDefinition} entries.
  * @param {Record<string, unknown>} data - Values to validate.
- * @param {(id: string) => Promise<EntityType>} loadEntityType - Loads referenced definitions.
- * @returns {Promise<ValidationProblem[]>} Resolves to validation problems, or an empty array.
- * @throws If a definition cannot be loaded or compiled.
+ * @param {(id: string) => Promise<EntityTypeDefinition>} loadEntityType - Loads referenced {@link EntityTypeDefinition} records.
+ * @returns {Promise<ValidationProblem[]>} Resolves to {@link ValidationProblem} entries, or an empty array.
+ * @throws {@link Error} — If a definition cannot be loaded or compiled.
  */
 export async function validateEntity(
     properties: EntityPropertyDefinition[],

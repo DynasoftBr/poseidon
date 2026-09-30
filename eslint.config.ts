@@ -4,9 +4,11 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import type { ESLint } from 'eslint';
 import importPlugin from 'eslint-plugin-import';
 import jsoncPlugin from 'eslint-plugin-jsonc';
+import jsdoc from 'eslint-plugin-jsdoc';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import sonarjs from 'eslint-plugin-sonarjs';
 import tseslint from 'typescript-eslint';
+import { jsdocTypes } from './eslint-rules/jsdoc-types';
 
 const noFileWideEslintDisable: NonNullable<ESLint.Plugin['rules']>[string] = {
     meta: {
@@ -61,7 +63,12 @@ export default defineConfig([
         plugins: {
             sonarjs,
             import: importPlugin,
-            'poseidon-lint': { rules: { 'no-file-wide-eslint-disable': noFileWideEslintDisable } },
+            'poseidon-lint': {
+                rules: {
+                    'no-file-wide-eslint-disable': noFileWideEslintDisable,
+                    'jsdoc-types': jsdocTypes,
+                },
+            },
         },
         rules: {
             'poseidon-lint/no-file-wide-eslint-disable': 'error',
@@ -118,6 +125,86 @@ export default defineConfig([
     {
         files: ['**/*.config.{ts,js,mjs,cjs}', 'vitest.shared.ts'],
         rules: { 'no-restricted-syntax': 'off' },
+    },
+    {
+        files: ['projects/**/*.ts'],
+        plugins: { jsdoc },
+        settings: { jsdoc: { mode: 'typescript', tagNamePreference: { augments: 'extends' } } },
+        rules: {
+            'jsdoc/require-jsdoc': [
+                'error',
+                {
+                    enableFixer: false,
+                    require: { FunctionDeclaration: false },
+                    contexts: [
+                        'ExportNamedDeclaration > FunctionDeclaration',
+                        'ExportNamedDeclaration > ClassDeclaration',
+                        'ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > :matches(ArrowFunctionExpression, FunctionExpression)',
+                        'ExportNamedDeclaration > ClassDeclaration > ClassBody > MethodDefinition:not([accessibility="private"]):not([key.type="PrivateIdentifier"])',
+                        'ExportNamedDeclaration > ClassDeclaration > ClassBody > PropertyDefinition:not([accessibility="private"]):not([key.type="PrivateIdentifier"])',
+                        'ExportNamedDeclaration > TSInterfaceDeclaration',
+                        'ExportNamedDeclaration > TSTypeAliasDeclaration',
+                        'ExportNamedDeclaration TSInterfaceBody > TSPropertySignature',
+                        'ExportNamedDeclaration > TSTypeAliasDeclaration TSPropertySignature:not(TSTypeParameterInstantiation TSPropertySignature)',
+                        'ExportNamedDeclaration TSInterfaceBody > TSMethodSignature',
+                        'ExportNamedDeclaration > TSDeclareFunction',
+                    ],
+                },
+            ],
+            'poseidon-lint/jsdoc-types': 'error',
+            'jsdoc/require-description': ['error', { contexts: ['any'] }],
+            'jsdoc/check-param-names': ['error', { checkDestructured: false }],
+            'jsdoc/check-tag-names': 'error',
+            'jsdoc/valid-types': 'error',
+            'jsdoc/require-param': [
+                'error',
+                {
+                    checkDestructured: false,
+                    contexts: [
+                        'FunctionDeclaration',
+                        'FunctionExpression',
+                        'ArrowFunctionExpression',
+                        'TSDeclareFunction',
+                        'TSMethodSignature',
+                    ],
+                },
+            ],
+            'jsdoc/require-param-description': 'error',
+            'jsdoc/require-returns': [
+                'error',
+                {
+                    contexts: [
+                        'FunctionDeclaration',
+                        'FunctionExpression',
+                        'ArrowFunctionExpression',
+                        'TSDeclareFunction',
+                        'TSMethodSignature',
+                    ],
+                },
+            ],
+            'jsdoc/require-returns-description': 'error',
+            'jsdoc/require-template': 'error',
+            'jsdoc/require-tags': [
+                'error',
+                {
+                    tags: [
+                        {
+                            tag: 'extends',
+                            context:
+                                ':matches(ClassDeclaration, ClassExpression)[superClass!=null]',
+                        },
+                        {
+                            tag: 'template',
+                            context:
+                                ':matches(FunctionExpression, ArrowFunctionExpression, TSMethodSignature)[typeParameters.params.length>0]',
+                        },
+                    ],
+                },
+            ],
+            'jsdoc/require-template-description': 'error',
+            'jsdoc/require-throws': 'error',
+            'jsdoc/require-throws-description': 'error',
+        },
     },
     {
         files: ['projects/**/*.ts'],

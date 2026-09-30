@@ -10,11 +10,19 @@ import {
 import { AccessDeniedError, ValidationError } from '@poseidon/runtime';
 import { errorMiddleware } from './error-middleware';
 
+/** Context creation and entity resolution services used by the HTTP application. */
 export interface AppDependencies {
+    /** Creates a {@link PoseidonContext} for an optional authorization token. */
     createContext: (token: string | undefined) => PoseidonContext;
+    /** {@link EntityTypeFactory} resolving classes used to dispatch HTTP operations. */
     entityTypeFactory: EntityTypeFactory;
 }
 
+/**
+ * Creates the HTTP application with health and operation endpoints.
+ * @param {AppDependencies} dependencies - {@link AppDependencies}.
+ * @returns {Express} Configured Express application.
+ */
 export function createApp(dependencies: AppDependencies): Express {
     const app = express();
     app.use(express.json());

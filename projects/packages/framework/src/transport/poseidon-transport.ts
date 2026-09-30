@@ -7,7 +7,7 @@ export interface PoseidonTransport {
     /**
      * Sends a request with the current authorization token.
      * @template TResult - Action result.
-     * @param {PoseidonRequest} request - Action invocation.
+     * @param {PoseidonRequest} request - {@link PoseidonRequest}.
      * @param {string | undefined} token - Current authorization token.
      * @returns {Promise<TResult>} Resolves to the action result.
      */

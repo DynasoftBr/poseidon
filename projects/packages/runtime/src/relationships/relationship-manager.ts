@@ -16,12 +16,24 @@ type EntityDeleter = (entityTypeName: string, id: string) => Promise<void>;
 
 /** Keeps relationship values outside business-record documents. */
 export class RelationshipManager {
+    /**
+     * Creates relationship persistence services for runtime operations.
+     * @param {RelationshipStore} store - {@link RelationshipStore} for links between entity properties.
+     * @param {EntityReader} getEntity - {@link EntityReader} used to load entities and relationship property definitions.
+     * @param {EntityDeleter} deleteEntity - {@link EntityDeleter} used to delete entities targeted by cascading relationships.
+     */
     public constructor(
         private readonly store: RelationshipStore,
         private readonly getEntity: EntityReader,
         private readonly deleteEntity: EntityDeleter,
     ) {}
 
+    /**
+     * Removes relationship fields from the data stored in an entity document.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} identifying the relationship fields.
+     * @param {Record<string, unknown>} data - Submitted entity data.
+     * @returns {Record<string, unknown>} Entity data without relationship properties.
+     */
     public dataWithoutRelationships(
         entityType: EntityTypeDefinition,
         data: Record<string, unknown>,
@@ -34,6 +46,14 @@ export class RelationshipManager {
         );
     }
 
+    /**
+     * Updates stored relationship links from the submitted entity data.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} declaring the relationships.
+     * @param {EntityRecord} entity - {@link EntityRecord} that owns the relationships.
+     * @param {Record<string, unknown>} data - Submitted values; null removes a link and undefined leaves it unchanged.
+     * @returns {Promise<void>} Promise resolving after the relationship links have been updated.
+     * @throws {@link Error} — If a relationship value or its referenced entity is invalid.
+     */
     public async save(
         entityType: EntityTypeDefinition,
         entity: EntityRecord,
@@ -62,6 +82,13 @@ export class RelationshipManager {
         }
     }
 
+    /**
+     * Applies restriction, unlinking, and cascade rules to an entity’s relationships.
+     * @param {EntityTypeDefinition} entityType - {@link EntityTypeDefinition} declaring relationship deletion behavior.
+     * @param {string} id - Identifier of the entity being deleted.
+     * @returns {Promise<void>} Promise resolving after relationship deletion rules have been applied.
+     * @throws {@link Error} — If an existing relationship restricts deletion.
+     */
     public async delete(entityType: EntityTypeDefinition, id: string): Promise<void> {
         const cascades: Array<{ entityTypeName: string; id: string }> = [];
         for (const property of relationshipProperties(entityType)) {

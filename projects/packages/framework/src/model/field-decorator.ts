@@ -21,13 +21,25 @@ type RelationshipRegistration<TTarget extends { _id: string }> = {
     options: RelationshipOptions;
 };
 
-/** Declares a string-named instance property with an explicit type. */
+/**
+ * Declares a string-named instance property with an explicit type.
+ * @param {PropertyOptions} options - {@link PropertyOptions} to register.
+ * @returns Decorator that registers the property definition.
+ */
 export function Property(options: PropertyOptions) {
     return <This>(_: undefined, context: FieldContext<This, unknown>): void => {
         registerField(context, options);
     };
 }
 
+/**
+ * Declares a relationship to one entity with a reciprocal property.
+ * @template TTarget - Entity shape at the relationship target.
+ * @param {() => EntityClass<TTarget>} target - Deferred {@link EntityClass} constructor of the relationship target.
+ * @param {(selector: RelationshipSelector<TTarget>) => RelationshipPath} inverse - Selects a {@link RelationshipPath} from the target’s {@link RelationshipSelector}.
+ * @param {RelationshipOptions} options - {@link RelationshipOptions} to register.
+ * @returns Decorator that registers the single-valued relationship.
+ */
 export function HasOne<TTarget extends { _id: string }>(
     target: () => EntityClass<TTarget>,
     inverse: (selector: RelationshipSelector<TTarget>) => RelationshipPath,
@@ -41,6 +53,14 @@ export function HasOne<TTarget extends { _id: string }>(
     };
 }
 
+/**
+ * Declares a relationship to a paginated collection with a reciprocal property.
+ * @template TTarget - Entity shape at the relationship target.
+ * @param {() => EntityClass<TTarget>} target - Deferred {@link EntityClass} constructor of the relationship target.
+ * @param {(selector: RelationshipSelector<TTarget>) => RelationshipPath} inverse - Selects a {@link RelationshipPath} from the target’s {@link RelationshipSelector}.
+ * @param {RelationshipOptions} options - {@link RelationshipOptions} to register.
+ * @returns Decorator that registers the collection relationship.
+ */
 export function HasMany<TTarget extends { _id: string }>(
     target: () => EntityClass<TTarget>,
     inverse: (selector: RelationshipSelector<TTarget>) => RelationshipPath,

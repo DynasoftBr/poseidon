@@ -42,12 +42,20 @@ export class RuntimeTransaction {
         }
     }
 
-    /** Returns the active MongoDB session, if a transaction is open. */
+    /**
+     * Returns the active MongoDB session, if a transaction is open.
+     * @returns {ClientSession | undefined} Active session, or undefined outside a transaction.
+     */
     public currentSession(): ClientSession | undefined {
         return this.session;
     }
 
-    /** Returns MongoDB operation options for the active transaction. */
+    /**
+     * Returns MongoDB operation options for the active transaction.
+     * @returns {{
+     *     session: ClientSession;
+     * } | undefined} Session options, or undefined outside a transaction.
+     */
     public options(): { session: ClientSession } | undefined {
         return this.session ? { session: this.session } : undefined;
     }

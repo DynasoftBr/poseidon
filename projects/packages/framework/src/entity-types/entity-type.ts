@@ -21,6 +21,7 @@ import type { Query as EntityQuery } from './query';
     description: 'Defines the properties and actions of an entity type.',
 })
 export class EntityType extends Entity {
+    /** Entity type name used for operation dispatch. */
     static override entityTypeName = 'entity-type';
 
     /** Name used to address this entity type in the API. */
@@ -46,7 +47,7 @@ export class EntityType extends Entity {
     })
     structure?: boolean;
 
-    /** Property definitions and their constraints. */
+    /** {@link EntityRef} values pointing to {@link EntityProperty} definitions and their constraints. */
     @Property({
         type: 'array',
         itemsType: 'reference',
@@ -55,7 +56,7 @@ export class EntityType extends Entity {
     })
     properties!: EntityRef<EntityProperty>[];
 
-    /** Actions available for this entity type. */
+    /** {@link EntityRef} values pointing to the {@link EntityAction} records available for this entity type. */
     @Property({
         type: 'array',
         itemsType: 'reference',
@@ -63,7 +64,7 @@ export class EntityType extends Entity {
     })
     actions?: EntityRef<EntityAction>[];
 
-    /** Queries available for this entity type. */
+    /** {@link EntityRef} values pointing to the {@link EntityQuery} records available for this entity type. */
     @Property({
         type: 'array',
         itemsType: 'reference',
@@ -72,11 +73,11 @@ export class EntityType extends Entity {
     queries?: EntityRef<EntityQuery>[];
 
     /**
-     * Applies EntityType definitions.
-     * @template TResult - Action result.
-     * @param {object} payload - Submitted EntityType definitions.
+     * Applies {@link EntityType} definitions.
+     * @template TResult - {@link Action} result.
+     * @param {object} payload - Submitted {@link EntityType} definitions.
      * @returns {Promise<TResult>} Resolves to the action result.
-     * @throws If the action fails.
+     * @throws {@link Error} — If the action fails.
      */
     @Action({ description: 'Applies submitted entity type definitions.', permissions: () => [] })
     static applyDefinitions<TResult = unknown>(payload: object): Promise<TResult> {
@@ -89,10 +90,10 @@ export class EntityType extends Entity {
 
     /**
      * Saves an entity type definition.
-     * @template TResult - Action result.
-     * @param {object} payload - Entity type definition to save.
+     * @template TResult - {@link Action} result.
+     * @param {object} payload - {@link EntityType} definition to save.
      * @returns {Promise<TResult>} Resolves to the saved entity type definition.
-     * @throws If the action fails.
+     * @throws {@link Error} — If the action fails.
      */
     @Action({ description: 'Creates or updates an entity type.', permissions: () => [] })
     static override save<TResult = unknown>(payload: object): Promise<TResult> {

@@ -16,7 +16,7 @@ export class EntityTypeFactory {
     /**
      * Returns an entity-type facade.
      * @param {string} name - Entity type name.
-     * @returns {typeof Entity} The callable entity-type facade.
+     * @returns {typeof Entity} The callable {@link Entity} facade.
      */
     public create(name: string): typeof Entity {
         return this.entityTypes.get(name) ?? this.dynamicEntityType(name);
